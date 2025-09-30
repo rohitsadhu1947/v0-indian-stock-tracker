@@ -374,7 +374,7 @@ export default function StockTracker() {
               <li>
                 Copy your URL:{" "}
                 <code style={{ background: "rgba(0,0,0,0.3)", padding: "2px 8px", borderRadius: "4px" }}>
-                  https://YOUR-URL.vercel.app
+                  https://v0-indian-stock-tracker-g9lg.vercel.app/
                 </code>
               </li>
               <li>Update line 238 in this code with your URL</li>
