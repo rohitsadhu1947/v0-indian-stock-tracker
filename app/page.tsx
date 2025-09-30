@@ -353,36 +353,7 @@ export default function StockTracker() {
           <h1>🚀 Indian Stock Tracker - Live Data</h1>
 
           <div className="alert" id="statusAlert">
-            <strong>⚙️ Setup Required:</strong> Deploy to Vercel first, then update PROXY_URL with your deployment URL.
-          </div>
-
-          <div className="strategy-info" style={{ marginBottom: "20px" }}>
-            <h3>🚀 Vercel Deployment Steps:</h3>
-            <ol style={{ marginLeft: "20px", lineHeight: 1.8 }}>
-              <li>
-                Create folder with <strong>api/stock.js</strong>, <strong>package.json</strong>, and{" "}
-                <strong>vercel.json</strong>
-              </li>
-              <li>
-                Go to{" "}
-                <a href="https://vercel.com/new" target="_blank" style={{ color: "#00f2fe" }} rel="noreferrer">
-                  vercel.com/new
-                </a>
-              </li>
-              <li>Click &quot;Add New...&quot; → &quot;Project&quot; → Import your folder</li>
-              <li>Click &quot;Deploy&quot; and wait 30 seconds</li>
-              <li>
-                Copy your URL:{" "}
-                <code style={{ background: "rgba(0,0,0,0.3)", padding: "2px 8px", borderRadius: "4px" }}>
-                  https://v0-indian-stock-tracker-g9lg.vercel.app/
-                </code>
-              </li>
-              <li>Update line 238 in this code with your URL</li>
-              <li>
-                Click <strong>REFRESH</strong> button above!
-              </li>
-            </ol>
-            <p style={{ marginTop: "10px" }}>📖 See full deployment guide in the artifacts above!</p>
+            <strong>✅ Live Mode:</strong> Connected to Vercel API - Real-time NSE/BSE data
           </div>
 
           <div className="controls">
@@ -450,9 +421,7 @@ export default function StockTracker() {
             __html: `
           // API Configuration - Using Vercel Serverless Function
           const API_KEY = 'TVGS8WZS1527VBBZ';
-          // 🚀 REPLACE THIS with your Vercel deployment URL after deploying
-          // Example: 'https://stock-api-xyz.vercel.app/api/stock'
-          const PROXY_URL = 'https://YOUR-VERCEL-URL.vercel.app/api/stock';
+          const PROXY_URL = 'https://v0-indian-stock-tracker-g9lg.vercel.app/api/stock';
           
           // State management
           let watchlist = ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'];
@@ -793,17 +762,21 @@ export default function StockTracker() {
             const container = document.getElementById('stockCards');
             const watchlistContainer = document.getElementById('watchlistItems');
             
-            container.innerHTML = '<div class="loading">Fetching live data from Alpha Vantage... (This may take a moment due to API rate limits)</div>';
+            container.innerHTML = '<div class="loading">Fetching live data from Vercel API... (This may take a moment due to API rate limits)</div>';
             watchlistContainer.innerHTML = '';
             
             let cards = '';
             let watchlistHTML = '';
             let errorCount = 0;
+            let successCount = 0;
             
             for (const symbol of watchlist) {
+              console.log(\`Processing \${symbol}...\`);
               const data = await fetchStockData(symbol);
               
               if (data) {
+                successCount++;
+                console.log(\`✓ Successfully loaded \${symbol}\`, data);
                 stockData[symbol] = data;
                 const analysis = generateTradingSignal(data);
                 
@@ -833,27 +806,39 @@ export default function StockTracker() {
                 \`;
               } else {
                 errorCount++;
+                console.error(\`✗ Failed to load \${symbol}\`);
                 cards += \`
                     <div class="card">
                         <div class="error">
                             <strong>\${symbol}</strong>
-                            <p>Failed to load data. Please check the symbol or try again later.</p>
+                            <p>Failed to load data. Please try again later.</p>
                         </div>
                     </div>
                 \`;
               }
             }
             
+            console.log(\`Loaded \${successCount} stocks, \${errorCount} errors\`);
+            
             if (errorCount > 0 && errorCount === watchlist.length) {
               container.innerHTML = '<div class="error">Failed to load any stocks. Please check your internet connection and try again.</div>';
+            } else if (cards) {
+              container.innerHTML = cards;
             } else {
-              container.innerHTML = cards || '<div class="error">No stocks in watchlist</div>';
+              container.innerHTML = '<div class="error">No stocks in watchlist</div>';
             }
             
             watchlistContainer.innerHTML = watchlistHTML || '<div>Add stocks to get started</div>';
             
             updateActiveSignals();
             isLoading = false;
+            
+            // Update status
+            const statusAlert = document.getElementById('statusAlert');
+            if (successCount > 0) {
+              statusAlert.className = 'alert';
+              statusAlert.innerHTML = \`<strong>✅ Live Mode:</strong> Loaded \${successCount} stocks successfully!\`;
+            }
           }
 
           function addStock() {
