@@ -545,10 +545,10 @@ export default function StockTracker() {
     const position = intradayPositions.find(p => p.symbol === symbol)
     if (!position) return
 
-    const pnl = calculatePnL(position.entryPrice, position.currentPrice, position.quantity, position.type)
+    const pnl = position.pnl || 0
     
     setIntradayPositions(intradayPositions.filter(p => p.symbol !== symbol))
-    setTotalPnL(totalPnL + pnl)
+    setTotalPnL(prev => Number(prev) + Number(pnl))
     
     alert(`✅ Position closed: ${symbol}\nP&L: ₹${pnl.toFixed(2)} (${((pnl / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%)`)
   }
@@ -608,7 +608,7 @@ export default function StockTracker() {
     
     if (confirm(`Close all ${intradayPositions.length} positions?`)) {
       const finalPnL = intradayPositions.reduce((sum, pos) => sum + (pos.pnl || 0), 0)
-      setTotalPnL(totalPnL + finalPnL)
+      setTotalPnL(prev => Number(prev) + Number(finalPnL))
       setIntradayPositions([])
       alert(`✅ All positions closed\nTotal P&L: ₹${finalPnL.toFixed(2)}`)
     }
@@ -1538,7 +1538,7 @@ export default function StockTracker() {
                   fontWeight: 'bold',
                   color: totalPnL >= 0 ? '#00ff64' : '#ff0064'
                 }}>
-                  {totalPnL >= 0 ? '+' : ''}₹{totalPnL.toFixed(2)}
+                  {totalPnL >= 0 ? '+' : ''}₹{Number(totalPnL).toFixed(2)}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
