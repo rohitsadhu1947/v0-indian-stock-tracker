@@ -524,6 +524,96 @@ export default function StockTracker() {
     }
   }
 
+  // Position Management Functions
+  function enterPosition(symbol: string, entryPrice: number, quantity: number, type: 'BUY' | 'SELL') {
+    const newPosition: Position = {
+      symbol,
+      entryPrice,
+      quantity,
+      type,
+      entryTime: new Date(),
+      currentPrice: entryPrice,
+      pnl: 0,
+      pnlPercent: 0
+    }
+    
+    setIntradayPositions([...intradayPositions, newPosition])
+    alert(`✅ ${type} position entered: ${quantity} shares of ${symbol} at ₹${entryPrice}`)
+  }
+
+  function exitPosition(symbol: string) {
+    const position = intradayPositions.find(p => p.symbol === symbol)
+    if (!position) return
+
+    const pnl = calculatePnL(position.entryPrice, position.currentPrice, position.quantity, position.type)
+    
+    setIntradayPositions(intradayPositions.filter(p => p.symbol !== symbol))
+    setTotalPnL(totalPnL + pnl)
+    
+    alert(`✅ Position closed: ${symbol}\nP&L: ₹${pnl.toFixed(2)} (${((pnl / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%)`)
+  }
+
+  function updatePositionPrices() {
+    // Update current prices for all open positions
+    intradayPositions.forEach(async (position) => {
+      try {
+        const data = await fetchStockQuote(position.symbol)
+        if (data) {
+          position.currentPrice = data.current
+          position.pnl = calculatePnL(position.entryPrice, data.current, position.quantity, position.type)
+          position.pnlPercent = (position.pnl / (position.entryPrice * position.quantity)) * 100
+        }
+      } catch (err) {
+        console.error(`Failed to update price for ${position.symbol}`)
+      }
+    })
+    
+    setIntradayPositions([...intradayPositions])
+  }
+
+  function addMockPositions() {
+    const mockPositions: Position[] = [
+      {
+        symbol: 'RELIANCE',
+        entryPrice: 2830.50,
+        quantity: 10,
+        type: 'BUY',
+        entryTime: new Date(Date.now() - 1000 * 60 * 45), // 45 min ago
+        currentPrice: 2858.20,
+        pnl: 277.00,
+        pnlPercent: 0.98
+      },
+      {
+        symbol: 'HDFCBANK',
+        entryPrice: 1635.80,
+        quantity: 15,
+        type: 'BUY',
+        entryTime: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
+        currentPrice: 1648.50,
+        pnl: 190.50,
+        pnlPercent: 0.78
+      }
+    ]
+    
+    setIntradayPositions(mockPositions)
+    setTotalPnL(467.50)
+    alert('✅ Added 2 mock positions (RELIANCE & HDFCBANK)')
+  }
+
+  function clearAllPositions() {
+    if (intradayPositions.length === 0) {
+      alert('⚠️ No open positions')
+      return
+    }
+    
+    if (confirm(`Close all ${intradayPositions.length} positions?`)) {
+      const finalPnL = intradayPositions.reduce((sum, pos) => sum + (pos.pnl || 0), 0)
+      setTotalPnL(totalPnL + finalPnL)
+      setIntradayPositions([])
+      alert(`✅ All positions closed\nTotal P&L: ₹${finalPnL.toFixed(2)}`)
+    }
+  }
+
   // Demo Mode - Generate mock signals for testing
   function runDemoScreener() {
     setIsLoading(true)
@@ -1420,6 +1510,240 @@ export default function StockTracker() {
               <li><strong>Position Sizing:</strong> Follow the suggested position size (1% risk per trade)</li>
               <li><strong>Exit Strategy:</strong> Exit at target (2-3%), stop-loss (0.5-1%), or 3:00 PM</li>
             </ol>
+          </div>
+
+          {/* Position Tracking Section */}
+          <div style={{ marginTop: '40px', borderTop: '2px solid rgba(255, 255, 255, 0.1)', paddingTop: '30px' }}>
+            <h2 style={{ fontSize: '1.8em', marginBottom: '20px' }}>📊 Position Tracking</h2>
+
+            {/* P&L Summary Banner */}
+            <div style={{
+              padding: '20px',
+              background: totalPnL >= 0 
+                ? 'linear-gradient(135deg, rgba(0, 255, 100, 0.2) 0%, rgba(0, 200, 80, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 0, 100, 0.2) 0%, rgba(200, 0, 80, 0.1) 100%)',
+              border: `2px solid ${totalPnL >= 0 ? '#00ff64' : '#ff0064'}`,
+              borderRadius: '12px',
+              marginBottom: '25px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '5px' }}>
+                  Today's Total P&L
+                </div>
+                <div style={{ 
+                  fontSize: '2.2em', 
+                  fontWeight: 'bold',
+                  color: totalPnL >= 0 ? '#00ff64' : '#ff0064'
+                }}>
+                  {totalPnL >= 0 ? '+' : ''}₹{totalPnL.toFixed(2)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '5px' }}>
+                  Open Positions
+                </div>
+                <div style={{ fontSize: '1.8em', fontWeight: 'bold' }}>
+                  {intradayPositions.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+              <button 
+                onClick={addMockPositions}
+                disabled={intradayPositions.length > 0}
+                style={{ 
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '2px solid rgba(102, 126, 234, 0.5)'
+                }}
+              >
+                🎭 Add Mock Positions (Test)
+              </button>
+              <button 
+                onClick={updatePositionPrices}
+                disabled={intradayPositions.length === 0 || !authStatus.authenticated}
+                style={{ 
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  background: 'rgba(79, 172, 254, 0.2)',
+                  border: '1px solid rgba(79, 172, 254, 0.5)'
+                }}
+              >
+                🔄 Update Prices
+              </button>
+              <button 
+                onClick={clearAllPositions}
+                disabled={intradayPositions.length === 0}
+                style={{ 
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '15px',
+                  background: 'rgba(255, 0, 100, 0.2)',
+                  border: '1px solid rgba(255, 0, 100, 0.5)'
+                }}
+              >
+                🗑️ Close All
+              </button>
+            </div>
+
+            {/* Open Positions */}
+            {intradayPositions.length === 0 ? (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(255, 255, 255, 0.2)'
+              }}>
+                <div style={{ fontSize: '3em', marginBottom: '15px' }}>📊</div>
+                <h3 style={{ marginBottom: '10px' }}>No Open Positions</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '20px' }}>
+                  Add mock positions to see the tracker in action, or enter real trades when the market opens.
+                </p>
+                <button 
+                  onClick={addMockPositions}
+                  style={{ 
+                    padding: '12px 24px',
+                    fontSize: '15px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    border: '2px solid rgba(102, 126, 234, 0.5)'
+                  }}
+                >
+                  🎭 Try Demo Positions
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {intradayPositions.map((position, idx) => {
+                  const pnlColor = (position.pnl || 0) >= 0 
+                    ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
+                    : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
+
+                  const timeHeld = Math.floor((Date.now() - position.entryTime.getTime()) / 1000 / 60)
+
+                  return (
+                    <div 
+                      key={idx}
+                      className="card"
+                      style={{
+                        background: pnlColor.bg,
+                        border: `2px solid ${pnlColor.border}`,
+                        position: 'relative'
+                      }}
+                    >
+                      {/* Position Type Badge */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '15px',
+                        right: '15px',
+                        padding: '6px 12px',
+                        background: position.type === 'BUY' ? '#00ff64' : '#ff0064',
+                        color: '#000',
+                        borderRadius: '6px',
+                        fontSize: '0.85em',
+                        fontWeight: 'bold'
+                      }}>
+                        {position.type}
+                      </div>
+
+                      {/* Symbol and Price */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <h2 style={{ fontSize: '1.8em', margin: 0 }}>
+                          {position.symbol}
+                        </h2>
+                        <div style={{ 
+                          fontSize: '1.1em', 
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          marginTop: '5px'
+                        }}>
+                          Entry: ₹{position.entryPrice.toFixed(2)} × {position.quantity} shares
+                        </div>
+                        <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.5)' }}>
+                          {timeHeld} minutes ago
+                        </div>
+                      </div>
+
+                      {/* P&L Display */}
+                      <div style={{
+                        padding: '20px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '10px',
+                        marginBottom: '15px'
+                      }}>
+                        <div className="indicators">
+                          <div className="indicator">
+                            <div className="indicator-label">Current Price</div>
+                            <div className="indicator-value">
+                              ₹{position.currentPrice.toFixed(2)}
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">P&L</div>
+                            <div className="indicator-value" style={{ color: pnlColor.text }}>
+                              {(position.pnl || 0) >= 0 ? '+' : ''}₹{(position.pnl || 0).toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              {(position.pnlPercent || 0) >= 0 ? '+' : ''}{(position.pnlPercent || 0).toFixed(2)}%
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">Total Value</div>
+                            <div className="indicator-value">
+                              ₹{(position.currentPrice * position.quantity).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                          onClick={() => exitPosition(position.symbol)}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            fontSize: '1em',
+                            fontWeight: 'bold',
+                            background: pnlColor.border,
+                            color: '#000',
+                            border: 'none'
+                          }}
+                        >
+                          🚪 Close Position
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Info Box */}
+            <div style={{ 
+              marginTop: '25px',
+              padding: '15px',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '10px'
+            }}>
+              <h4 style={{ marginBottom: '10px' }}>💡 Position Tracking Tips:</h4>
+              <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                <li><strong>Update Prices:</strong> Click "Update Prices" to fetch live P&L</li>
+                <li><strong>Auto-refresh:</strong> Coming in next update (every 30 seconds)</li>
+                <li><strong>Exit Strategy:</strong> Close positions at target or stop-loss</li>
+                <li><strong>End of Day:</strong> All positions should be closed by 3:15 PM</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}
