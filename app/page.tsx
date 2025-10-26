@@ -1,914 +1,296 @@
 "use client"
 
+import { useState, useEffect } from 'react'
+import { formatSymbolForKite, generateTradingSignal } from '@/lib/kite-utils'
+import { 
+  calculateVWAP, 
+  generateIntradaySignal, 
+  checkExitSignal, 
+  calculatePnL,
+  detectGap,
+  isMarketHours,
+  type Position,
+  type IntradaySignal,
+  type IntradayCandle
+} from '@/lib/intraday-utils'
+
+interface StockData {
+  symbol: string
+  name: string
+  instrumentToken: number
+  current: number
+  change: number
+  changePercent: number
+  volume: number
+  dayHigh: number
+  dayLow: number
+  open: number
+  prices: number[]
+  volumes: number[]
+  timestamp: string
+}
+
+interface AuthStatus {
+  authenticated: boolean
+  user: { userId: string } | null
+}
+
 export default function StockTracker() {
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Indian Stock Tracker - NSE/BSE</title>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
+  const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  const [stockData, setStockData] = useState<Record<string, StockData>>({})
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday'>('watchlist')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [stockInput, setStockInput] = useState('')
+  const [exchange, setExchange] = useState('NSE')
+  const [screenerResults, setScreenerResults] = useState<any[]>([])
+  const [activeSignals, setActiveSignals] = useState<any[]>([])
+  const [customScreenerStocks, setCustomScreenerStocks] = useState<string[]>([])
+  const [screenerInput, setScreenerInput] = useState('')
+  const [screenerGroups, setScreenerGroups] = useState<Record<string, string[]>>({
+    'Popular Large Caps': ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'WIPRO', 'ITC', 'HINDUNILVR', 'BHARTIARTL', 'ASIANPAINT', 'MARUTI', 'TITAN', 'BAJFINANCE', 'TATASTEEL', 'SUNPHARMA'],
+    'Custom': []
+  })
+  const [activeScreenerGroup, setActiveScreenerGroup] = useState('Popular Large Caps')
+  
+  // Intraday trading states
+  const [intradayPositions, setIntradayPositions] = useState<Position[]>([])
+  const [intradaySignals, setIntradaySignals] = useState<IntradaySignal[]>([])
+  const [marketStatus, setMarketStatus] = useState(isMarketHours())
+  const [totalPnL, setTotalPnL] = useState(0)
+  const [intradayWatchlist, setIntradayWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  const [autoRefreshIntraday, setAutoRefreshIntraday] = useState(false)
+  const [isDemoData, setIsDemoData] = useState(false)
+  const [intradayStockInput, setIntradayStockInput] = useState('')
 
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #fff;
-            min-height: 100vh;
-            padding: 20px;
-          }
+  // Load custom screener settings from localStorage
+  useEffect(() => {
+    const savedGroups = localStorage.getItem('screenerGroups')
+    const savedActiveGroup = localStorage.getItem('activeScreenerGroup')
+    const savedIntradayWatchlist = localStorage.getItem('intradayWatchlist')
 
-          .container {
-            max-width: 1400px;
-            margin: 0 auto;
-          }
+    if (savedGroups) {
+      setScreenerGroups(JSON.parse(savedGroups))
+    }
+    if (savedActiveGroup) {
+      setActiveScreenerGroup(savedActiveGroup)
+    }
+    if (savedIntradayWatchlist) {
+      setIntradayWatchlist(JSON.parse(savedIntradayWatchlist))
+    }
+  }, [])
 
-          h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            background: linear-gradient(45deg, #00f2fe, #4facfe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-          }
+  // Save screener settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('screenerGroups', JSON.stringify(screenerGroups))
+    localStorage.setItem('activeScreenerGroup', activeScreenerGroup)
+  }, [screenerGroups, activeScreenerGroup])
 
-          .alert {
-            background: rgba(0, 255, 100, 0.2);
-            border: 1px solid rgba(0, 255, 100, 0.5);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-          }
+  // Save intraday watchlist to localStorage
+  useEffect(() => {
+    localStorage.setItem('intradayWatchlist', JSON.stringify(intradayWatchlist))
+  }, [intradayWatchlist])
 
-          .warning {
-            background: rgba(255, 193, 7, 0.2);
-            border: 1px solid rgba(255, 193, 7, 0.5);
-          }
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuthStatus()
+    
+    // Check for auth callback
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('authenticated') === 'true') {
+      setError(null)
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/')
+        checkAuthStatus()
+      }, 500)
+    } else if (params.get('error')) {
+      setError(`Authentication failed: ${params.get('error')}`)
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
 
-          .controls {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
+  // Load watchlist when authenticated
+  useEffect(() => {
+    if (authStatus.authenticated && watchlist.length > 0) {
+      updateWatchlist()
+    }
+  }, [authStatus.authenticated])
 
-          .input-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-          }
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch('/api/auth/kite/session')
+      const data = await res.json()
+      setAuthStatus(data)
+    } catch (err) {
+      console.error('Error checking auth status:', err)
+    }
+  }
 
-          input, select, button {
-            padding: 12px 20px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 14px;
-            transition: all 0.3s;
-          }
+  async function handleLogin() {
+    window.location.href = '/api/auth/kite/login'
+  }
 
-          input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-          }
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/kite/logout', { method: 'POST' })
+      setAuthStatus({ authenticated: false, user: null })
+      setStockData({})
+      setError(null)
+    } catch (err) {
+      console.error('Error logging out:', err)
+    }
+  }
 
-          button {
-            cursor: pointer;
-            background: linear-gradient(45deg, #4facfe, #00f2fe);
-            border: none;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-          }
+  async function fetchStockQuote(symbol: string): Promise<StockData | null> {
+    try {
+      const kiteSymbol = formatSymbolForKite(symbol, exchange)
+      const res = await fetch(`/api/kite/quote?symbols=${encodeURIComponent(kiteSymbol)}`)
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        if (errorData.code === 'TOKEN_EXPIRED') {
+          setError('Session expired. Please login again.')
+          setAuthStatus({ authenticated: false, user: null })
+        }
+        throw new Error(errorData.error || 'Failed to fetch quote')
+      }
 
-          button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
-          }
+      const { data } = await res.json()
+      const quote = data[kiteSymbol]
 
-          button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-          }
+      if (!quote) {
+        throw new Error('No data received for ' + symbol)
+      }
 
-          .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-          }
-
-          .tab {
-            padding: 12px 25px;
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.6);
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            position: relative;
-          }
-
-          .tab.active {
-            color: #00f2fe;
-          }
-
-          .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(45deg, #4facfe, #00f2fe);
-          }
-
-          .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-          }
-
-          .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
-
-          .stock-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-          }
-
-          .stock-symbol {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #4facfe;
-          }
-
-          .stock-price {
-            font-size: 2em;
-            font-weight: bold;
-            margin: 10px 0;
-          }
-
-          .price-change {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-weight: bold;
-          }
-
-          .positive {
-            background: rgba(0, 255, 100, 0.2);
-            color: #00ff64;
-          }
-
-          .negative {
-            background: rgba(255, 0, 100, 0.2);
-            color: #ff0064;
-          }
-
-          .neutral {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-          }
-
-          .indicators {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin: 15px 0;
-          }
-
-          .indicator {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-          }
-
-          .indicator-label {
-            font-size: 0.85em;
-            color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 5px;
-          }
-
-          .indicator-value {
-            font-size: 1.1em;
-            font-weight: bold;
-          }
-
-          .signal-box {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-          }
-
-          .buy-signal {
-            background: linear-gradient(45deg, rgba(0, 255, 100, 0.2), rgba(0, 255, 100, 0.1));
-            border: 2px solid #00ff64;
-          }
-
-          .sell-signal {
-            background: linear-gradient(45deg, rgba(255, 0, 100, 0.2), rgba(255, 0, 100, 0.1));
-            border: 2px solid #ff0064;
-          }
-
-          .hold-signal {
-            background: linear-gradient(45deg, rgba(255, 200, 0, 0.2), rgba(255, 200, 0, 0.1));
-            border: 2px solid #ffc800;
-          }
-
-          .signal-strength {
-            display: flex;
-            gap: 5px;
-            justify-content: center;
-            margin-top: 10px;
-          }
-
-          .strength-bar {
-            width: 30px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-          }
-
-          .strength-bar.filled {
-            background: currentColor;
-          }
-
-          .watchlist {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-          }
-
-          .watchlist-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            cursor: pointer;
-            transition: background 0.3s;
-          }
-
-          .watchlist-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-          }
-
-          .remove-btn {
-            background: rgba(255, 0, 100, 0.2);
-            color: #ff0064;
-            border: 1px solid #ff0064;
-            padding: 5px 10px;
-            font-size: 0.8em;
-          }
-
-          .loading {
-            text-align: center;
-            padding: 20px;
-            color: rgba(255, 255, 255, 0.6);
-          }
-
-          .error {
-            background: rgba(255, 0, 0, 0.1);
-            border: 1px solid rgba(255, 0, 0, 0.3);
-            color: #ff6b6b;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px 0;
-          }
-
-          .screener-results {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-          }
-
-          .screener-table {
-            width: 100%;
-            margin-top: 15px;
-          }
-
-          .screener-table th,
-          .screener-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          }
-
-          .screener-table th {
-            background: rgba(255, 255, 255, 0.05);
-            font-weight: 600;
-            color: #4facfe;
-          }
-
-          .strategy-info {
-            background: rgba(79, 172, 254, 0.1);
-            border: 1px solid rgba(79, 172, 254, 0.3);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-          }
-
-          @media (max-width: 768px) {
-            .dashboard {
-              grid-template-columns: 1fr;
-            }
-            
-            h1 {
-              font-size: 1.8em;
-            }
-          }
-        `,
-          }}
-        />
-      </head>
-      <body>
-        <div className="container">
-          <h1>🚀 Indian Stock Tracker - Live Data</h1>
-
-          <div className="alert" id="statusAlert">
-            <strong>✅ Live Mode:</strong> Connected to Vercel API - Real-time NSE/BSE data
-          </div>
-
-          <div className="controls">
-            <div className="input-group">
-              <input type="text" id="stockInput" placeholder="Enter Stock Symbol (e.g., RELIANCE, TCS, INFY)" />
-              <select id="exchange">
-                <option value="NSE">NSE (India)</option>
-                <option value="BSE">BSE (India)</option>
-              </select>
-              <button onClick={() => (window as any).addStock()}>Add to Watchlist</button>
-              <button onClick={() => (window as any).runScreener()}>Run Screener</button>
-              <button onClick={() => (window as any).refreshAll()}>🔄 Refresh</button>
-            </div>
-          </div>
-
-          <div className="tabs">
-            <button className="tab active" onClick={(e) => (window as any).switchTab(e, "watchlist")}>
-              Watchlist
-            </button>
-            <button className="tab" onClick={(e) => (window as any).switchTab(e, "screener")}>
-              Screener
-            </button>
-            <button className="tab" onClick={(e) => (window as any).switchTab(e, "signals")}>
-              Active Signals
-            </button>
-          </div>
-
-          <div id="watchlistTab" className="tab-content">
-            <div className="watchlist">
-              <h3>Your Watchlist</h3>
-              <div id="watchlistItems"></div>
-            </div>
-            <div className="dashboard" id="stockCards"></div>
-          </div>
-
-          <div id="screenerTab" className="tab-content" style={{ display: "none" }}>
-            <div className="strategy-info">
-              <h3>📊 Screener Strategies</h3>
-              <p>
-                <strong>Momentum Breakout:</strong> Stocks breaking above resistance with high volume
-              </p>
-              <p>
-                <strong>Oversold Bounce:</strong> Stocks at RSI &lt; 30 ready for reversal
-              </p>
-              <p>
-                <strong>Trend Following:</strong> Stocks in strong uptrend with good momentum
-              </p>
-            </div>
-            <div className="screener-results">
-              <h3>Top Opportunities</h3>
-              <div id="screenerResults"></div>
-            </div>
-          </div>
-
-          <div id="signalsTab" className="tab-content" style={{ display: "none" }}>
-            <div className="screener-results">
-              <h3>Active Trading Signals</h3>
-              <div id="activeSignals"></div>
-            </div>
-          </div>
-        </div>
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-          // API Configuration - Using Vercel Serverless Function
-          const API_KEY = 'TVGS8WZS1527VBBZ';
-          const PROXY_URL = 'https://v0-indian-stock-tracker-g9lg.vercel.app/api/stock';
-          
-          // State management
-          let watchlist = ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'];
-          let stockData = {};
-          let activeSignals = [];
-          let isLoading = false;
-          let requestQueue = [];
-          let lastRequestTime = 0;
-          const MIN_REQUEST_INTERVAL = 12000; // 12 seconds between requests (5 per minute limit)
-
-          // Rate limiting function
-          async function makeRateLimitedRequest(symbol, exchange) {
-            const now = Date.now();
-            const timeSinceLastRequest = now - lastRequestTime;
-            
-            if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-              await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest));
-            }
-            
-            lastRequestTime = Date.now();
-            
-            try {
-              // Call Vercel serverless function
-              const url = \`\${PROXY_URL}?symbol=\${symbol}&exchange=\${exchange}\`;
-              const response = await fetch(url);
-              
-              if (!response.ok) {
-                throw new Error(\`HTTP error! status: \${response.status}\`);
-              }
-              
-              return response.json();
-            } catch (error) {
-              console.error('Fetch error:', error);
-              throw error;
-            }
-          }
-
-          // Fetch real stock data from Alpha Vantage via proxy
-          async function fetchStockData(symbol, exchange = 'NSE') {
-            try {
-              const data = await makeRateLimitedRequest(symbol, exchange);
-              
-              // Check for API errors
-              if (data.error) {
-                throw new Error(data.error);
-              }
-              
-              if (data['Error Message']) {
-                throw new Error('Invalid stock symbol or not found');
-              }
-              
-              if (data['Note']) {
-                throw new Error('API rate limit reached. Please wait a minute.');
-              }
-              
-              if (!data['Time Series (Daily)']) {
-                throw new Error('No data available for this symbol');
-              }
-              
-              const timeSeries = data['Time Series (Daily)'];
-              const dates = Object.keys(timeSeries).sort().reverse();
-              
-              if (dates.length === 0) {
-                throw new Error('No trading data available');
-              }
-              
-              // Extract price and volume data
-              const prices = [];
-              const volumes = [];
-              
-              dates.forEach(date => {
-                const dayData = timeSeries[date];
-                prices.push(parseFloat(dayData['4. close']));
-                volumes.push(parseFloat(dayData['5. volume']));
-              });
-              
-              const currentPrice = prices[0];
-              const previousClose = prices[1];
-              const change = currentPrice - previousClose;
-              const changePercent = (change / previousClose) * 100;
-              
-              const todayData = timeSeries[dates[0]];
-              
-              return {
-                symbol: \`\${symbol}.\${exchange}\`,
-                name: symbol,
-                current: currentPrice,
-                change: change,
-                changePercent: changePercent,
-                volume: volumes[0],
-                dayHigh: parseFloat(todayData['2. high']),
-                dayLow: parseFloat(todayData['3. low']),
-                prices: prices,
-                volumes: volumes,
-                timestamp: new Date().toLocaleTimeString(),
-                lastUpdate: dates[0]
-              };
-            } catch (error) {
-              console.error(\`Error fetching \${symbol}:\`, error);
-              return null;
-            }
-          }
-
-          // Technical Analysis Functions
-          function calculateSMA(prices, period) {
-            if (!prices || prices.length < period) return null;
-            const sum = prices.slice(0, period).reduce((a, b) => a + b, 0);
-            return sum / period;
-          }
-
-          function calculateRSI(prices, period = 14) {
-            if (!prices || prices.length < period + 1) return 50;
-            
-            let gains = 0;
-            let losses = 0;
-            
-            for (let i = 1; i <= period; i++) {
-              const change = prices[i - 1] - prices[i];
-              if (change > 0) gains += change;
-              else losses += Math.abs(change);
-            }
-            
-            const avgGain = gains / period;
-            const avgLoss = losses / period;
-            
-            if (avgLoss === 0) return 100;
-            const rs = avgGain / avgLoss;
-            return 100 - (100 / (1 + rs));
-          }
-
-          function calculateMACD(prices) {
-            if (!prices || prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
-            
-            const ema12 = calculateEMA(prices, 12);
-            const ema26 = calculateEMA(prices, 26);
-            const macd = ema12 - ema26;
-            const signal = macd * 0.2;
-            
-            return {
-              macd: macd,
-              signal: signal,
-              histogram: macd - signal
-            };
-          }
-
-          function calculateEMA(prices, period) {
-            if (!prices || prices.length < period) return prices ? prices[0] : 0;
-            
-            const multiplier = 2 / (period + 1);
-            let ema = calculateSMA(prices.slice(0, period), period);
-            
-            for (let i = period; i < Math.min(prices.length, 50); i++) {
-              ema = (prices[i] - ema) * multiplier + ema;
-            }
-            
-            return ema;
-          }
-
-          function calculateBollingerBands(prices, period = 20) {
-            const sma = calculateSMA(prices, period);
-            if (!sma) return { upper: 0, middle: 0, lower: 0 };
-            
-            const variance = prices.slice(0, period).reduce((sum, price) => {
-              return sum + Math.pow(price - sma, 2);
-            }, 0) / period;
-            
-            const stdDev = Math.sqrt(variance);
-            
-            return {
-              upper: sma + (stdDev * 2),
-              middle: sma,
-              lower: sma - (stdDev * 2)
-            };
-          }
-
-          function generateTradingSignal(data) {
-            const prices = data.prices || [];
-            const volumes = data.volumes || [];
-            const current = data.current;
-            
-            if (prices.length < 30) {
-              return { 
-                signal: 'HOLD', 
-                strength: 1, 
-                reason: 'Insufficient data',
-                indicators: {
-                  rsi: 'N/A',
-                  macd: 'N/A',
-                  bb_position: 'N/A'
-                }
-              };
-            }
-            
-            const rsi = calculateRSI(prices);
-            const macd = calculateMACD(prices);
-            const bb = calculateBollingerBands(prices);
-            const sma20 = calculateSMA(prices, 20);
-            const sma50 = calculateSMA(prices, 50);
-            const avgVolume = calculateSMA(volumes, 20);
-            const currentVolume = volumes[0];
-            
-            let buySignals = 0;
-            let sellSignals = 0;
-            let reasons = [];
-            
-            // RSI signals
-            if (rsi < 30) {
-              buySignals += 2;
-              reasons.push('RSI Oversold');
-            } else if (rsi > 70) {
-              sellSignals += 2;
-              reasons.push('RSI Overbought');
-            }
-            
-            // MACD signals
-            if (macd.histogram > 0 && macd.macd > macd.signal) {
-              buySignals += 1;
-              reasons.push('MACD Bullish');
-            } else if (macd.histogram < 0 && macd.macd < macd.signal) {
-              sellSignals += 1;
-              reasons.push('MACD Bearish');
-            }
-            
-            // Bollinger Bands signals
-            if (current <= bb.lower) {
-              buySignals += 2;
-              reasons.push('At Lower BB');
-            } else if (current >= bb.upper) {
-              sellSignals += 2;
-              reasons.push('At Upper BB');
-            }
-            
-            // Moving Average signals
-            if (sma20 && sma50 && sma20 > sma50 && current > sma20) {
-              buySignals += 1;
-              reasons.push('Golden Cross');
-            } else if (sma20 && sma50 && sma20 < sma50 && current < sma20) {
-              sellSignals += 1;
-              reasons.push('Death Cross');
-            }
-            
-            // Volume confirmation
-            if (avgVolume && currentVolume > avgVolume * 1.5) {
-              if (buySignals > sellSignals) buySignals += 1;
-              if (sellSignals > buySignals) sellSignals += 1;
-              reasons.push('High Volume');
-            }
-            
-            // Determine signal
-            let signal, strength;
-            if (buySignals >= 4) {
-              signal = 'STRONG BUY';
-              strength = Math.min(5, Math.floor(buySignals / 2));
-            } else if (buySignals >= 2) {
-              signal = 'BUY';
-              strength = Math.min(4, Math.floor(buySignals / 1.5));
-            } else if (sellSignals >= 4) {
-              signal = 'STRONG SELL';
-              strength = Math.min(5, Math.floor(sellSignals / 2));
-            } else if (sellSignals >= 2) {
-              signal = 'SELL';
-              strength = Math.min(4, Math.floor(sellSignals / 1.5));
-            } else {
-              signal = 'HOLD';
-              strength = 2;
-              reasons = ['Mixed signals', 'Wait for confirmation'];
+      // Fetch historical data for technical analysis
+      const historicalRes = await fetch(
+        `/api/kite/historical?instrument_token=${quote.instrument_token}&interval=day`
+      )
+      
+      let prices: number[] = []
+      let volumes: number[] = []
+      
+      if (historicalRes.ok) {
+        const histData = await historicalRes.json()
+        prices = histData.data.map((d: any) => d.close).reverse()
+        volumes = histData.data.map((d: any) => d.volume).reverse()
             }
             
             return {
-              signal: signal,
-              strength: strength,
-              reason: reasons.join(', '),
-              indicators: {
-                rsi: rsi.toFixed(2),
-                macd: macd.macd.toFixed(2),
-                bb_position: bb.upper > bb.lower ? ((current - bb.lower) / (bb.upper - bb.lower) * 100).toFixed(1) + '%' : 'N/A'
-              }
-            };
-          }
-
-          function createStockCard(stock, analysis) {
-            const changeClass = stock.change >= 0 ? 'positive' : 'negative';
-            const signalClass = analysis.signal.includes('BUY') ? 'buy-signal' : 
-                               analysis.signal.includes('SELL') ? 'sell-signal' : 'hold-signal';
-            
-            return \`
-                <div class="card">
-                    <div class="stock-header">
-                        <span class="stock-symbol">\${stock.name}</span>
-                        <button class="remove-btn" onclick="removeFromWatchlist('\${stock.name}')">Remove</button>
-                    </div>
-                    <div class="stock-price">₹\${stock.current.toFixed(2)}</div>
-                    <span class="price-change \${changeClass}">
-                        \${stock.change >= 0 ? '▲' : '▼'} \${Math.abs(stock.change).toFixed(2)} 
-                        (\${stock.changePercent.toFixed(2)}%)
-                    </span>
-                    
-                    <div class="indicators">
-                        <div class="indicator">
-                            <div class="indicator-label">RSI (14)</div>
-                            <div class="indicator-value">\${analysis.indicators.rsi}</div>
-                        </div>
-                        <div class="indicator">
-                            <div class="indicator-label">MACD</div>
-                            <div class="indicator-value">\${analysis.indicators.macd}</div>
-                        </div>
-                        <div class="indicator">
-                            <div class="indicator-label">Day Range</div>
-                            <div class="indicator-value">₹\${stock.dayLow.toFixed(2)} - ₹\${stock.dayHigh.toFixed(2)}</div>
-                        </div>
-                        <div class="indicator">
-                            <div class="indicator-label">Volume</div>
-                            <div class="indicator-value">\${(stock.volume / 1000000).toFixed(2)}M</div>
-                        </div>
-                    </div>
-                    
-                    <div class="signal-box \${signalClass}">
-                        <h3>\${analysis.signal}</h3>
-                        <p style="font-size: 0.9em; margin-top: 8px;">\${analysis.reason}</p>
-                        <div class="signal-strength">
-                            \${Array(5).fill('').map((_, i) => 
-                                \`<div class="strength-bar \${i < analysis.strength ? 'filled' : ''}"></div>\`
-                            ).join('')}
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 10px; color: rgba(255,255,255,0.5); font-size: 0.85em;">
-                        Last trade: \${stock.lastUpdate} | Updated: \${stock.timestamp}
-                    </div>
-                </div>
-            \`;
+        symbol: symbol,
+        name: quote.tradingsymbol || symbol,
+        instrumentToken: quote.instrument_token,
+        current: quote.last_price,
+        change: quote.last_price - quote.ohlc.close,
+        changePercent: ((quote.last_price - quote.ohlc.close) / quote.ohlc.close) * 100,
+        volume: quote.volume,
+        dayHigh: quote.ohlc.high,
+        dayLow: quote.ohlc.low,
+        open: quote.ohlc.open,
+        prices: prices,
+        volumes: volumes,
+        timestamp: new Date().toLocaleTimeString()
+      }
+    } catch (err: any) {
+      console.error(`Error fetching ${symbol}:`, err)
+      return null
+    }
           }
 
           async function updateWatchlist() {
-            if (isLoading) return;
-            isLoading = true;
-            
-            const container = document.getElementById('stockCards');
-            const watchlistContainer = document.getElementById('watchlistItems');
-            
-            container.innerHTML = '<div class="loading">Fetching live data from Vercel API... (This may take a moment due to API rate limits)</div>';
-            watchlistContainer.innerHTML = '';
-            
-            let cards = '';
-            let watchlistHTML = '';
-            let errorCount = 0;
-            let successCount = 0;
+    if (isLoading || !authStatus.authenticated) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    const newStockData: Record<string, StockData> = {}
+    const newActiveSignals: any[] = []
             
             for (const symbol of watchlist) {
-              console.log(\`Processing \${symbol}...\`);
-              const data = await fetchStockData(symbol);
+      const data = await fetchStockQuote(symbol)
               
               if (data) {
-                successCount++;
-                console.log(\`✓ Successfully loaded \${symbol}\`, data);
-                stockData[symbol] = data;
-                const analysis = generateTradingSignal(data);
+        newStockData[symbol] = data
+        
+        // Generate trading signal
+        const analysis = generateTradingSignal(data.current, data.prices, data.volumes)
                 
                 if (analysis.signal.includes('STRONG')) {
-                  activeSignals.push({
+          newActiveSignals.push({
                     symbol: symbol,
                     signal: analysis.signal,
                     price: data.current,
                     reason: analysis.reason,
                     time: new Date().toLocaleString()
-                  });
-                }
-                
-                cards += createStockCard(data, analysis);
-                
-                const changeClass = data.change >= 0 ? 'positive' : 'negative';
-                watchlistHTML += \`
-                    <div class="watchlist-item">
-                        <div>
-                            <strong>\${symbol}</strong>
-                            <span style="margin-left: 15px;">₹\${data.current.toFixed(2)}</span>
-                        </div>
-                        <span class="price-change \${changeClass}">
-                            \${data.changePercent.toFixed(2)}%
-                        </span>
-                    </div>
-                \`;
-              } else {
-                errorCount++;
-                console.error(\`✗ Failed to load \${symbol}\`);
-                cards += \`
-                    <div class="card">
-                        <div class="error">
-                            <strong>\${symbol}</strong>
-                            <p>Failed to load data. Please try again later.</p>
-                        </div>
-                    </div>
-                \`;
-              }
-            }
-            
-            console.log(\`Loaded \${successCount} stocks, \${errorCount} errors\`);
-            
-            if (errorCount > 0 && errorCount === watchlist.length) {
-              container.innerHTML = '<div class="error">Failed to load any stocks. Please check your internet connection and try again.</div>';
-            } else if (cards) {
-              container.innerHTML = cards;
-            } else {
-              container.innerHTML = '<div class="error">No stocks in watchlist</div>';
-            }
-            
-            watchlistContainer.innerHTML = watchlistHTML || '<div>Add stocks to get started</div>';
-            
-            updateActiveSignals();
-            isLoading = false;
-            
-            // Update status
-            const statusAlert = document.getElementById('statusAlert');
-            if (successCount > 0) {
-              statusAlert.className = 'alert';
-              statusAlert.innerHTML = \`<strong>✅ Live Mode:</strong> Loaded \${successCount} stocks successfully!\`;
-            }
+          })
+        }
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+
+    setStockData(newStockData)
+    setActiveSignals(prev => [...prev, ...newActiveSignals].slice(-15))
+    setIsLoading(false)
           }
 
           function addStock() {
-            const input = document.getElementById('stockInput');
-            const exchange = document.getElementById('exchange').value;
-            const symbol = input.value.trim().toUpperCase();
+    const symbol = stockInput.trim().toUpperCase()
             
             if (!symbol) {
-              alert('Please enter a stock symbol');
-              return;
+      alert('Please enter a stock symbol')
+      return
             }
             
             if (watchlist.includes(symbol)) {
-              alert('Stock already in watchlist');
-              return;
-            }
-            
-            watchlist.push(symbol);
-            input.value = '';
-            
-            // Update status
-            const statusAlert = document.getElementById('statusAlert');
-            statusAlert.className = 'alert warning';
-            statusAlert.innerHTML = '<strong>⏳ Loading:</strong> Fetching data for ' + symbol + '...';
-            
-            updateWatchlist().then(() => {
-              statusAlert.className = 'alert';
-              statusAlert.innerHTML = '<strong>✅ Live Mode:</strong> Connected to Alpha Vantage API - Real-time NSE/BSE data';
-            });
-          }
+      alert('Stock already in watchlist')
+      return
+    }
+    
+    setWatchlist([...watchlist, symbol])
+    setStockInput('')
+    
+    // Fetch data for new stock
+    if (authStatus.authenticated) {
+      fetchStockQuote(symbol).then(data => {
+        if (data) {
+          setStockData(prev => ({ ...prev, [symbol]: data }))
+        }
+      })
+    }
+  }
 
-          function removeFromWatchlist(symbol) {
-            watchlist = watchlist.filter(s => s !== symbol);
-            delete stockData[symbol];
-            updateWatchlist();
-          }
-
-          function switchTab(event, tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-              tab.style.display = 'none';
-            });
-            
-            document.querySelectorAll('.tab').forEach(tab => {
-              tab.classList.remove('active');
-            });
-            
-            document.getElementById(\`\${tabName}Tab\`).style.display = 'block';
-            event.target.classList.add('active');
+  function removeFromWatchlist(symbol: string) {
+    setWatchlist(watchlist.filter(s => s !== symbol))
+    const newData = { ...stockData }
+    delete newData[symbol]
+    setStockData(newData)
           }
 
           async function runScreener() {
-            const screenerResults = document.getElementById('screenerResults');
-            screenerResults.innerHTML = '<div class="loading">Running screener on popular NSE stocks... This will take 2-3 minutes due to API rate limits.</div>';
+    if (!authStatus.authenticated) {
+      alert('Please login first')
+      return
+    }
+
+    const stocksToScreen = screenerGroups[activeScreenerGroup]
+    
+    if (!stocksToScreen || stocksToScreen.length === 0) {
+      alert('Please add stocks to screen first')
+      return
+    }
+
+    setIsLoading(true)
+    setActiveTab('screener')
             
-            const stocksToScreen = [
-              'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
-              'WIPRO', 'ITC', 'HINDUNILVR', 'BHARTIARTL', 'ASIANPAINT',
-              'MARUTI', 'TITAN', 'BAJFINANCE', 'TATASTEEL', 'SUNPHARMA'
-            ];
-            
-            let results = [];
-            let processed = 0;
+    const results: any[] = []
             
             for (const symbol of stocksToScreen) {
-              processed++;
-              screenerResults.innerHTML = \`<div class="loading">Screening \${symbol}... (\${processed}/\${stocksToScreen.length})</div>\`;
-              
-              const data = await fetchStockData(symbol, 'NSE');
+      const data = await fetchStockQuote(symbol)
               if (data) {
-                const analysis = generateTradingSignal(data);
+        const analysis = generateTradingSignal(data.current, data.prices, data.volumes)
                 results.push({
                   symbol: symbol,
                   price: data.current,
@@ -916,14 +298,658 @@ export default function StockTracker() {
                   signal: analysis.signal,
                   strength: analysis.strength,
                   reason: analysis.reason
-                });
-              }
-            }
-            
-            results.sort((a, b) => b.strength - a.strength);
-            
-            let html = \`
-                <table class="screener-table">
+        })
+      }
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    
+    results.sort((a, b) => b.strength - a.strength)
+    setScreenerResults(results)
+    setIsLoading(false)
+  }
+
+  function addToWatchlist(symbol: string) {
+    if (!watchlist.includes(symbol)) {
+      setWatchlist([...watchlist, symbol])
+      alert(`${symbol} added to watchlist. Click Refresh to load data.`)
+    } else {
+      alert('Already in watchlist')
+    }
+  }
+
+  function addToScreener() {
+    const symbol = screenerInput.trim().toUpperCase()
+    
+    if (!symbol) {
+      alert('Please enter a stock symbol')
+      return
+    }
+    
+    const currentStocks = screenerGroups[activeScreenerGroup] || []
+    
+    if (currentStocks.includes(symbol)) {
+      alert('Stock already in screener group')
+      return
+    }
+    
+    setScreenerGroups({
+      ...screenerGroups,
+      [activeScreenerGroup]: [...currentStocks, symbol]
+    })
+    
+    setScreenerInput('')
+    alert(`${symbol} added to ${activeScreenerGroup} screener`)
+  }
+
+  function removeFromScreener(symbol: string) {
+    const currentStocks = screenerGroups[activeScreenerGroup] || []
+    
+    setScreenerGroups({
+      ...screenerGroups,
+      [activeScreenerGroup]: currentStocks.filter(s => s !== symbol)
+    })
+  }
+
+  function createNewScreenerGroup() {
+    const groupName = prompt('Enter name for new screener group:')
+    
+    if (!groupName || !groupName.trim()) {
+      return
+    }
+    
+    const trimmedName = groupName.trim()
+    
+    if (screenerGroups[trimmedName]) {
+      alert('A group with this name already exists')
+      return
+    }
+    
+    setScreenerGroups({
+      ...screenerGroups,
+      [trimmedName]: []
+    })
+    
+    setActiveScreenerGroup(trimmedName)
+    alert(`Created new screener group: ${trimmedName}`)
+  }
+
+  function deleteScreenerGroup() {
+    if (activeScreenerGroup === 'Popular Large Caps') {
+      alert('Cannot delete the default group')
+      return
+    }
+    
+    if (!confirm(`Delete screener group "${activeScreenerGroup}"?`)) {
+      return
+    }
+    
+    const newGroups = { ...screenerGroups }
+    delete newGroups[activeScreenerGroup]
+    
+    setScreenerGroups(newGroups)
+    setActiveScreenerGroup('Popular Large Caps')
+  }
+
+  // Intraday Functions
+  async function runMorningScreener() {
+    if (!authStatus.authenticated) {
+      alert('Please login first')
+      return
+    }
+
+    // Check if market is closed
+    const today = new Date().getDay()
+    if (today === 0 || today === 6) {
+      alert('⚠️ Market is closed on weekends!\n\nThe Morning Screener only works on trading days (Monday-Friday).\n\nPlease try again on a trading day between 9:00 AM - 3:30 PM.')
+      return
+    }
+
+    setIsLoading(true)
+    setIsDemoData(false)
+    const signals: IntradaySignal[] = []
+    let processedCount = 0
+
+    for (const symbol of intradayWatchlist) {
+      try {
+        // Fetch current quote
+        const data = await fetchStockQuote(symbol)
+        if (!data) continue
+
+        // Fetch intraday 5-minute candles
+        const intradayRes = await fetch(
+          `/api/kite/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
+        )
+
+        if (!intradayRes.ok) continue
+
+        const intradayData = await intradayRes.json()
+        const candles: IntradayCandle[] = intradayData.data.map((d: any) => ({
+          timestamp: new Date(d.date),
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+          volume: d.volume
+        }))
+
+        if (candles.length === 0) continue
+
+        // Check for gap
+        const yesterdayClose = data.prices[1] || data.current
+        const todayOpen = candles[0].open
+        const gap = detectGap(yesterdayClose, todayOpen)
+
+        // Calculate RSI from daily data
+        const rsi = data.prices.length >= 14 
+          ? parseFloat(generateTradingSignal(data.current, data.prices, data.volumes).indicators.rsi)
+          : 50
+
+        // Generate intraday signal
+        const marketOpen = new Date()
+        marketOpen.setHours(9, 15, 0, 0)
+        
+        const signal = generateIntradaySignal(
+          symbol,
+          candles,
+          data.current,
+          rsi,
+          marketOpen
+        )
+
+        if (signal) {
+          signals.push({
+            ...signal,
+            reasons: [
+              ...signal.reasons,
+              gap.hasGap ? `${gap.gapType.replace('_', ' ')}: ${gap.gapPercent > 0 ? '+' : ''}${gap.gapPercent.toFixed(2)}%` : ''
+            ].filter(Boolean)
+          })
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+      } catch (err) {
+        console.error(`Error screening ${symbol}:`, err)
+      }
+    }
+
+    // Sort by signal strength
+    signals.sort((a, b) => b.strength - a.strength)
+    setIntradaySignals(signals)
+    setIsLoading(false)
+  }
+
+  function addToIntradayWatchlist(symbol: string) {
+    const upperSymbol = symbol.toUpperCase().trim()
+    
+    if (!upperSymbol) {
+      alert('⚠️ Please enter a stock symbol')
+      return
+    }
+    
+    if (intradayWatchlist.includes(upperSymbol)) {
+      alert(`⚠️ ${upperSymbol} is already in your intraday watchlist`)
+      return
+    }
+    
+    setIntradayWatchlist([...intradayWatchlist, upperSymbol])
+    setIntradayStockInput('')
+    alert(`✅ ${upperSymbol} added to intraday watchlist`)
+  }
+
+  function removeFromIntradayWatchlist(symbol: string) {
+    setIntradayWatchlist(intradayWatchlist.filter(s => s !== symbol))
+  }
+
+  function bulkAddToIntradayWatchlist() {
+    const newStocks = watchlist.filter(s => !intradayWatchlist.includes(s))
+    
+    if (newStocks.length === 0) {
+      alert('⚠️ All main watchlist stocks are already in intraday watchlist')
+      return
+    }
+    
+    setIntradayWatchlist([...intradayWatchlist, ...newStocks])
+    alert(`✅ Added ${newStocks.length} stocks from main watchlist: ${newStocks.join(', ')}`)
+  }
+
+  function clearIntradayWatchlist() {
+    if (intradayWatchlist.length === 0) {
+      alert('⚠️ Intraday watchlist is already empty')
+      return
+    }
+    
+    if (confirm(`Clear all ${intradayWatchlist.length} stocks from intraday watchlist?`)) {
+      setIntradayWatchlist([])
+      alert('✅ Intraday watchlist cleared')
+    }
+  }
+
+  // Demo Mode - Generate mock signals for testing
+  function runDemoScreener() {
+    setIsLoading(true)
+    setIsDemoData(true)
+    
+    // Simulate API delay
+    setTimeout(() => {
+      const mockSignals: IntradaySignal[] = [
+        {
+          symbol: 'RELIANCE',
+          signal_type: 'BUY',
+          strength: 5,
+          entry_price: 2845.50,
+          target: 2916.63,
+          stop_loss: 2817.05,
+          reasons: [
+            'Momentum: +0.85%',
+            'Volume: 2.8x avg',
+            'RSI: 58 (Good range)',
+            'Above VWAP (₹2,840.20)',
+            'Support at ₹2,815.00',
+            'GAP UP: +1.2%'
+          ],
+          risk_reward: 2.5,
+          position_size_suggested: 35
+        },
+        {
+          symbol: 'TCS',
+          signal_type: 'BUY',
+          strength: 4,
+          entry_price: 3850.75,
+          target: 3947.02,
+          stop_loss: 3812.24,
+          reasons: [
+            'Momentum: +0.65%',
+            'Volume: 2.2x avg',
+            'RSI: 62 (Good range)',
+            'Above VWAP (₹3,845.30)',
+            'Support at ₹3,810.00'
+          ],
+          risk_reward: 2.5,
+          position_size_suggested: 26
+        },
+        {
+          symbol: 'INFY',
+          signal_type: 'SELL',
+          strength: 3,
+          entry_price: 1456.30,
+          target: 1420.10,
+          stop_loss: 1470.92,
+          reasons: [
+            'Momentum: -0.72%',
+            'Volume: 2.5x avg',
+            'RSI: 68 (Near overbought)',
+            'Below VWAP (₹1,460.50)',
+            'GAP DOWN: -0.8%'
+          ],
+          risk_reward: 2.5,
+          position_size_suggested: 68
+        },
+        {
+          symbol: 'HDFCBANK',
+          signal_type: 'BUY',
+          strength: 5,
+          entry_price: 1642.80,
+          target: 1683.87,
+          stop_loss: 1626.37,
+          reasons: [
+            'Momentum: +0.95%',
+            'Volume: 3.1x avg',
+            'RSI: 55 (Good range)',
+            'Above VWAP (₹1,638.50)',
+            'Support at ₹1,625.00',
+            'GAP UP: +1.5%'
+          ],
+          risk_reward: 2.5,
+          position_size_suggested: 61
+        },
+        {
+          symbol: 'ICICIBANK',
+          signal_type: 'BUY',
+          strength: 4,
+          entry_price: 1089.20,
+          target: 1116.44,
+          stop_loss: 1078.31,
+          reasons: [
+            'Momentum: +0.55%',
+            'Volume: 2.6x avg',
+            'RSI: 60 (Good range)',
+            'Above VWAP (₹1,086.75)',
+            'Support at ₹1,077.00'
+          ],
+          risk_reward: 2.5,
+          position_size_suggested: 92
+        }
+      ]
+      
+      setIntradaySignals(mockSignals)
+      setIsLoading(false)
+    }, 2000) // 2 second delay to simulate API calls
+  }
+
+  const StockCard = ({ stock, analysis }: { stock: StockData; analysis: any }) => {
+    const changeClass = stock.change >= 0 ? 'positive' : 'negative'
+            const signalClass = analysis.signal.includes('BUY') ? 'buy-signal' : 
+                       analysis.signal.includes('SELL') ? 'sell-signal' : 'hold-signal'
+    
+    return (
+      <div className="card">
+        <div className="stock-header">
+          <span className="stock-symbol">{stock.name}</span>
+          <button className="remove-btn" onClick={() => removeFromWatchlist(stock.symbol)}>
+            Remove
+          </button>
+                    </div>
+        <div className="stock-price">₹{stock.current.toFixed(2)}</div>
+        <span className={`price-change ${changeClass}`}>
+          {stock.change >= 0 ? '▲' : '▼'} {Math.abs(stock.change).toFixed(2)} 
+          ({stock.changePercent.toFixed(2)}%)
+                    </span>
+                    
+        <div className="indicators">
+          <div className="indicator">
+            <div className="indicator-label">RSI (14)</div>
+            <div className="indicator-value">{analysis.indicators.rsi}</div>
+                        </div>
+          <div className="indicator">
+            <div className="indicator-label">MACD</div>
+            <div className="indicator-value">{analysis.indicators.macd}</div>
+                        </div>
+          <div className="indicator">
+            <div className="indicator-label">Day Range</div>
+            <div className="indicator-value">₹{stock.dayLow.toFixed(2)} - ₹{stock.dayHigh.toFixed(2)}</div>
+                        </div>
+          <div className="indicator">
+            <div className="indicator-label">Volume</div>
+            <div className="indicator-value">{(stock.volume / 1000000).toFixed(2)}M</div>
+                        </div>
+                    </div>
+                    
+        <div className={`signal-box ${signalClass}`}>
+          <h3>{analysis.signal}</h3>
+          <p style={{ fontSize: '0.9em', marginTop: '8px' }}>{analysis.reason}</p>
+          <div className="signal-strength">
+            {Array(5).fill('').map((_, i) => (
+              <div key={i} className={`strength-bar ${i < analysis.strength ? 'filled' : ''}`}></div>
+            ))}
+                        </div>
+                    </div>
+                    
+        <div style={{ textAlign: 'center', marginTop: '10px', color: 'rgba(255,255,255,0.5)', fontSize: '0.85em' }}>
+          Updated: {stock.timestamp}
+                    </div>
+                </div>
+    )
+  }
+
+  if (!authStatus.authenticated) {
+    return (
+      <div className="container">
+        <h1>🚀 Indian Stock Tracker - Zerodha Kite</h1>
+        
+        <div className="alert warning">
+          <strong>🔐 Authentication Required</strong>
+          <p style={{ marginTop: '10px' }}>Please login with your Zerodha account to access live NSE/BSE market data.</p>
+          <button onClick={handleLogin} style={{ marginTop: '15px' }}>
+            Login with Zerodha Kite
+          </button>
+        </div>
+
+        {error && (
+          <div className="error">
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        <div className="card">
+          <h3>Features</h3>
+          <ul style={{ marginTop: '15px', lineHeight: '1.8' }}>
+            <li>✅ Real-time NSE/BSE stock quotes via Zerodha Kite Connect</li>
+            <li>📊 Advanced technical analysis (RSI, MACD, Bollinger Bands)</li>
+            <li>🎯 Automated trading signals (Buy/Sell/Hold)</li>
+            <li>🔍 Stock screener for top opportunities</li>
+            <li>📈 Historical data for comprehensive analysis</li>
+            <li>⚡ Live market data with no rate limits</li>
+          </ul>
+        </div>
+
+        <style jsx>{`
+          ${require('./styles').default}
+        `}</style>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container">
+      <h1>🚀 Indian Stock Tracker - Zerodha Kite</h1>
+
+      <div className={error ? "alert warning" : "alert"}>
+        {error ? (
+          <>
+            <strong>⚠️ Error:</strong> {error}
+          </>
+        ) : (
+          <>
+            <strong>✅ Connected:</strong> Logged in as {authStatus.user?.userId}
+            <button onClick={handleLogout} style={{ marginLeft: '15px', padding: '5px 15px', fontSize: '0.9em' }}>
+              Logout
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="controls">
+        <div className="input-group">
+          <input
+            type="text"
+            value={stockInput}
+            onChange={(e) => setStockInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addStock()}
+            placeholder="Enter Stock Symbol (e.g., RELIANCE, TCS, INFY)"
+          />
+          <select value={exchange} onChange={(e) => setExchange(e.target.value)}>
+            <option value="NSE">NSE (India)</option>
+            <option value="BSE">BSE (India)</option>
+          </select>
+          <button onClick={addStock}>Add to Watchlist</button>
+          <button onClick={runScreener} disabled={isLoading}>Run Screener</button>
+          <button onClick={updateWatchlist} disabled={isLoading}>
+            🔄 {isLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      <div className="tabs">
+        <button 
+          className={`tab ${activeTab === 'watchlist' ? 'active' : ''}`}
+          onClick={() => setActiveTab('watchlist')}
+        >
+          Watchlist
+        </button>
+        <button 
+          className={`tab ${activeTab === 'screener' ? 'active' : ''}`}
+          onClick={() => setActiveTab('screener')}
+        >
+          Screener
+        </button>
+        <button 
+          className={`tab ${activeTab === 'signals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('signals')}
+        >
+          Active Signals
+        </button>
+        <button 
+          className={`tab ${activeTab === 'intraday' ? 'active' : ''}`}
+          onClick={() => setActiveTab('intraday')}
+        >
+          🔥 Intraday
+        </button>
+      </div>
+
+      {activeTab === 'watchlist' && (
+                        <div>
+          <div className="watchlist">
+            <h3>Your Watchlist</h3>
+            <div>
+              {watchlist.map(symbol => {
+                const data = stockData[symbol]
+                if (!data) return (
+                  <div key={symbol} className="watchlist-item">
+                    <strong>{symbol}</strong>
+                    <span>Loading...</span>
+                        </div>
+                )
+                
+                const changeClass = data.change >= 0 ? 'positive' : 'negative'
+                return (
+                  <div key={symbol} className="watchlist-item">
+                    <div>
+                      <strong>{symbol}</strong>
+                      <span style={{ marginLeft: '15px' }}>₹{data.current.toFixed(2)}</span>
+                    </div>
+                    <span className={`price-change ${changeClass}`}>
+                      {data.changePercent.toFixed(2)}%
+                        </span>
+                    </div>
+                )
+              })}
+                        </div>
+                    </div>
+          
+          <div className="dashboard">
+            {watchlist.map(symbol => {
+              const data = stockData[symbol]
+              if (!data) return (
+                <div key={symbol} className="card">
+                  <div className="loading">Loading {symbol}...</div>
+                </div>
+              )
+              
+              const analysis = generateTradingSignal(data.current, data.prices, data.volumes)
+              return <StockCard key={symbol} stock={data} analysis={analysis} />
+            })}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'screener' && (
+        <div>
+          <div className="strategy-info">
+            <h3>📊 Custom Screener Groups</h3>
+            <p><strong>Momentum Breakout:</strong> Stocks breaking above resistance with high volume</p>
+            <p><strong>Oversold Bounce:</strong> Stocks at RSI &lt; 30 ready for reversal</p>
+            <p><strong>Trend Following:</strong> Stocks in strong uptrend with good momentum</p>
+          </div>
+
+          <div className="controls" style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Select Screener Group:
+              </label>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <select 
+                  value={activeScreenerGroup} 
+                  onChange={(e) => setActiveScreenerGroup(e.target.value)}
+                  style={{ flex: '1', minWidth: '200px' }}
+                >
+                  {Object.keys(screenerGroups).map(group => (
+                    <option key={group} value={group}>
+                      {group} ({screenerGroups[group].length} stocks)
+                    </option>
+                  ))}
+                </select>
+                <button onClick={createNewScreenerGroup}>
+                  ➕ New Group
+                </button>
+                {activeScreenerGroup !== 'Popular Large Caps' && (
+                  <button 
+                    onClick={deleteScreenerGroup}
+                    style={{ background: 'rgba(255, 0, 100, 0.3)', color: '#ff0064' }}
+                  >
+                    🗑️ Delete Group
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Add Stock to {activeScreenerGroup}:
+              </label>
+              <div className="input-group">
+                <input
+                  type="text"
+                  value={screenerInput}
+                  onChange={(e) => setScreenerInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addToScreener()}
+                  placeholder="Enter stock symbol (e.g., ADANIENT)"
+                  style={{ flex: '1' }}
+                />
+                <button onClick={addToScreener}>Add to Screener</button>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Stocks in {activeScreenerGroup}: ({screenerGroups[activeScreenerGroup]?.length || 0})
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '8px',
+                padding: '10px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                minHeight: '50px'
+              }}>
+                {screenerGroups[activeScreenerGroup]?.length > 0 ? (
+                  screenerGroups[activeScreenerGroup].map(symbol => (
+                    <span 
+                      key={symbol}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'rgba(79, 172, 254, 0.2)',
+                        border: '1px solid rgba(79, 172, 254, 0.5)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {symbol}
+                      <button 
+                        onClick={() => removeFromScreener(symbol)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ff0064',
+                          cursor: 'pointer',
+                          padding: '0',
+                          fontSize: '16px',
+                          lineHeight: '1'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                    No stocks added. Add stocks above to screen them.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="screener-results">
+            <h3>Top Opportunities</h3>
+            {isLoading ? (
+              <div className="loading">Screening stocks... Please wait...</div>
+            ) : screenerResults.length === 0 ? (
+              <p>Click "Run Screener" to find trading opportunities</p>
+            ) : (
+              <table className="screener-table">
                     <thead>
                         <tr>
                             <th>Symbol</th>
@@ -935,61 +961,42 @@ export default function StockTracker() {
                         </tr>
                     </thead>
                     <tbody>
-            \`;
-            
-            results.forEach(stock => {
-              const changeClass = stock.change >= 0 ? 'positive' : 'negative';
+                  {screenerResults.map(stock => {
+                    const changeClass = stock.change >= 0 ? 'positive' : 'negative'
               const signalClass = stock.signal.includes('BUY') ? 'positive' : 
-                                 stock.signal.includes('SELL') ? 'negative' : 'neutral';
-              
-              html += \`
-                    <tr>
-                        <td><strong>\${stock.symbol}</strong></td>
-                        <td>₹\${stock.price.toFixed(2)}</td>
-                        <td class="\${changeClass}">\${stock.change.toFixed(2)}%</td>
-                        <td class="\${signalClass}">\${stock.signal}</td>
-                        <td style="font-size: 0.9em;">\${stock.reason}</td>
+                                       stock.signal.includes('SELL') ? 'negative' : 'neutral'
+                    return (
+                      <tr key={stock.symbol}>
+                        <td><strong>{stock.symbol}</strong></td>
+                        <td>₹{stock.price.toFixed(2)}</td>
+                        <td className={changeClass}>{stock.change.toFixed(2)}%</td>
+                        <td className={signalClass}>{stock.signal}</td>
+                        <td style={{ fontSize: '0.9em' }}>{stock.reason}</td>
                         <td>
-                            <button onclick="addToWatchlist('\${stock.symbol}')" style="font-size: 0.9em; padding: 5px 10px;">
+                          <button 
+                            onClick={() => addToWatchlist(stock.symbol)}
+                            style={{ fontSize: '0.9em', padding: '5px 10px' }}
+                          >
                                 Add
                             </button>
                         </td>
                     </tr>
-                \`;
-            });
-            
-            html += '</tbody></table>';
-            screenerResults.innerHTML = html;
-            
-            // Switch to screener tab
-            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-            document.getElementById('screenerTab').style.display = 'block';
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab')[1].classList.add('active');
-          }
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
-          function addToWatchlist(symbol) {
-            if (!watchlist.includes(symbol)) {
-              watchlist.push(symbol);
-              alert(\`\${symbol} added to watchlist. Click Refresh to load data.\`);
-            } else {
-              alert('Already in watchlist');
-            }
-          }
-
-          function updateActiveSignals() {
-            const signalsContainer = document.getElementById('activeSignals');
-            
-            if (activeSignals.length === 0) {
-              signalsContainer.innerHTML = '<p>No active strong signals at the moment. Run the screener to find opportunities.</p>';
-              return;
-            }
-            
-            // Keep only recent signals (last 15)
-            activeSignals = activeSignals.slice(-15);
-            
-            let html = \`
-                <table class="screener-table">
+      {activeTab === 'signals' && (
+        <div className="screener-results">
+          <h3>Active Trading Signals</h3>
+          {activeSignals.length === 0 ? (
+            <p>No active strong signals. Refresh your watchlist or run the screener to find opportunities.</p>
+          ) : (
+            <table className="screener-table">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -1000,65 +1007,426 @@ export default function StockTracker() {
                         </tr>
                     </thead>
                     <tbody>
-            \`;
-            
-            activeSignals.slice().reverse().forEach(signal => {
-              const signalClass = signal.signal.includes('BUY') ? 'positive' : 'negative';
-              html += \`
-                    <tr>
-                        <td>\${signal.time}</td>
-                        <td><strong>\${signal.symbol}</strong></td>
-                        <td class="\${signalClass}">\${signal.signal}</td>
-                        <td>₹\${signal.price.toFixed(2)}</td>
-                        <td>\${signal.reason}</td>
+                {activeSignals.slice().reverse().map((signal, idx) => {
+                  const signalClass = signal.signal.includes('BUY') ? 'positive' : 'negative'
+                  return (
+                    <tr key={idx}>
+                      <td>{signal.time}</td>
+                      <td><strong>{signal.symbol}</strong></td>
+                      <td className={signalClass}>{signal.signal}</td>
+                      <td>₹{signal.price.toFixed(2)}</td>
+                      <td>{signal.reason}</td>
                     </tr>
-                \`;
-            });
-            
-            html += '</tbody></table>';
-            signalsContainer.innerHTML = html;
-          }
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
-          function refreshAll() {
-            if (!isLoading) {
-              const statusAlert = document.getElementById('statusAlert');
-              statusAlert.className = 'alert warning';
-              statusAlert.innerHTML = '<strong>⏳ Refreshing:</strong> Fetching latest data...';
-              
-              updateWatchlist().then(() => {
-                statusAlert.className = 'alert';
-                statusAlert.innerHTML = '<strong>✅ Updated:</strong> Data refreshed successfully!';
-                
-                setTimeout(() => {
-                  statusAlert.innerHTML = '<strong>✅ Live Mode:</strong> Connected to Alpha Vantage API - Real-time NSE/BSE data';
-                }, 3000);
-              });
+      {activeTab === 'intraday' && (
+        <div>
+          {/* Market Status Banner */}
+          {(() => {
+            const today = new Date().getDay()
+            const isWeekend = today === 0 || today === 6
+            
+            if (isWeekend) {
+              return (
+                <div className="alert warning" style={{ 
+                  background: 'rgba(255, 69, 0, 0.2)',
+                  border: '1px solid rgba(255, 69, 0, 0.5)'
+                }}>
+                  <strong>🚫 Market Closed - {today === 0 ? 'Sunday' : 'Saturday'}</strong>
+                  <p style={{ marginTop: '10px', fontSize: '0.9em' }}>
+                    The intraday screener only works on trading days (Monday-Friday, 9:00 AM - 3:30 PM).
+                    <br />
+                    Come back on Monday to use the Morning Screener!
+                  </p>
+                </div>
+              )
             }
-          }
-
-          // Initialize on load
-          document.addEventListener('DOMContentLoaded', () => {
-            updateWatchlist();
             
-            // Add enter key support for stock input
-            document.getElementById('stockInput').addEventListener('keypress', (e) => {
-              if (e.key === 'Enter') {
-                addStock();
-              }
-            });
-          });
+            return (
+              <div className="alert" style={{ 
+                background: marketStatus.isOpen 
+                  ? 'rgba(0, 255, 100, 0.2)' 
+                  : 'rgba(255, 193, 7, 0.2)',
+                border: `1px solid ${marketStatus.isOpen ? 'rgba(0, 255, 100, 0.5)' : 'rgba(255, 193, 7, 0.5)'}`
+              }}>
+                <strong>🕐 Market Status:</strong> {marketStatus.phase.toUpperCase().replace('_', ' ')}
+                {marketStatus.minutesToOpen && ` - Opens in ${marketStatus.minutesToOpen} minutes`}
+                {marketStatus.minutesToClose && ` - Closes in ${Math.floor(marketStatus.minutesToClose / 60)}h ${marketStatus.minutesToClose % 60}m`}
+              </div>
+            )
+          })()}
 
-          // Expose functions to window
-          window.addStock = addStock;
-          window.removeFromWatchlist = removeFromWatchlist;
-          window.switchTab = switchTab;
-          window.runScreener = runScreener;
-          window.refreshAll = refreshAll;
-          window.addToWatchlist = addToWatchlist;
-        `,
-          }}
-        />
-      </body>
-    </html>
+          {/* Morning Screener Section */}
+          <div className="strategy-info">
+            <h3>🌅 Morning Screener (9:00-9:30 AM)</h3>
+            <p><strong>Gap Up/Down:</strong> Stocks with significant overnight moves</p>
+            <p><strong>High Volume:</strong> Stocks with volume {'>'} 2x average</p>
+            <p><strong>Breakout Candidates:</strong> Strong momentum in first 15 minutes</p>
+          </div>
+
+          {/* Intraday Watchlist Manager */}
+          <div className="controls" style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                Intraday Watchlist: ({intradayWatchlist.length} stocks)
+              </label>
+              
+              {/* Add Stock Input */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  value={intradayStockInput}
+                  onChange={(e) => setIntradayStockInput(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                      addToIntradayWatchlist(intradayStockInput)
+                    }
+                  }}
+                  placeholder="Enter symbol (e.g., WIPRO)"
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '14px'
+                  }}
+                />
+                <button 
+                  onClick={() => addToIntradayWatchlist(intradayStockInput)}
+                  disabled={!intradayStockInput.trim()}
+                  style={{ 
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  ➕ Add
+                </button>
+                <button 
+                  onClick={bulkAddToIntradayWatchlist}
+                  style={{ 
+                    padding: '10px 15px',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    background: 'rgba(79, 172, 254, 0.2)',
+                    border: '1px solid rgba(79, 172, 254, 0.5)'
+                  }}
+                  title="Import all stocks from main watchlist"
+                >
+                  📥 Import
+                </button>
+                <button 
+                  onClick={clearIntradayWatchlist}
+                  disabled={intradayWatchlist.length === 0}
+                  style={{ 
+                    padding: '10px 15px',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    background: 'rgba(255, 0, 100, 0.2)',
+                    border: '1px solid rgba(255, 0, 100, 0.5)'
+                  }}
+                  title="Clear all stocks from intraday watchlist"
+                >
+                  🗑️ Clear
+                </button>
+              </div>
+
+              {/* Stock Tags */}
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '8px',
+                padding: '10px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                minHeight: '50px'
+              }}>
+                {intradayWatchlist.length === 0 ? (
+                  <p style={{ 
+                    margin: 0, 
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontSize: '0.9em',
+                    padding: '5px'
+                  }}>
+                    No stocks in intraday watchlist. Add some above or import from main watchlist.
+                  </p>
+                ) : (
+                  intradayWatchlist.map(symbol => (
+                    <span 
+                      key={symbol}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'rgba(255, 165, 0, 0.2)',
+                        border: '1px solid rgba(255, 165, 0, 0.5)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '0.9em'
+                      }}
+                    >
+                      {symbol}
+                      <button 
+                        onClick={() => removeFromIntradayWatchlist(symbol)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ff0064',
+                          cursor: 'pointer',
+                          padding: '0',
+                          fontSize: '16px',
+                          lineHeight: '1'
+                        }}
+                        title={`Remove ${symbol}`}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={runMorningScreener} 
+                disabled={isLoading || !authStatus.authenticated || new Date().getDay() === 0 || new Date().getDay() === 6}
+                style={{ flex: 1, fontSize: '16px', padding: '15px' }}
+              >
+                {isLoading 
+                  ? '🔍 Screening...' 
+                  : (new Date().getDay() === 0 || new Date().getDay() === 6)
+                    ? '🚫 Market Closed (Weekend)'
+                    : '🚀 Run Morning Screener'}
+              </button>
+              
+              <button 
+                onClick={runDemoScreener}
+                disabled={isLoading}
+                style={{ 
+                  flex: 1, 
+                  fontSize: '16px', 
+                  padding: '15px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '2px solid rgba(102, 126, 234, 0.5)'
+                }}
+              >
+                {isLoading ? '🎬 Loading Demo...' : '🎭 Demo Mode (Test UI)'}
+              </button>
+            </div>
+            
+            {(new Date().getDay() === 0 || new Date().getDay() === 6) && (
+              <div style={{ 
+                marginTop: '10px', 
+                padding: '12px',
+                background: 'rgba(102, 126, 234, 0.1)',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <p style={{ 
+                  color: 'rgba(255, 193, 7, 1)',
+                  fontSize: '0.9em',
+                  margin: 0,
+                  marginBottom: '5px'
+                }}>
+                  💡 <strong>Market Closed:</strong> The screener will work on Monday morning when the market opens!
+                </p>
+                <p style={{ 
+                  color: 'rgba(102, 126, 234, 1)',
+                  fontSize: '0.85em',
+                  margin: 0
+                }}>
+                  🎭 Try <strong>Demo Mode</strong> to see how the screener results will look!
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Intraday Signals Results */}
+          <div className="screener-results">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0 }}>📊 Intraday Entry Signals</h3>
+              {isDemoData && (
+                <span style={{
+                  padding: '6px 12px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '1px solid rgba(102, 126, 234, 0.5)',
+                  borderRadius: '6px',
+                  fontSize: '0.75em',
+                  fontWeight: 'bold',
+                  letterSpacing: '0.5px'
+                }}>
+                  🎭 DEMO DATA
+                </span>
+              )}
+            </div>
+            {intradaySignals.length === 0 ? (
+              <p>
+                {isLoading 
+                  ? 'Analyzing stocks for intraday opportunities...' 
+                  : 'Click "Run Morning Screener" to find intraday trading opportunities'}
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {intradaySignals.map((signal, idx) => {
+                  const signalColor = signal.signal_type === 'BUY' 
+                    ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
+                    : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
+
+                  return (
+                    <div 
+                      key={idx}
+                      className="card"
+                      style={{
+                        background: signalColor.bg,
+                        border: `2px solid ${signalColor.border}`
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <div>
+                          <h2 style={{ fontSize: '1.8em', margin: 0, color: signalColor.text }}>
+                            {signal.symbol}
+                          </h2>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginTop: '5px' }}>
+                            ₹{signal.entry_price.toFixed(2)}
+                          </div>
+                        </div>
+                        <div style={{ 
+                          padding: '10px 20px', 
+                          background: signalColor.border,
+                          color: '#000',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          fontSize: '1.2em'
+                        }}>
+                          {signal.signal_type}
+                        </div>
+                      </div>
+
+                      {/* Signal Strength */}
+                      <div style={{ marginBottom: '15px' }}>
+                        <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.7)', marginBottom: '5px' }}>
+                          Signal Strength:
+                        </div>
+                        <div className="signal-strength">
+                          {Array(5).fill('').map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`strength-bar ${i < signal.strength ? 'filled' : ''}`}
+                              style={{ background: i < signal.strength ? signalColor.border : 'rgba(255,255,255,0.1)' }}
+                            ></div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Entry Details */}
+                      <div className="indicators">
+                        <div className="indicator">
+                          <div className="indicator-label">🎯 Target</div>
+                          <div className="indicator-value" style={{ color: '#00ff64' }}>
+                            ₹{signal.target.toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.6)' }}>
+                            +{((signal.target - signal.entry_price) / signal.entry_price * 100).toFixed(2)}%
+                          </div>
+                        </div>
+
+                        <div className="indicator">
+                          <div className="indicator-label">🛑 Stop Loss</div>
+                          <div className="indicator-value" style={{ color: '#ff0064' }}>
+                            ₹{signal.stop_loss.toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.6)' }}>
+                            -{((signal.entry_price - signal.stop_loss) / signal.entry_price * 100).toFixed(2)}%
+                          </div>
+                        </div>
+
+                        <div className="indicator">
+                          <div className="indicator-label">⚖️ Risk:Reward</div>
+                          <div className="indicator-value">
+                            1:{signal.risk_reward.toFixed(2)}
+                          </div>
+                        </div>
+
+                        <div className="indicator">
+                          <div className="indicator-label">📦 Position Size</div>
+                          <div className="indicator-value">
+                            {signal.position_size_suggested} shares
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reasons */}
+                      <div style={{ 
+                        marginTop: '15px', 
+                        padding: '12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+                          ✓ Entry Reasons:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          {signal.reasons.map((reason, i) => (
+                            <div key={i} style={{ fontSize: '0.9em' }}>
+                              • {reason}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <button 
+                        onClick={() => addToWatchlist(signal.symbol)}
+                        style={{ 
+                          width: '100%', 
+                          marginTop: '15px',
+                          padding: '12px',
+                          fontSize: '1em',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        📊 Add to Watchlist
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Info Box */}
+          <div style={{ 
+            marginTop: '20px',
+            padding: '15px',
+            background: 'rgba(79, 172, 254, 0.1)',
+            border: '1px solid rgba(79, 172, 254, 0.3)',
+            borderRadius: '10px'
+          }}>
+            <h4 style={{ marginBottom: '10px' }}>📚 How to Use Morning Screener:</h4>
+            <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+              <li><strong>Best Time:</strong> Run between 9:00-9:30 AM for pre-market analysis</li>
+              <li><strong>Entry Conditions:</strong> All 5 conditions must match (Momentum, Volume, RSI, VWAP, Support)</li>
+              <li><strong>Risk Management:</strong> Always use suggested stop-loss and targets</li>
+              <li><strong>Position Sizing:</strong> Follow the suggested position size (1% risk per trade)</li>
+              <li><strong>Exit Strategy:</strong> Exit at target (2-3%), stop-loss (0.5-1%), or 3:00 PM</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        ${require('./styles').default}
+      `}</style>
+    </div>
   )
 }
