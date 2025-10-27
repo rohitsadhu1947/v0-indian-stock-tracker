@@ -39,7 +39,7 @@ export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
   const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday'>('watchlist')
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe'>('watchlist')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -78,6 +78,14 @@ export default function StockTracker() {
   const [entryAlerts, setEntryAlerts] = useState<any[]>([])
   const [isMonitoringWatch, setIsMonitoringWatch] = useState(false)
   const [watchMonitorInterval, setWatchMonitorInterval] = useState(120) // 2 minutes default
+  
+  // Universe Scanner states
+  const [universeScans, setUniverseScans] = useState<any[]>([])
+  const [isScanningUniverse, setIsScanningUniverse] = useState(false)
+  const [scanResults, setScanResults] = useState<any[]>([])
+  const [selectedSector, setSelectedSector] = useState<string>('All')
+  const [minVolume, setMinVolume] = useState(100000) // 1 lakh minimum volume
+  const [minGapPercent, setMinGapPercent] = useState(0.5) // 0.5% gap minimum
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -1196,7 +1204,7 @@ export default function StockTracker() {
       conditions.momentum = true
       conditionsMet++
       reasons.push(`✅ Momentum: ${priceChange.toFixed(2)}%`)
-              } else {
+            } else {
       reasons.push(`⏳ Momentum: ${priceChange.toFixed(2)}% (waiting)`)
     }
 
@@ -1252,7 +1260,7 @@ export default function StockTracker() {
       ? data.current * 0.99   // 1% stop loss
       : data.current * 1.01
 
-    return {
+            return {
       conditions,
       conditionsMet,
       reasons,
@@ -1260,6 +1268,144 @@ export default function StockTracker() {
       target,
       stopLoss
     }
+  }
+
+  // ========== UNIVERSE SCANNER FUNCTIONS ==========
+
+  // Scan NIFTY 500 for best intraday candidates
+  async function scanUniverse() {
+    setIsScanningUniverse(true)
+    setIsLoading(true)
+
+    try {
+      console.log('🔍 Scanning NIFTY 500 universe for intraday candidates...')
+
+      // Fetch universe stocks
+      const universeResponse = await fetch('/api/kite/universe')
+      if (!universeResponse.ok) throw new Error('Failed to fetch universe')
+      
+      const universeData = await universeResponse.json()
+      const stocks = universeData.data || []
+
+      console.log(`📊 Fetched ${stocks.length} stocks from universe`)
+
+      // Analyze each stock (batch processing)
+      const results: any[] = []
+      const batchSize = 20 // Process 20 stocks at a time
+      
+      for (let i = 0; i < Math.min(stocks.length, 200); i += batchSize) { // Limit to first 200 for speed
+        const batch = stocks.slice(i, i + batchSize)
+        
+        const batchResults = await Promise.all(
+          batch.map(async (stock: any) => {
+            try {
+              const data = await fetchStockQuote(stock.tradingsymbol)
+              
+              if (!data) return null
+
+              // Calculate intraday score
+              const gap = ((data.current - data.open) / data.open) * 100
+              const priceMove = Math.abs(gap)
+              const volumeRatio = data.volume / (data.volume / 2 || 1) // Rough estimate
+              
+              // Intraday score (0-100)
+              let score = 0
+              
+              // Gap score (0-40 points)
+              if (Math.abs(gap) >= minGapPercent) {
+                score += Math.min(Math.abs(gap) * 10, 40)
+              }
+              
+              // Volume score (0-30 points)
+              if (data.volume >= minVolume) {
+                score += Math.min((data.volume / minVolume) * 10, 30)
+              }
+              
+              // Volatility score (0-20 points) - based on day's range
+              const dayRange = ((data.dayHigh - data.dayLow) / data.open) * 100
+              score += Math.min(dayRange * 5, 20)
+              
+              // Liquidity bonus (0-10 points) - stocks with good volume
+              if (data.volume > minVolume * 2) {
+                score += 10
+              }
+
+              return {
+                symbol: stock.tradingsymbol,
+                current: data.current,
+                open: data.open,
+                high: data.dayHigh,
+                low: data.dayLow,
+                volume: data.volume,
+                gap: gap,
+                gapType: gap > 0 ? 'GAP_UP' : gap < 0 ? 'GAP_DOWN' : 'FLAT',
+                change: data.change,
+                changePercent: data.changePercent,
+                score: Math.round(score),
+                dayRange: dayRange,
+                reasons: [
+                  gap !== 0 ? `Gap: ${gap > 0 ? '+' : ''}${gap.toFixed(2)}%` : 'No gap',
+                  `Volume: ${(data.volume / 100000).toFixed(1)}L`,
+                  `Range: ${dayRange.toFixed(2)}%`,
+                  `Price: ₹${data.current.toFixed(2)}`
+                ]
+              }
+            } catch (err) {
+              console.error(`Error analyzing ${stock.tradingsymbol}:`, err)
+              return null
+            }
+          })
+        )
+
+        results.push(...batchResults.filter(r => r !== null))
+        console.log(`✅ Processed ${i + batchSize}/${Math.min(stocks.length, 200)} stocks`)
+      }
+
+      // Sort by score (highest first)
+      const sortedResults = results
+        .filter(r => r.score > 0) // Only stocks with some potential
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 50) // Top 50 candidates
+
+      setScanResults(sortedResults)
+      
+      alert(`✅ Scan complete!\n\nFound ${sortedResults.length} intraday candidates\nTop score: ${sortedResults[0]?.score || 0}/100`)
+
+    } catch (error: any) {
+      console.error('Universe scan error:', error)
+      alert(`❌ Scan failed: ${error.message}`)
+    } finally {
+      setIsScanningUniverse(false)
+      setIsLoading(false)
+    }
+  }
+
+  // Load top candidates into screener watchlists
+  function loadTopCandidates(count: number = 15) {
+    if (scanResults.length === 0) {
+      alert('⚠️ No scan results. Run Universe Scanner first!')
+      return
+    }
+
+    const topStocks = scanResults.slice(0, count).map(r => r.symbol)
+    
+    // Update intraday watchlist
+    setIntradayWatchlist(topStocks)
+    
+    // Update screener group
+    const updatedGroups = {
+      ...screenerGroups,
+      'Today\'s Top Picks': topStocks
+    }
+    setScreenerGroups(updatedGroups)
+    setActiveScreenerGroup('Today\'s Top Picks')
+
+    alert(`✅ Loaded top ${count} candidates!\n\n${topStocks.slice(0, 5).join(', ')}...\n\nReady to run screeners!`)
+  }
+
+  // Clear scan results
+  function clearScanResults() {
+    setScanResults([])
   }
 
   // Demo Mode - Generate mock signals for testing
@@ -1521,6 +1667,12 @@ export default function StockTracker() {
           onClick={() => setActiveTab('intraday')}
         >
           🔥 Intraday
+        </button>
+        <button 
+          className={`tab ${activeTab === 'universe' ? 'active' : ''}`}
+          onClick={() => setActiveTab('universe')}
+        >
+          🔍 Universe Scanner
         </button>
       </div>
 
@@ -3305,7 +3457,7 @@ export default function StockTracker() {
                     <th>Total Value</th>
                     <th>P&L</th>
                     <th>Time</th>
-                    <th>Action</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3379,9 +3531,9 @@ export default function StockTracker() {
                             }}
                           >
                             Close
-                          </button>
+                            </button>
                         </td>
-                      </tr>
+                    </tr>
 
                       {/* Exit Signal Alert Row */}
                       {exitSignal && (
@@ -3448,6 +3600,428 @@ export default function StockTracker() {
               </ul>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'universe' && (
+        <div>
+          <div className="strategy-info" style={{ 
+            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.2))',
+            border: '2px solid rgba(138, 43, 226, 0.5)'
+          }}>
+            <h2 style={{ fontSize: '1.8em', marginBottom: '10px' }}>🔍 Universe Scanner - NIFTY 500</h2>
+            <p style={{ fontSize: '1.1em', marginBottom: '15px' }}>
+              Automatically scan 200+ stocks to find the BEST intraday candidates based on gap, volume, and volatility!
+            </p>
+            <div style={{ 
+              background: 'rgba(0, 0, 0, 0.3)', 
+              padding: '15px', 
+              borderRadius: '10px',
+              marginTop: '15px'
+            }}>
+              <h3 style={{ marginBottom: '10px' }}>🎯 How it works:</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                <div>
+                  <strong>1. 📊 Scan Universe</strong><br/>
+                  <span style={{ fontSize: '0.9em', opacity: 0.8 }}>Analyzes 200+ stocks for intraday potential</span>
+                </div>
+                <div>
+                  <strong>2. 🎯 Smart Scoring</strong><br/>
+                  <span style={{ fontSize: '0.9em', opacity: 0.8 }}>Ranks stocks by gap, volume, volatility (0-100)</span>
+                </div>
+                <div>
+                  <strong>3. ✅ Load to Screeners</strong><br/>
+                  <span style={{ fontSize: '0.9em', opacity: 0.8 }}>One-click to populate watchlists & screeners</span>
+                </div>
+                <div>
+                  <strong>4. 🚀 Run Screeners</strong><br/>
+                  <span style={{ fontSize: '0.9em', opacity: 0.8 }}>Get precise entry signals for best candidates</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scanner Controls */}
+          <div className="controls" style={{ 
+            marginTop: '20px', 
+            padding: '20px', 
+            background: 'rgba(138, 43, 226, 0.1)',
+            border: '1px solid rgba(138, 43, 226, 0.3)',
+            borderRadius: '10px'
+          }}>
+            <h3 style={{ marginBottom: '15px' }}>⚙️ Scanner Settings</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  📊 Minimum Volume (shares)
+                </label>
+                <input
+                  type="number"
+                  value={minVolume}
+                  onChange={(e) => setMinVolume(Number(e.target.value))}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '1em',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: 'white'
+                  }}
+                />
+                <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                  Current: {(minVolume / 100000).toFixed(1)} Lakh shares
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  📈 Minimum Gap % (open vs yesterday close)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={minGapPercent}
+                  onChange={(e) => setMinGapPercent(Number(e.target.value))}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '1em',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: 'white'
+                  }}
+                />
+                <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                  Lower = more results, Higher = stricter filter
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+              <button
+                onClick={scanUniverse}
+                disabled={isScanningUniverse || !authStatus.authenticated}
+                style={{
+                  padding: '15px 30px',
+                  fontSize: '1.1em',
+                  fontWeight: 'bold',
+                  background: isScanningUniverse ? 'rgba(128, 128, 128, 0.3)' : 'linear-gradient(135deg, #8a2be2, #4b0082)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: isScanningUniverse ? 'not-allowed' : 'pointer',
+                  flex: '1',
+                  minWidth: '200px'
+                }}
+              >
+                {isScanningUniverse ? '🔄 Scanning...' : '🔍 Scan NIFTY 500 Universe'}
+              </button>
+
+              {scanResults.length > 0 && (
+                <>
+                  <button
+                    onClick={() => loadTopCandidates(15)}
+                    style={{
+                      padding: '15px 30px',
+                      fontSize: '1.1em',
+                      fontWeight: 'bold',
+                      background: 'linear-gradient(135deg, #00ff64, #00cc51)',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '10px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✅ Load Top 15 to Screeners
+                  </button>
+                  
+                  <button
+                    onClick={clearScanResults}
+                    style={{
+                      padding: '15px 30px',
+                      fontSize: '1.1em',
+                      fontWeight: 'bold',
+                      background: 'rgba(255, 0, 100, 0.2)',
+                      color: 'white',
+                      border: '1px solid rgba(255, 0, 100, 0.5)',
+                      borderRadius: '10px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Clear Results
+                  </button>
+                </>
+              )}
+            </div>
+
+            {!authStatus.authenticated && (
+              <div style={{
+                marginTop: '15px',
+                padding: '12px',
+                background: 'rgba(255, 193, 7, 0.2)',
+                border: '1px solid rgba(255, 193, 7, 0.5)',
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                ⚠️ Please login to use Universe Scanner
+              </div>
+            )}
+          </div>
+
+          {/* Scan Results */}
+          {scanResults.length > 0 && (
+            <div style={{ marginTop: '30px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px',
+                padding: '15px',
+                background: 'rgba(138, 43, 226, 0.1)',
+                border: '1px solid rgba(138, 43, 226, 0.3)',
+                borderRadius: '10px'
+              }}>
+                <h3 style={{ margin: 0 }}>🎯 Top Intraday Candidates</h3>
+                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
+                  {scanResults.length} stocks found
+                </div>
+              </div>
+
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.2)',
+                padding: '20px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <table className="screener-table" style={{ width: '100%' }}>
+                    <thead>
+                        <tr>
+                      <th>Rank</th>
+                            <th>Symbol</th>
+                      <th>Score</th>
+                      <th>Current Price</th>
+                      <th>Gap</th>
+                      <th>Type</th>
+                      <th>Volume</th>
+                      <th>Day Range</th>
+                      <th>Details</th>
+                      <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {scanResults.map((result, idx) => {
+                      const gapColor = result.gap > 0 ? '#00ff64' : result.gap < 0 ? '#ff0064' : '#ffc107'
+                      const scoreColor = result.score >= 70 ? '#00ff64' : 
+                                        result.score >= 50 ? '#ffc107' : 
+                                        result.score >= 30 ? '#ff9800' : '#ff0064'
+                      
+                      return (
+                        <tr key={idx}>
+                          <td>
+                            <div style={{
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              background: idx < 3 ? 'linear-gradient(135deg, #ffd700, #ffed4e)' : 
+                                         idx < 10 ? 'linear-gradient(135deg, #c0c0c0, #e8e8e8)' :
+                                         'rgba(255, 255, 255, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 'bold',
+                              color: idx < 10 ? '#000' : '#fff',
+                              margin: '0 auto'
+                            }}>
+                              {idx + 1}
+                            </div>
+                          </td>
+                          <td><strong style={{ fontSize: '1.1em' }}>{result.symbol}</strong></td>
+                          <td>
+                            <div style={{
+                              padding: '5px 12px',
+                              background: scoreColor,
+                              color: '#000',
+                              borderRadius: '20px',
+                              fontWeight: 'bold',
+                              display: 'inline-block'
+                            }}>
+                              {result.score}/100
+                            </div>
+                          </td>
+                          <td>₹{result.current.toFixed(2)}</td>
+                          <td>
+                            <div style={{
+                              padding: '5px 12px',
+                              background: gapColor,
+                              color: '#000',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              display: 'inline-block'
+                            }}>
+                              {result.gap >= 0 ? '+' : ''}{result.gap.toFixed(2)}%
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{
+                              padding: '5px 10px',
+                              background: result.gapType === 'GAP_UP' ? 'rgba(0, 255, 100, 0.2)' : 
+                                         result.gapType === 'GAP_DOWN' ? 'rgba(255, 0, 100, 0.2)' : 
+                                         'rgba(255, 193, 7, 0.2)',
+                              border: `1px solid ${result.gapType === 'GAP_UP' ? '#00ff64' : 
+                                                   result.gapType === 'GAP_DOWN' ? '#ff0064' : '#ffc107'}`,
+                              borderRadius: '6px',
+                              fontSize: '0.9em'
+                            }}>
+                              {result.gapType.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td>{(result.volume / 100000).toFixed(1)}L</td>
+                          <td>{result.dayRange.toFixed(2)}%</td>
+                          <td style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {result.reasons.join(' • ')}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => {
+                                  setIntradayWatchlist(prev => 
+                                    prev.includes(result.symbol) ? prev : [...prev, result.symbol]
+                                  )
+                                  alert(`✅ ${result.symbol} added to Intraday Watchlist!`)
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '0.9em',
+                                  background: 'rgba(0, 255, 100, 0.2)',
+                                  border: '1px solid #00ff64',
+                                  color: '#00ff64',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                + Intraday
+                              </button>
+                              <button
+                                onClick={() => addToTradeWatch(result.symbol, 'universe-scan', result)}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '0.9em',
+                                  background: 'rgba(138, 43, 226, 0.2)',
+                                  border: '1px solid #8a2be2',
+                                  color: '#8a2be2',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                👁️ Watch
+                              </button>
+                            </div>
+                          </td>
+                    </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Quick Stats */}
+              <div style={{
+                marginTop: '20px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '15px'
+              }}>
+                <div style={{
+                  padding: '15px',
+                  background: 'rgba(0, 255, 100, 0.1)',
+                  border: '1px solid rgba(0, 255, 100, 0.3)',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#00ff64' }}>
+                    {scanResults.filter(r => r.gapType === 'GAP_UP').length}
+                  </div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8 }}>Gap Up Stocks</div>
+                </div>
+                
+                <div style={{
+                  padding: '15px',
+                  background: 'rgba(255, 0, 100, 0.1)',
+                  border: '1px solid rgba(255, 0, 100, 0.3)',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#ff0064' }}>
+                    {scanResults.filter(r => r.gapType === 'GAP_DOWN').length}
+                  </div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8 }}>Gap Down Stocks</div>
+                </div>
+                
+                <div style={{
+                  padding: '15px',
+                  background: 'rgba(138, 43, 226, 0.1)',
+                  border: '1px solid rgba(138, 43, 226, 0.3)',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#8a2be2' }}>
+                    {scanResults.filter(r => r.score >= 70).length}
+                  </div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8 }}>High Score (70+)</div>
+                </div>
+                
+                <div style={{
+                  padding: '15px',
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#ffc107' }}>
+                    {Math.max(...scanResults.map(r => r.score))}
+                  </div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8 }}>Top Score</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {scanResults.length === 0 && !isScanningUniverse && (
+            <div style={{
+              marginTop: '30px',
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(138, 43, 226, 0.05)',
+              border: '2px dashed rgba(138, 43, 226, 0.3)',
+              borderRadius: '15px'
+            }}>
+              <div style={{ fontSize: '4em', marginBottom: '15px' }}>🔍</div>
+              <h3 style={{ marginBottom: '10px' }}>No Scan Results Yet</h3>
+              <p style={{ fontSize: '1.1em', opacity: 0.8, marginBottom: '20px' }}>
+                Click "Scan NIFTY 500 Universe" to find the best intraday trading candidates!
+              </p>
+              <div style={{
+                padding: '20px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '10px',
+                display: 'inline-block',
+                textAlign: 'left'
+              }}>
+                <h4 style={{ marginBottom: '10px' }}>💡 Pro Tips:</h4>
+                <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                  <li>Run scanner between <strong>9:00-9:30 AM</strong> for pre-market analysis</li>
+                  <li>Lower minimum gap % to find more candidates</li>
+                  <li>Higher volume = better liquidity & tighter spreads</li>
+                  <li>Top 15 stocks are automatically loaded to screeners</li>
+                  <li>Scan takes ~2-3 minutes to analyze 200+ stocks</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
