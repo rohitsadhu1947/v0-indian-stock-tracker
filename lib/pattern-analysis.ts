@@ -169,64 +169,76 @@ export function generateStockIntelligence(
   let recommendation: 'STRONG_BUY' | 'BUY' | 'WATCH' | 'SKIP' = 'WATCH';
   let historicalScore = 0;
 
-  // Analyze success rate
-  if (pattern.successRate >= 75) {
+  // Analyze success rate (MORE REALISTIC THRESHOLDS)
+  if (pattern.successRate >= 60) {
     reasons.push(`🔥 High Success Rate: ${pattern.successRate.toFixed(0)}% days move >2%`);
-    historicalScore += 30;
-  } else if (pattern.successRate >= 60) {
+    historicalScore += 35;
+  } else if (pattern.successRate >= 45) {
     reasons.push(`✅ Good Success Rate: ${pattern.successRate.toFixed(0)}% days move >2%`);
-    historicalScore += 20;
-  } else if (pattern.successRate < 40) {
+    historicalScore += 25;
+  } else if (pattern.successRate >= 30) {
+    reasons.push(`📊 Moderate Success: ${pattern.successRate.toFixed(0)}% days move >2%`);
+    historicalScore += 15;
+  } else {
     reasons.push(`⚠️ Low Success Rate: ${pattern.successRate.toFixed(0)}% days move >2%`);
-    historicalScore -= 10;
+    historicalScore += 5; // Still give some points
   }
 
-  // Analyze volatility consistency
-  if (pattern.volatilityConsistency >= 70) {
+  // Analyze volatility consistency (MORE LENIENT)
+  if (pattern.volatilityConsistency >= 60) {
     reasons.push(`📊 Consistent Volatility (${pattern.volatilityConsistency.toFixed(0)}%) - Predictable`);
     historicalScore += 20;
-  } else if (pattern.volatilityConsistency < 50) {
-    reasons.push(`⚠️ Erratic Volatility (${pattern.volatilityConsistency.toFixed(0)}%) - Unpredictable`);
-    historicalScore -= 10;
-  }
-
-  // Analyze momentum follow-through
-  if (pattern.momentumFollowThrough >= 70) {
-    reasons.push(`🚀 Strong Momentum Follow-through (${pattern.momentumFollowThrough.toFixed(0)}%)`);
-    historicalScore += 25;
-  } else if (pattern.momentumFollowThrough >= 55) {
-    reasons.push(`📈 Good Momentum (${pattern.momentumFollowThrough.toFixed(0)}%)`);
-    historicalScore += 15;
-  }
-
-  // Analyze average day range
-  if (pattern.averageDayRange >= 3) {
-    reasons.push(`💰 High Avg Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
-    historicalScore += 15;
-  } else if (pattern.averageDayRange >= 1.5) {
-    reasons.push(`📊 Good Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
+  } else if (pattern.volatilityConsistency >= 40) {
+    reasons.push(`📊 Moderate Volatility (${pattern.volatilityConsistency.toFixed(0)}%)`);
     historicalScore += 10;
   } else {
+    reasons.push(`⚠️ Erratic Volatility (${pattern.volatilityConsistency.toFixed(0)}%)`);
+    // Don't subtract points, just don't add
+  }
+
+  // Analyze momentum follow-through (LOWER THRESHOLDS)
+  if (pattern.momentumFollowThrough >= 60) {
+    reasons.push(`🚀 Strong Momentum Follow-through (${pattern.momentumFollowThrough.toFixed(0)}%)`);
+    historicalScore += 25;
+  } else if (pattern.momentumFollowThrough >= 45) {
+    reasons.push(`📈 Good Momentum (${pattern.momentumFollowThrough.toFixed(0)}%)`);
+    historicalScore += 15;
+  } else {
+    reasons.push(`📊 Momentum: ${pattern.momentumFollowThrough.toFixed(0)}%`);
+    historicalScore += 5; // Base points
+  }
+
+  // Analyze average day range (REALISTIC FOR INDIAN MARKETS)
+  if (pattern.averageDayRange >= 2.5) {
+    reasons.push(`💰 High Avg Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
+    historicalScore += 20;
+  } else if (pattern.averageDayRange >= 1.2) {
+    reasons.push(`📊 Good Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
+    historicalScore += 12;
+  } else if (pattern.averageDayRange >= 0.7) {
+    reasons.push(`📊 Moderate Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
+    historicalScore += 6;
+  } else {
     reasons.push(`⏳ Low Range: ${pattern.averageDayRange.toFixed(2)}% per day`);
-    historicalScore -= 15;
+    // Don't subtract, stocks can still be good
   }
 
   // Best entry strategy
   reasons.push(`🎯 Best Entry: ${pattern.bestEntry.replace('_', ' ')}`);
 
-  // Determine recommendation
-  if (historicalScore >= 70 && pattern.successRate >= 70) {
+  // Determine recommendation (REALISTIC THRESHOLDS)
+  if (historicalScore >= 70 && pattern.successRate >= 50) {
     recommendation = 'STRONG_BUY';
     reasons.unshift('🚨 STRONG INTRADAY CANDIDATE - High confidence based on patterns');
-  } else if (historicalScore >= 50 && pattern.successRate >= 60) {
+  } else if (historicalScore >= 50) {
     recommendation = 'BUY';
     reasons.unshift('✅ GOOD INTRADAY CANDIDATE - Solid historical performance');
-  } else if (historicalScore >= 30) {
+  } else if (historicalScore >= 25) {
     recommendation = 'WATCH';
     reasons.unshift('👀 WATCH - Moderate potential, needs confirmation');
   } else {
     recommendation = 'SKIP';
-    reasons.unshift('⏭️ SKIP - Poor historical performance for intraday');
+    reasons.unshift('⏭️ SKIP - Low activity for intraday');
   }
 
   // Calculate key levels
