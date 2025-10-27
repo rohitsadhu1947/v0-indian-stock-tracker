@@ -274,6 +274,8 @@ export default function StockTracker() {
       }
 
       // Fetch historical data for technical analysis
+      console.log(`📊 Fetching historical for ${symbol} (token: ${quote.instrument_token})`)
+      
       const historicalRes = await fetch(
         `/api/kite/historical?instrument_token=${quote.instrument_token}&interval=day`
       )
@@ -285,15 +287,18 @@ export default function StockTracker() {
         const histData = await historicalRes.json()
         const candles = histData.candles || histData.data || []
         
+        console.log(`📈 ${symbol}: Received ${candles.length} candles`)
+        
         // Kite returns objects {date, open, high, low, close, volume}
         if (candles.length > 0) {
           prices = candles.map((d: any) => d.close).reverse()
           volumes = candles.map((d: any) => d.volume).reverse()
+          console.log(`✅ ${symbol}: Parsed ${prices.length} prices, ${volumes.length} volumes`)
         } else {
-          console.warn(`${symbol}: No historical data available`)
+          console.warn(`⚠️ ${symbol}: No historical data available (candles array is empty)`)
         }
       } else {
-        console.warn(`${symbol}: Failed to fetch historical data (${historicalRes.status})`)
+        console.error(`❌ ${symbol}: Failed to fetch historical data (${historicalRes.status})`)
       }
             
             return {
