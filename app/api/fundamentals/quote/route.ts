@@ -11,12 +11,17 @@ export const dynamic = 'force-dynamic';
  * Fetches comprehensive fundamental data for a stock from Yahoo Finance
  */
 export async function GET(request: NextRequest) {
+  console.log('🚀 === FUNDAMENTALS API CALLED ===');
+  
   try {
     const searchParams = request.nextUrl.searchParams;
     const symbol = searchParams.get('symbol');
     const exchange = (searchParams.get('exchange') || 'NSE').toUpperCase() as 'NSE' | 'BSE';
     
+    console.log(`📥 Received request: symbol=${symbol}, exchange=${exchange}`);
+    
     if (!symbol) {
+      console.log('❌ No symbol provided');
       return NextResponse.json(
         { error: 'Symbol parameter is required' },
         { status: 400 }
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Convert to Yahoo Finance format (e.g., RELIANCE -> RELIANCE.NS)
     const yahooSymbol = convertToYahooSymbol(symbol, exchange);
     
-    console.log(`📊 Fetching fundamentals for ${yahooSymbol}...`);
+    console.log(`📊 Step 1: Trying Yahoo Finance quoteSummary for ${yahooSymbol}...`);
     
     // Fetch comprehensive data from Yahoo Finance
     // Using quoteSummary with multiple modules for complete picture
@@ -41,10 +46,12 @@ export async function GET(request: NextRequest) {
         ]
       });
     } catch (yahooError: any) {
-      console.error(`❌ Yahoo Finance API error for ${yahooSymbol}:`, yahooError.message);
+      console.error(`❌ Step 1 FAILED - Yahoo Finance quoteSummary error for ${yahooSymbol}:`);
+      console.error(`   Error type: ${yahooError.name}`);
+      console.error(`   Error message: ${yahooError.message}`);
       
       // Try alternate approach with just quote
-      console.log(`📊 Trying alternate approach for ${yahooSymbol}...`);
+      console.log(`📊 Step 2: Trying Yahoo Finance quote() API for ${yahooSymbol}...`);
       try {
         const quote = await yahooFinance.quote(yahooSymbol);
         
@@ -88,12 +95,16 @@ export async function GET(request: NextRequest) {
         });
         
       } catch (quoteError: any) {
-        console.error(`❌ Quote API also failed:`, quoteError.message);
+        console.error(`❌ Step 2 FAILED - Yahoo Finance quote() also failed:`);
+        console.error(`   Error type: ${quoteError.name}`);
+        console.error(`   Error message: ${quoteError.message}`);
         
         // Last resort: try Screener.in (Indian stock data)
-        console.log(`📊 Last attempt: trying Screener.in for ${symbol}...`);
+        console.log(`📊 Step 3: Trying Screener.in for ${symbol}...`);
         try {
           const screenerUrl = `https://www.screener.in/api/company/${symbol}/`;
+          console.log(`   Screener.in URL: ${screenerUrl}`);
+          
           const screenerResponse = await fetch(screenerUrl, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -101,11 +112,16 @@ export async function GET(request: NextRequest) {
             }
           });
           
+          console.log(`   Screener.in response status: ${screenerResponse.status}`);
+          
           if (screenerResponse.ok) {
             const screenerData = await screenerResponse.json();
             
+            console.log(`   Screener.in data received:`, screenerData ? 'Yes' : 'No');
+            console.log(`   Company name:`, screenerData?.name || 'N/A');
+            
             if (screenerData && screenerData.name) {
-              console.log(`✅ Retrieved data from Screener.in for ${symbol}`);
+              console.log(`✅ Step 3 SUCCESS - Retrieved data from Screener.in for ${symbol}`);
               
               const fundamentalData: FundamentalData = {
                 symbol: symbol.toUpperCase(),
@@ -148,11 +164,18 @@ export async function GET(request: NextRequest) {
               });
             }
           }
-        } catch (screenerError) {
-          console.error(`❌ Screener.in also failed:`, screenerError);
+        } catch (screenerError: any) {
+          console.error(`❌ Step 3 FAILED - Screener.in also failed:`);
+          console.error(`   Error type: ${screenerError.name}`);
+          console.error(`   Error message: ${screenerError.message}`);
         }
         
-        throw new Error(`Could not fetch data for ${symbol} from any source. Yahoo Finance: ${yahooError.message}, Quote: ${quoteError.message}`);
+        console.error(`💥 ALL 3 ATTEMPTS FAILED for ${symbol}`);
+        console.error(`   1. Yahoo quoteSummary: ${yahooError.message}`);
+        console.error(`   2. Yahoo quote: ${quoteError.message}`);
+        console.error(`   3. Screener.in: Failed or no data`);
+        
+        throw new Error(`Could not fetch data for ${symbol} from any source. Check terminal for detailed errors.`);
       }
     }
     
