@@ -116,6 +116,12 @@ export default function StockTracker() {
   const [fundamentalExchange, setFundamentalExchange] = useState<'NSE' | 'BSE'>('NSE')
   const [isFetchingFundamentals, setIsFetchingFundamentals] = useState(false)
   
+  // News states
+  const [stockNews, setStockNews] = useState<any[]>([])
+  const [marketNews, setMarketNews] = useState<any[]>([])
+  const [isFetchingNews, setIsFetchingNews] = useState(false)
+  const [newsTab, setNewsTab] = useState<'stock' | 'market'>('stock')
+  
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
   const [manualEntryPrice, setManualEntryPrice] = useState('')
@@ -1709,6 +1715,69 @@ export default function StockTracker() {
     setScanResults([])
   }
 
+  // Fetch stock-specific news
+  async function fetchStockNews(symbol?: string) {
+    const targetSymbol = symbol || fundamentalSymbol.trim().toUpperCase()
+    
+    if (!targetSymbol) {
+      alert('⚠️ Please enter a stock symbol first')
+      return
+    }
+    
+    setIsFetchingNews(true)
+    
+    try {
+      console.log(`📰 Fetching news for ${targetSymbol}...`)
+      
+      const response = await fetch(`/api/news/quote?symbol=${targetSymbol}&exchange=${fundamentalExchange}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch news')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.news) {
+        setStockNews(result.news)
+        console.log(`✅ Loaded ${result.count} news items for ${targetSymbol}`)
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching stock news:', error)
+      alert(`❌ Failed to fetch news: ${error.message}`)
+    } finally {
+      setIsFetchingNews(false)
+    }
+  }
+
+  // Fetch general market news
+  async function fetchMarketNews() {
+    setIsFetchingNews(true)
+    
+    try {
+      console.log('📰 Fetching market news...')
+      
+      const response = await fetch('/api/news/market')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch market news')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.news) {
+        setMarketNews(result.news)
+        console.log(`✅ Loaded ${result.count} market news items`)
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching market news:', error)
+      alert(`❌ Failed to fetch market news: ${error.message}`)
+    } finally {
+      setIsFetchingNews(false)
+    }
+  }
+
   // Fetch fundamental data for a stock
   async function fetchFundamentals() {
     const symbol = fundamentalSymbol.trim().toUpperCase()
@@ -1743,6 +1812,9 @@ export default function StockTracker() {
         
         console.log(`✅ ${symbol} fundamentals loaded`)
         console.log(`   Score: ${score.overall}/100 (${score.rating})`)
+        
+        // Auto-fetch news for this stock
+        fetchStockNews(symbol)
       } else {
         throw new Error('No data received')
       }
@@ -4898,6 +4970,146 @@ export default function StockTracker() {
                   })()}
                 </div>
               )}
+
+              {/* News Section */}
+              <div className="screener-results" style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                  <h4 style={{ margin: 0 }}>📰 Latest News</h4>
+                  
+                  {/* News Type Tabs */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => {
+                        setNewsTab('stock')
+                        if (stockNews.length === 0) fetchStockNews()
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: newsTab === 'stock' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
+                        border: newsTab === 'stock' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: newsTab === 'stock' ? 'bold' : 'normal'
+                      }}
+                    >
+                      {fundamentalData.symbol} News
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewsTab('market')
+                        if (marketNews.length === 0) fetchMarketNews()
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: newsTab === 'market' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
+                        border: newsTab === 'market' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: newsTab === 'market' ? 'bold' : 'normal'
+                      }}
+                    >
+                      Market News
+                    </button>
+                    <button
+                      onClick={() => newsTab === 'stock' ? fetchStockNews() : fetchMarketNews()}
+                      disabled={isFetchingNews}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        cursor: isFetchingNews ? 'not-allowed' : 'pointer',
+                        opacity: isFetchingNews ? 0.5 : 1
+                      }}
+                    >
+                      {isFetchingNews ? '🔄' : '🔄 Refresh'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* News Loading State */}
+                {isFetchingNews && (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', opacity: 0.7 }}>
+                    <div style={{ fontSize: '2em', marginBottom: '10px' }}>📰</div>
+                    <div>Fetching latest news...</div>
+                  </div>
+                )}
+
+                {/* News List */}
+                {!isFetchingNews && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(newsTab === 'stock' ? stockNews : marketNews).length === 0 ? (
+                      <div style={{ padding: '40px 20px', textAlign: 'center', opacity: 0.6 }}>
+                        <div style={{ fontSize: '2em', marginBottom: '10px' }}>📰</div>
+                        <div>No news articles loaded yet</div>
+                        <div style={{ fontSize: '0.9em', marginTop: '10px' }}>
+                          Click the {newsTab === 'stock' ? `"${fundamentalData.symbol} News"` : '"Market News"'} tab to load articles
+                        </div>
+                      </div>
+                    ) : (
+                      (newsTab === 'stock' ? stockNews : marketNews).slice(0, 10).map((item, index) => (
+                        <div key={index} style={{
+                          padding: '15px',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(item.link, '_blank')}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'
+                          e.currentTarget.style.transform = 'translateY(-2px)'
+                          e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.5)'
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'
+                          e.currentTarget.style.transform = 'translateY(0)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                        }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
+                            <div style={{ flex: 1 }}>
+                              <h5 style={{ 
+                                margin: 0, 
+                                marginBottom: '8px', 
+                                fontSize: '1.05em', 
+                                color: '#4facfe',
+                                fontWeight: 'bold'
+                              }}>
+                                {item.title}
+                              </h5>
+                              {item.snippet && (
+                                <p style={{ 
+                                  margin: 0, 
+                                  marginBottom: '8px', 
+                                  fontSize: '0.9em', 
+                                  opacity: 0.7,
+                                  lineHeight: '1.4'
+                                }}>
+                                  {item.snippet}
+                                </p>
+                              )}
+                              <div style={{ 
+                                display: 'flex', 
+                                gap: '15px', 
+                                fontSize: '0.85em', 
+                                opacity: 0.6 
+                              }}>
+                                <span>🏢 {item.source}</span>
+                                <span>⏰ {new Date(item.pubDate).toLocaleDateString()} {new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '1.5em', opacity: 0.5 }}>
+                              🔗
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
