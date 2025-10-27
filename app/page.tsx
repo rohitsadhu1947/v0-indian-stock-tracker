@@ -1454,6 +1454,9 @@ export default function StockTracker() {
               console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
             }
             
+            // DEBUG: Log RAW candles data from API
+            console.log(`🔍 ${stock.tradingsymbol} RAW CANDLES (first 2):`, candles.slice(0, 2))
+            
             // Convert to DailyCandle format
             const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
               date: new Date(c[0]),
