@@ -8,18 +8,32 @@
 
 ## 🚀 Overview
 
-A comprehensive Indian stock market tracking and analysis application with real-time data from **Zerodha Kite Connect API**. Features advanced technical analysis, automated trading signals, and a powerful stock screener.
+A comprehensive Indian stock market tracking and analysis application with real-time data from **Zerodha Kite Connect API**. Features advanced technical analysis, automated trading signals, powerful stock screeners, and AI-powered pattern recognition for intraday trading.
+
+### 📚 **NEW: Complete Documentation for Beginners!**
+
+- 📖 **[Complete User Guide](./USER_GUIDE.md)** - Everything you need to know (recommended start here!)
+- 🚀 **[Quick Reference Card](./QUICK_REFERENCE.md)** - Print and keep at your trading desk
+- 🔧 **[Migration Guide](./MIGRATION_GUIDE.md)** - For developers migrating from other APIs
 
 ### ✨ Key Features
 
-- 📊 **Real-Time Data** - Live NSE/BSE quotes with no rate limits
+#### Core Features:
+- 📊 **Real-Time Data** - Live NSE/BSE quotes with 60 days of historical data
 - 🔐 **Secure OAuth** - Zerodha authentication for data access
-- 📈 **Technical Analysis** - RSI, MACD, Bollinger Bands, SMA/EMA
-- 🎯 **Trading Signals** - Automated buy/sell/hold recommendations
-- 🔍 **Stock Screener** - Find momentum breakouts and oversold bounces
-- 📉 **Historical Data** - OHLC data for comprehensive analysis
+- 📈 **Technical Analysis** - RSI, MACD, Bollinger Bands, SMA/EMA with proper indicator periods
+- 🎯 **Trading Signals** - Automated buy/sell/hold recommendations with multiple confirmations
 - ⚡ **Fast & Reliable** - Server-side API with proper session management
 - 🎨 **Modern UI** - Beautiful gradient interface with glass-morphism
+
+#### Advanced Trading Tools:
+- 🔍 **Stock Screener** - Custom groups with technical analysis (Conservative/Moderate/Aggressive levels)
+- 🤖 **Universe Scanner** - AI-powered NIFTY 500 scanner with historical pattern analysis
+- 📊 **Intraday Tools** - Morning screener, position tracker, ORB scanner, Trade Watch
+- 📉 **Market Close Analyzer** - Evening analysis for tomorrow's game plan
+- 🎯 **Position Management** - Real-time P&L tracking with auto-refresh and exit signals
+- 🔔 **Smart Alerts** - Browser notifications for critical exit signals
+- 📱 **Multi-Screener Levels** - 3-level intraday screening (Conservative/Moderate/Aggressive)
 
 ## 🆕 What's New
 
@@ -224,14 +238,33 @@ components/
 
 ## 🎯 Roadmap
 
+### ✅ Completed:
+- [x] Zerodha Kite Connect integration
+- [x] Real-time watchlist & screener
+- [x] Advanced intraday trading tools
+- [x] Universe Scanner (AI-powered NIFTY 500 analysis)
+- [x] Historical pattern analysis
+- [x] Position tracking with P&L
+- [x] Opening Range Breakout (ORB) scanner
+- [x] Trade Watch system
+- [x] Market Close Analyzer
+- [x] Comprehensive documentation for beginners
+- [x] 60-day historical data for accurate indicators
+
+### 🚧 In Progress:
+- [ ] Export analysis to CSV/Excel
+- [ ] Better stock search with autocomplete
+
+### 🔮 Future Enhancements:
 - [ ] WebSocket integration for real-time streaming
-- [ ] Portfolio tracking (holdings & positions)
-- [ ] Order placement capability
-- [ ] Price alerts & notifications
 - [ ] TradingView chart integration
-- [ ] Multi-timeframe analysis
-- [ ] Strategy backtesting
-- [ ] Export analysis to PDF
+- [ ] Multi-timeframe analysis (1min, 5min, 15min, 1hr)
+- [ ] Strategy backtesting engine
+- [ ] Portfolio tracking (holdings & positions)
+- [ ] Order placement capability (requires additional API permissions)
+- [ ] Custom alerts & notifications (SMS/Email)
+- [ ] Mobile app (React Native)
+- [ ] Advanced pattern recognition (Head & Shoulders, Cup & Handle, etc.)
 
 ## 🤝 Contributing
 
