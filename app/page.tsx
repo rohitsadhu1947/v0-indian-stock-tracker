@@ -283,9 +283,18 @@ export default function StockTracker() {
       
       if (historicalRes.ok) {
         const histData = await historicalRes.json()
-        prices = histData.data.map((d: any) => d.close).reverse()
-        volumes = histData.data.map((d: any) => d.volume).reverse()
-            }
+        const candles = histData.candles || histData.data || []
+        
+        // Kite returns objects {date, open, high, low, close, volume}
+        if (candles.length > 0) {
+          prices = candles.map((d: any) => d.close).reverse()
+          volumes = candles.map((d: any) => d.volume).reverse()
+        } else {
+          console.warn(`${symbol}: No historical data available`)
+        }
+      } else {
+        console.warn(`${symbol}: Failed to fetch historical data (${historicalRes.status})`)
+      }
             
             return {
         symbol: symbol,
