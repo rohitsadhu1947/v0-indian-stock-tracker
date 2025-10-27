@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
-// Use require for yahoo-finance2 to work with Next.js
-const yahooFinance = require('yahoo-finance2').default;
+// Yahoo Finance 2 exports a CLASS that must be instantiated
+const YahooFinance = require('yahoo-finance2').default;
+const yahooFinance = new YahooFinance();
 
 /**
  * Simple test endpoint to verify Yahoo Finance API is working

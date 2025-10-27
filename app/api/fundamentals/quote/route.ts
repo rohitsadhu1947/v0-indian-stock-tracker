@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { convertToYahooSymbol, type FundamentalData } from '@/lib/fundamentals-utils';
 
-// Use dynamic import for yahoo-finance2 to work with Next.js edge runtime
-const yahooFinance = require('yahoo-finance2').default;
+// Yahoo Finance 2 exports a CLASS that must be instantiated
+const YahooFinance = require('yahoo-finance2').default;
+const yahooFinance = new YahooFinance();
 
 // Disable caching for this API route during development
 export const dynamic = 'force-dynamic';
