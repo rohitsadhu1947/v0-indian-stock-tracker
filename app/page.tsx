@@ -1901,9 +1901,71 @@ export default function StockTracker() {
         ) : (
           <>
             <strong>✅ Connected:</strong> Logged in as {authStatus.user?.userId}
-            <button onClick={handleLogout} style={{ marginLeft: '15px', padding: '5px 15px', fontSize: '0.9em' }}>
-              Logout
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <a 
+                href="https://github.com/rohitsadhu1947/v0-indian-stock-tracker/blob/main/USER_GUIDE.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.9em',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '2px solid rgba(102, 126, 234, 0.5)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(102, 126, 234, 0.4)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                📚 User Guide
+              </a>
+              <a 
+                href="https://github.com/rohitsadhu1947/v0-indian-stock-tracker/blob/main/QUICK_REFERENCE.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.9em',
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  border: '2px solid rgba(245, 87, 108, 0.5)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(245, 87, 108, 0.4)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                🚀 Quick Ref
+              </a>
+              <button onClick={handleLogout} style={{ padding: '6px 12px', fontSize: '0.9em' }}>
+                Logout
+              </button>
+            </div>
           </>
         )}
       </div>

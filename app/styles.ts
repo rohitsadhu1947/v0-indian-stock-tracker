@@ -33,7 +33,10 @@ export default `
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 20px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
   }
 
   .warning {
