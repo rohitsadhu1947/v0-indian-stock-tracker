@@ -22,6 +22,14 @@ import {
   type StockIntelligence,
   type MarketCloseAnalysis
 } from '@/lib/pattern-analysis'
+import {
+  calculateFundamentalScore,
+  getCombinedSignal,
+  formatLargeNumber,
+  getCompanySize,
+  type FundamentalData,
+  type FundamentalScore
+} from '@/lib/fundamentals-utils'
 
 interface StockData {
   symbol: string
@@ -48,7 +56,7 @@ export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
   const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe'>('watchlist')
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals'>('watchlist')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -100,6 +108,13 @@ export default function StockTracker() {
   // Market Close Analysis states
   const [marketCloseAnalysis, setMarketCloseAnalysis] = useState<MarketCloseAnalysis | null>(null)
   const [isAnalyzingClose, setIsAnalyzingClose] = useState(false)
+  
+  // Fundamentals states
+  const [fundamentalData, setFundamentalData] = useState<FundamentalData | null>(null)
+  const [fundamentalScore, setFundamentalScore] = useState<FundamentalScore | null>(null)
+  const [fundamentalSymbol, setFundamentalSymbol] = useState('')
+  const [fundamentalExchange, setFundamentalExchange] = useState<'NSE' | 'BSE'>('NSE')
+  const [isFetchingFundamentals, setIsFetchingFundamentals] = useState(false)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -1694,6 +1709,52 @@ export default function StockTracker() {
     setScanResults([])
   }
 
+  // Fetch fundamental data for a stock
+  async function fetchFundamentals() {
+    const symbol = fundamentalSymbol.trim().toUpperCase()
+            
+            if (!symbol) {
+      alert('⚠️ Please enter a stock symbol')
+      return
+    }
+    
+    setIsFetchingFundamentals(true)
+    setFundamentalData(null)
+    setFundamentalScore(null)
+    
+    try {
+      console.log(`📊 Fetching fundamentals for ${symbol}...`)
+      
+      const response = await fetch(`/api/fundamentals/quote?symbol=${symbol}&exchange=${fundamentalExchange}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch fundamentals')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        setFundamentalData(result.data)
+        
+        // Calculate fundamental score
+        const score = calculateFundamentalScore(result.data)
+        setFundamentalScore(score)
+        
+        console.log(`✅ ${symbol} fundamentals loaded`)
+        console.log(`   Score: ${score.overall}/100 (${score.rating})`)
+      } else {
+        throw new Error('No data received')
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching fundamentals:', error)
+      alert(`❌ Failed to fetch fundamentals for ${symbol}:\n\n${error.message}\n\nTry different exchange (NSE/BSE) or check symbol spelling.`)
+    } finally {
+      setIsFetchingFundamentals(false)
+    }
+  }
+
   // Demo Mode - Generate mock signals for testing
   function runDemoScreener() {
     setIsLoading(true)
@@ -2021,6 +2082,12 @@ export default function StockTracker() {
           onClick={() => setActiveTab('universe')}
         >
           🔍 Universe Scanner
+        </button>
+        <button 
+          className={`tab ${activeTab === 'fundamentals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('fundamentals')}
+        >
+          📊 Fundamentals
         </button>
       </div>
 
@@ -4430,6 +4497,429 @@ export default function StockTracker() {
                   <li>Higher volume = better liquidity & tighter spreads</li>
                   <li>Top 15 stocks are automatically loaded to screeners</li>
                   <li>Scan takes ~2-3 minutes to analyze 200+ stocks</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* FUNDAMENTALS TAB */}
+      {activeTab === 'fundamentals' && (
+        <div>
+          {/* Search Section */}
+          <div className="screener-results" style={{ marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '15px' }}>📊 Fundamental Analysis</h3>
+            <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '20px' }}>
+              Get comprehensive fundamental data, valuation metrics, and combined technical + fundamental signals
+            </p>
+            
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={fundamentalSymbol}
+                onChange={(e) => setFundamentalSymbol(e.target.value.toUpperCase())}
+                onKeyPress={(e) => e.key === 'Enter' && fetchFundamentals()}
+                placeholder="Enter Stock Symbol (e.g., RELIANCE, TCS)"
+                style={{
+                  flex: '1',
+                  minWidth: '250px',
+                  padding: '12px',
+                  fontSize: '15px'
+                }}
+              />
+              <select 
+                value={fundamentalExchange} 
+                onChange={(e) => setFundamentalExchange(e.target.value as 'NSE' | 'BSE')}
+                style={{ padding: '12px', fontSize: '15px' }}
+              >
+                <option value="NSE">NSE</option>
+                <option value="BSE">BSE</option>
+              </select>
+              <button
+                onClick={fetchFundamentals}
+                disabled={isFetchingFundamentals || !fundamentalSymbol}
+                style={{
+                  padding: '12px 30px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  background: isFetchingFundamentals 
+                    ? 'rgba(255, 255, 255, 0.2)' 
+                    : 'linear-gradient(45deg, #667eea, #764ba2)',
+                  cursor: isFetchingFundamentals || !fundamentalSymbol ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isFetchingFundamentals ? '🔄 Analyzing...' : '📊 Analyze'}
+              </button>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {isFetchingFundamentals && (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(102, 126, 234, 0.1)',
+              borderRadius: '15px',
+              border: '2px solid rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{ fontSize: '4em', marginBottom: '20px' }}>📊</div>
+              <h3>Fetching Fundamental Data...</h3>
+              <p style={{ opacity: 0.7, marginTop: '10px' }}>
+                Analyzing valuation, profitability, financial health, and growth metrics
+              </p>
+            </div>
+          )}
+
+          {/* Fundamental Data Display */}
+          {fundamentalData && fundamentalScore && !isFetchingFundamentals && (
+            <div>
+              {/* Company Header */}
+              <div className="screener-results" style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '2em', margin: 0, marginBottom: '5px', color: '#4facfe' }}>
+                      {fundamentalData.symbol}
+                    </h2>
+                    <p style={{ fontSize: '1.1em', margin: 0, opacity: 0.8 }}>
+                      {fundamentalData.companyName}
+                    </p>
+                    {fundamentalData.sector && (
+                      <p style={{ fontSize: '0.9em', margin: 0, marginTop: '5px', opacity: 0.6 }}>
+                        {fundamentalData.sector} • {getCompanySize(fundamentalData.marketCap)}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Overall Score */}
+                  <div style={{
+                    padding: '20px 30px',
+                    background: fundamentalScore.overall >= 70 
+                      ? 'linear-gradient(135deg, rgba(0, 255, 100, 0.2), rgba(0, 255, 100, 0.1))'
+                      : fundamentalScore.overall >= 50
+                      ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.1))'
+                      : 'linear-gradient(135deg, rgba(255, 0, 100, 0.2), rgba(255, 0, 100, 0.1))',
+                    border: `2px solid ${
+                      fundamentalScore.overall >= 70 ? '#00ff64' :
+                      fundamentalScore.overall >= 50 ? '#ffc107' : '#ff0064'
+                    }`,
+                    borderRadius: '12px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3em', fontWeight: 'bold', lineHeight: '1' }}>
+                      {fundamentalScore.overall}
+                    </div>
+                    <div style={{ fontSize: '0.9em', opacity: 0.8, marginTop: '5px' }}>
+                      out of 100
+                    </div>
+                    <div style={{
+                      fontSize: '1.2em',
+                      fontWeight: 'bold',
+                      marginTop: '10px',
+                      color: fundamentalScore.overall >= 70 ? '#00ff64' :
+                             fundamentalScore.overall >= 50 ? '#ffc107' : '#ff0064'
+                    }}>
+                      {fundamentalScore.rating}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Scores */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '15px',
+                marginBottom: '20px'
+              }}>
+                <div className="card">
+                  <h4 style={{ marginBottom: '10px', color: '#4facfe' }}>💰 Valuation</h4>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{fundamentalScore.valuation}/100</div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                    P/E, P/B, Dividend Yield
+                  </div>
+                </div>
+                
+                <div className="card">
+                  <h4 style={{ marginBottom: '10px', color: '#00ff64' }}>📈 Profitability</h4>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{fundamentalScore.profitability}/100</div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                    ROE, Profit Margins
+                  </div>
+                </div>
+                
+                <div className="card">
+                  <h4 style={{ marginBottom: '10px', color: '#ffc107' }}>🏦 Financial Health</h4>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{fundamentalScore.financial_health}/100</div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                    Debt, Liquidity Ratios
+                  </div>
+                </div>
+                
+                <div className="card">
+                  <h4 style={{ marginBottom: '10px', color: '#8a2be2' }}>🚀 Growth</h4>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{fundamentalScore.growth}/100</div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                    Revenue, Earnings Growth
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Insights */}
+              {fundamentalScore.reasons.length > 0 && (
+                <div className="screener-results" style={{ marginBottom: '20px' }}>
+                  <h4 style={{ marginBottom: '15px' }}>💡 Key Insights</h4>
+                  <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                    {fundamentalScore.reasons.map((reason, idx) => (
+                      <li key={idx} style={{ marginBottom: '8px' }}>
+                        {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Detailed Metrics */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+                gap: '20px',
+                marginBottom: '20px'
+              }}>
+                {/* Valuation Metrics */}
+                <div className="card">
+                  <h4 style={{ marginBottom: '15px', color: '#4facfe' }}>💰 Valuation Metrics</h4>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                      <span style={{ opacity: 0.7 }}>Market Cap:</span>
+                      <strong>{formatLargeNumber(fundamentalData.marketCap)}</strong>
+                    </div>
+                    {fundamentalData.peRatio && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>P/E Ratio:</span>
+                        <strong>{fundamentalData.peRatio.toFixed(2)}</strong>
+                      </div>
+                    )}
+                    {fundamentalData.pbRatio && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>P/B Ratio:</span>
+                        <strong>{fundamentalData.pbRatio.toFixed(2)}</strong>
+                      </div>
+                    )}
+                    {fundamentalData.dividendYield && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Dividend Yield:</span>
+                        <strong>{(fundamentalData.dividendYield * 100).toFixed(2)}%</strong>
+                      </div>
+                    )}
+                    {fundamentalData.eps && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>EPS:</span>
+                        <strong>₹{fundamentalData.eps.toFixed(2)}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Profitability Metrics */}
+                <div className="card">
+                  <h4 style={{ marginBottom: '15px', color: '#00ff64' }}>📈 Profitability</h4>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {fundamentalData.roe && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>ROE:</span>
+                        <strong style={{ color: fundamentalData.roe > 0.15 ? '#00ff64' : '#fff' }}>
+                          {(fundamentalData.roe * 100).toFixed(2)}%
+                        </strong>
+                      </div>
+                    )}
+                    {fundamentalData.profitMargin && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Profit Margin:</span>
+                        <strong>{(fundamentalData.profitMargin * 100).toFixed(2)}%</strong>
+                      </div>
+                    )}
+                    {fundamentalData.operatingMargin && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Operating Margin:</span>
+                        <strong>{(fundamentalData.operatingMargin * 100).toFixed(2)}%</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Health */}
+                <div className="card">
+                  <h4 style={{ marginBottom: '15px', color: '#ffc107' }}>🏦 Financial Health</h4>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {fundamentalData.debtToEquity !== undefined && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Debt/Equity:</span>
+                        <strong style={{ color: fundamentalData.debtToEquity < 0.5 ? '#00ff64' : fundamentalData.debtToEquity > 2 ? '#ff0064' : '#fff' }}>
+                          {fundamentalData.debtToEquity.toFixed(2)}
+                        </strong>
+                      </div>
+                    )}
+                    {fundamentalData.currentRatio && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Current Ratio:</span>
+                        <strong>{fundamentalData.currentRatio.toFixed(2)}</strong>
+                      </div>
+                    )}
+                    {fundamentalData.quickRatio && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Quick Ratio:</span>
+                        <strong>{fundamentalData.quickRatio.toFixed(2)}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Growth Metrics */}
+                <div className="card">
+                  <h4 style={{ marginBottom: '15px', color: '#8a2be2' }}>🚀 Growth</h4>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {fundamentalData.revenueGrowth && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Revenue Growth:</span>
+                        <strong style={{ color: fundamentalData.revenueGrowth > 0.15 ? '#00ff64' : fundamentalData.revenueGrowth < 0 ? '#ff0064' : '#fff' }}>
+                          {(fundamentalData.revenueGrowth * 100).toFixed(2)}%
+                        </strong>
+                      </div>
+                    )}
+                    {fundamentalData.earningsGrowth && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                        <span style={{ opacity: 0.7 }}>Earnings Growth:</span>
+                        <strong style={{ color: fundamentalData.earningsGrowth > 0.15 ? '#00ff64' : fundamentalData.earningsGrowth < 0 ? '#ff0064' : '#fff' }}>
+                          {(fundamentalData.earningsGrowth * 100).toFixed(2)}%
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Market Data */}
+              <div className="screener-results">
+                <h4 style={{ marginBottom: '15px' }}>📊 Market Data</h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '15px'
+                }}>
+                  {fundamentalData.fiftyTwoWeekHigh && (
+                    <div>
+                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>52-Week High</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{fundamentalData.fiftyTwoWeekHigh.toFixed(2)}</div>
+                    </div>
+                  )}
+                  {fundamentalData.fiftyTwoWeekLow && (
+                    <div>
+                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>52-Week Low</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{fundamentalData.fiftyTwoWeekLow.toFixed(2)}</div>
+                    </div>
+                  )}
+                  {fundamentalData.beta && (
+                    <div>
+                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Beta</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>{fundamentalData.beta.toFixed(2)}</div>
+                    </div>
+                  )}
+                  {fundamentalData.averageVolume && (
+                    <div>
+                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Avg Volume</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
+                        {(fundamentalData.averageVolume / 1000000).toFixed(2)}M
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Combined Signal (if technical data exists) */}
+              {stockData[fundamentalData.symbol] && (
+                <div className="screener-results" style={{
+                  marginTop: '20px',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(138, 43, 226, 0.2))',
+                  border: '2px solid rgba(102, 126, 234, 0.5)'
+                }}>
+                  <h4 style={{ marginBottom: '15px' }}>🎯 Combined Signal (Technical + Fundamental)</h4>
+                  {(() => {
+                    const data = stockData[fundamentalData.symbol]
+                    const signal = generateTradingSignal(data.current, data.prices, data.volumes)
+                    const combined = getCombinedSignal(signal.signal, fundamentalScore.overall)
+                    
+                    return (
+                      <div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+                          <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+                            <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Technical Signal</div>
+                            <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: ['STRONG BUY', 'BUY'].includes(signal.signal) ? '#00ff64' : ['STRONG SELL', 'SELL'].includes(signal.signal) ? '#ff0064' : '#ffc107' }}>
+                              {signal.signal}
+                            </div>
+                          </div>
+                          <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+                            <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Fundamental Score</div>
+                            <div style={{ fontSize: '1.5em', fontWeight: 'bold' }}>
+                              {fundamentalScore.overall}/100 ({fundamentalScore.rating})
+                            </div>
+                          </div>
+                          <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '10px', border: '2px solid ' + (combined.signal === 'STRONG BUY' ? '#00ff64' : combined.signal === 'BUY' ? '#00ff64' : combined.signal === 'STRONG SELL' ? '#ff0064' : combined.signal === 'SELL' ? '#ff0064' : '#ffc107') }}>
+                            <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>COMBINED SIGNAL</div>
+                            <div style={{ fontSize: '1.8em', fontWeight: 'bold', color: ['STRONG BUY', 'BUY'].includes(combined.signal) ? '#00ff64' : ['STRONG SELL', 'SELL'].includes(combined.signal) ? '#ff0064' : '#ffc107' }}>
+                              {combined.signal}
+                            </div>
+                            <div style={{ fontSize: '0.9em', marginTop: '5px', opacity: 0.8 }}>
+                              {combined.confidence}% confidence
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '15px',
+                          background: 'rgba(102, 126, 234, 0.1)',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(102, 126, 234, 0.3)'
+                        }}>
+                          <strong>Analysis:</strong> {combined.reason}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!fundamentalData && !isFetchingFundamentals && (
+            <div style={{
+              marginTop: '30px',
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(102, 126, 234, 0.05)',
+              border: '2px dashed rgba(102, 126, 234, 0.3)',
+              borderRadius: '15px'
+            }}>
+              <div style={{ fontSize: '4em', marginBottom: '15px' }}>📊</div>
+              <h3 style={{ marginBottom: '10px' }}>Ready to Analyze Fundamentals</h3>
+              <p style={{ fontSize: '1.1em', opacity: 0.8, marginBottom: '20px' }}>
+                Enter a stock symbol above to get comprehensive fundamental analysis!
+              </p>
+              <div style={{
+                padding: '20px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '10px',
+                display: 'inline-block',
+                textAlign: 'left'
+              }}>
+                <h4 style={{ marginBottom: '10px' }}>💡 What You'll Get:</h4>
+                <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                  <li><strong>Valuation Metrics:</strong> Market Cap, P/E, P/B, Dividend Yield</li>
+                  <li><strong>Profitability:</strong> ROE, Profit Margins, Operating Margins</li>
+                  <li><strong>Financial Health:</strong> Debt/Equity, Current Ratio, Quick Ratio</li>
+                  <li><strong>Growth:</strong> Revenue Growth, Earnings Growth</li>
+                  <li><strong>Overall Score:</strong> 0-100 rating (EXCELLENT → VERY POOR)</li>
+                  <li><strong>Combined Signal:</strong> Technical + Fundamental analysis together!</li>
                 </ul>
               </div>
             </div>
