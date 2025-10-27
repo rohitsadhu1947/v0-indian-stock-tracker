@@ -1457,21 +1457,21 @@ export default function StockTracker() {
             // DEBUG: Log RAW candles data from API with FULL details
             console.log(`🔍 ${stock.tradingsymbol} RAW CANDLES (first 2):`, JSON.stringify(candles.slice(0, 2), null, 2))
             
-            // Convert to DailyCandle format
+            // Convert to DailyCandle format (Kite returns objects, not arrays!)
             const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
-              date: new Date(c[0]),
-              open: c[1],
-              high: c[2],
-              low: c[3],
-              close: c[4],
-              volume: c[5]
+              date: new Date(c.date),
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+              volume: c.volume
             }))
             
-            // DEBUG: Log first candle to see actual values (and RAW date format)
+            // DEBUG: Log first candle to see actual values
             if (dailyCandles.length > 0) {
-              console.log(`🔍 ${stock.tradingsymbol} FIRST CANDLE:`, {
-                date_raw: candles[0][0], // RAW date from API
-                date_parsed: dailyCandles[0].date, // After new Date()
+              console.log(`🔍 ${stock.tradingsymbol} FIRST CANDLE PARSED:`, {
+                date_raw: candles[0].date,
+                date_parsed: dailyCandles[0].date.toISOString().split('T')[0],
                 open: dailyCandles[0].open,
                 high: dailyCandles[0].high,
                 low: dailyCandles[0].low,
