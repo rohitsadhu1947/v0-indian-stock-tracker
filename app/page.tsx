@@ -1464,10 +1464,11 @@ export default function StockTracker() {
               volume: c[5]
             }))
             
-            // DEBUG: Log first candle to see actual values
+            // DEBUG: Log first candle to see actual values (and RAW date format)
             if (dailyCandles.length > 0) {
               console.log(`🔍 ${stock.tradingsymbol} FIRST CANDLE:`, {
-                date: dailyCandles[0].date.toISOString().split('T')[0],
+                date_raw: candles[0][0], // RAW date from API
+                date_parsed: dailyCandles[0].date, // After new Date()
                 open: dailyCandles[0].open,
                 high: dailyCandles[0].high,
                 low: dailyCandles[0].low,
