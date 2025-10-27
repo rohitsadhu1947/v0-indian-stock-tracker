@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
-import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal } from '@/lib/sentiment-utils';
+import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal, getDayTradingSignal, type AggregateSentiment, type DayTradingSignal } from '@/lib/sentiment-utils';
 import { getSectorInfo, buildSectorNewsQuery, buildMacroNewsQuery, MACRO_NEWS_KEYWORDS } from '@/lib/sector-mapping';
 import type { NewsItem } from '../quote/route';
 
@@ -78,11 +78,20 @@ export async function GET(request: NextRequest) {
     // Calculate combined sentiment
     const combinedSentiment = calculateCombinedSentiment(stockNews, sectorNews, macroNews, sectorInfo);
 
+    // Calculate day trading signal (more aggressive for intraday)
+    const dayTradingSignal = getDayTradingSignal(
+      stockNews.sentiment.aggregate,
+      sectorNews?.sentiment.aggregate || null,
+      macroNews?.sentiment.aggregate || null,
+      combinedSentiment.score
+    );
+
     console.log(`\n✅ MULTI-LAYER ANALYSIS COMPLETE`);
     console.log(`   Stock Sentiment: ${stockNews.sentiment.aggregate.overall}`);
     if (sectorNews) console.log(`   Sector Sentiment: ${sectorNews.sentiment.aggregate.overall}`);
     if (macroNews) console.log(`   Macro Sentiment: ${macroNews.sentiment.aggregate.overall}`);
     console.log(`   ⚡ COMBINED: ${combinedSentiment.overall} (${combinedSentiment.tradingSignal.signal})`);
+    console.log(`   📊 DAY TRADING: ${dayTradingSignal.signal} (${dayTradingSignal.confidence}% confidence, ${dayTradingSignal.timeframe})`);
 
     return NextResponse.json({
       success: true,
@@ -91,7 +100,8 @@ export async function GET(request: NextRequest) {
       stockNews,
       sectorNews,
       macroNews,
-      combinedSentiment
+      combinedSentiment,
+      dayTradingSignal
     });
 
   } catch (error: any) {

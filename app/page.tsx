@@ -5200,6 +5200,109 @@ export default function StockTracker() {
                         </div>
                       </div>
                       
+                      {/* Day Trading Signal Card */}
+                      {multiLayerNews.dayTradingSignal && (() => {
+                        const daySignal = multiLayerNews.dayTradingSignal;
+                        let signalColor = '#888888';
+                        let signalEmoji = '👀';
+                        
+                        if (daySignal.signal === 'STRONG BUY') {
+                          signalColor = '#00ff64';
+                          signalEmoji = '🚀';
+                        } else if (daySignal.signal === 'BUY') {
+                          signalColor = '#00ff64';
+                          signalEmoji = '📈';
+                        } else if (daySignal.signal === 'SHORT') {
+                          signalColor = '#ff0064';
+                          signalEmoji = '📉';
+                        } else if (daySignal.signal === 'AVOID') {
+                          signalColor = '#ff8800';
+                          signalEmoji = '⚠️';
+                        } else {
+                          signalColor = '#4facfe';
+                          signalEmoji = '👀';
+                        }
+                        
+                        return (
+                          <div style={{
+                            marginTop: '20px',
+                            padding: '25px',
+                            background: `linear-gradient(135deg, ${signalColor}15, ${signalColor}08)`,
+                            border: `2px solid ${signalColor}`,
+                            borderRadius: '15px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                              <div style={{ flex: 1, minWidth: '250px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' }}>
+                                  <span style={{ fontSize: '2.5em' }}>{signalEmoji}</span>
+                                  <div>
+                                    <h4 style={{ margin: 0, fontSize: '1.5em', color: signalColor }}>
+                                      DAY TRADING: {daySignal.signal}
+                                    </h4>
+                                    <div style={{ marginTop: '5px', opacity: 0.9 }}>
+                                      <span style={{ fontSize: '0.95em', fontWeight: 'bold' }}>Confidence: {daySignal.confidence}%</span>
+                                      <span style={{ marginLeft: '15px', fontSize: '0.9em', opacity: 0.8 }}>⏰ {daySignal.timeframe}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <p style={{ margin: '10px 0', fontSize: '1em', lineHeight: '1.5', opacity: 0.9 }}>
+                                  {daySignal.reason}
+                                </p>
+                              </div>
+                              
+                              <div style={{
+                                padding: '20px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: '12px',
+                                minWidth: '200px'
+                              }}>
+                                <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px', textTransform: 'uppercase' }}>Strength</div>
+                                <div style={{ fontSize: '2em', fontWeight: 'bold', color: signalColor }}>
+                                  {daySignal.strength}/10
+                                </div>
+                                <div style={{
+                                  width: '100%',
+                                  height: '8px',
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  borderRadius: '4px',
+                                  marginTop: '10px',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    width: `${(daySignal.strength / 10) * 100}%`,
+                                    height: '100%',
+                                    background: signalColor,
+                                    borderRadius: '4px'
+                                  }} />
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Action Items */}
+                            {daySignal.actions && daySignal.actions.length > 0 && (
+                              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                <h5 style={{ margin: '0 0 12px 0', fontSize: '1.05em', opacity: 0.9 }}>📋 Action Plan:</h5>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                                  {daySignal.actions.map((action: string, idx: number) => (
+                                    <div key={idx} style={{
+                                      padding: '12px 15px',
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      borderRadius: '8px',
+                                      borderLeft: `3px solid ${signalColor}`,
+                                      fontSize: '0.9em',
+                                      lineHeight: '1.4'
+                                    }}>
+                                      <span style={{ opacity: 0.7, marginRight: '8px' }}>•</span>
+                                      {action}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      
                       {/* Detailed News by Layer */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
                         {/* Stock News */}
