@@ -400,7 +400,7 @@ export default function StockTracker() {
   // Intraday Functions
   async function runMorningScreener() {
     if (!authStatus.authenticated) {
-      alert('Please login first')
+      alert('⚠️ Please login first!\n\nClick "Login with Kite Connect" at the top to authenticate.')
       return
     }
 
@@ -415,12 +415,20 @@ export default function StockTracker() {
     setIsDemoData(false)
     const signals: IntradaySignal[] = []
     let processedCount = 0
+    let authError = false
 
     for (const symbol of intradayWatchlist) {
       try {
         // Fetch current quote
         const data = await fetchStockQuote(symbol)
-        if (!data) continue
+        if (!data) {
+          // Check if it's an auth error
+          if (!authStatus.authenticated) {
+            authError = true
+            break
+          }
+          continue
+        }
 
         // Fetch intraday 5-minute candles
         const intradayRes = await fetch(
@@ -484,6 +492,14 @@ export default function StockTracker() {
     signals.sort((a, b) => b.strength - a.strength)
     setIntradaySignals(signals)
     setIsLoading(false)
+    
+    // Show auth error if detected
+    if (authError) {
+      alert('❌ Session expired!\n\nYour Kite Connect session has expired. Please login again to continue.')
+      setAuthStatus({ authenticated: false, user: null })
+    } else if (signals.length === 0) {
+      alert(`ℹ️ No signals found\n\nScreened ${intradayWatchlist.length} stocks with ${screenerLevel} criteria.\n\nTry:\n• Different risk level (AGGRESSIVE for early morning)\n• Wait for more market data (best after 10 AM)\n• Add more stocks to intraday watchlist`)
+    }
   }
 
   function addToIntradayWatchlist(symbol: string) {
