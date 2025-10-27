@@ -616,34 +616,60 @@ export default function StockTracker() {
   }
 
   async function updatePositionPrices() {
-    // Update current prices for all open positions
-    const updatedPositions = await Promise.all(
-      intradayPositions.map(async (position) => {
-        try {
-          const data = await fetchStockQuote(position.symbol)
-          if (data) {
-            const pnl = position.type === 'BUY' 
-              ? (data.current - position.entry_price) * position.quantity
-              : (position.entry_price - data.current) * position.quantity
-            
-            const pnlPercent = (pnl / (position.entry_price * position.quantity)) * 100
-            
-            return {
-              ...position,
-              current_price: data.current,
-              pnl: Number(pnl),
-              pnl_percent: Number(pnlPercent)
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to update price for ${position.symbol}`)
-        }
-        return position
-      })
-    )
+    if (intradayPositions.length === 0) {
+      alert('⚠️ No positions to update')
+      return
+    }
+
+    setIsLoading(true)
     
-    setIntradayPositions(updatedPositions)
-    alert('✅ Prices updated successfully!')
+    try {
+      // Update current prices for all open positions
+      const updatedPositions = await Promise.all(
+        intradayPositions.map(async (position) => {
+          try {
+            console.log(`Updating price for ${position.symbol}...`)
+            const data = await fetchStockQuote(position.symbol)
+            
+            if (data) {
+              console.log(`✅ ${position.symbol}: ₹${data.current}`)
+              
+              const pnl = position.type === 'BUY' 
+                ? (data.current - position.entry_price) * position.quantity
+                : (position.entry_price - data.current) * position.quantity
+              
+              const pnlPercent = (pnl / (position.entry_price * position.quantity)) * 100
+              
+              return { 
+                ...position,
+                current_price: data.current,
+                pnl: Number(pnl),
+                pnl_percent: Number(pnlPercent)
+              }
+            } else {
+              console.error(`❌ No data returned for ${position.symbol}`)
+              return position
+            }
+          } catch (err) {
+            console.error(`❌ Failed to update ${position.symbol}:`, err)
+            return position
+          }
+        })
+      )
+      
+      setIntradayPositions(updatedPositions)
+      
+      // Calculate total P&L
+      const totalPnL = updatedPositions.reduce((sum, pos) => sum + Number(pos.pnl || 0), 0)
+      setTotalPnL(totalPnL)
+      
+      alert('✅ Prices updated successfully!')
+    } catch (err) {
+      console.error('Error updating positions:', err)
+      alert('❌ Failed to update prices. Check console for details.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   function addMockPositions() {
@@ -1841,16 +1867,17 @@ export default function StockTracker() {
               </button>
               <button 
                 onClick={updatePositionPrices}
-                disabled={intradayPositions.length === 0 || !authStatus.authenticated}
+                disabled={intradayPositions.length === 0 || !authStatus.authenticated || isLoading}
                 style={{ 
                   flex: 1,
                   padding: '12px',
                   fontSize: '15px',
                   background: 'rgba(79, 172, 254, 0.2)',
-                  border: '1px solid rgba(79, 172, 254, 0.5)'
+                  border: '1px solid rgba(79, 172, 254, 0.5)',
+                  opacity: (intradayPositions.length === 0 || !authStatus.authenticated || isLoading) ? 0.5 : 1
                 }}
               >
-                🔄 Update Prices
+                {isLoading ? '⏳ Updating...' : '🔄 Update Prices'}
               </button>
               <button 
                 onClick={clearAllPositions}
