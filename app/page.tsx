@@ -64,6 +64,12 @@ export default function StockTracker() {
   const [isDemoData, setIsDemoData] = useState(false)
   const [intradayStockInput, setIntradayStockInput] = useState('')
   const [screenerLevel, setScreenerLevel] = useState<'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'>('MODERATE')
+  
+  // Manual position entry
+  const [manualEntrySymbol, setManualEntrySymbol] = useState('')
+  const [manualEntryPrice, setManualEntryPrice] = useState('')
+  const [manualEntryQuantity, setManualEntryQuantity] = useState('')
+  const [manualEntryType, setManualEntryType] = useState<'BUY' | 'SELL'>('BUY')
 
   // Load custom screener settings from localStorage
   useEffect(() => {
@@ -541,6 +547,41 @@ export default function StockTracker() {
     
     setIntradayPositions([...intradayPositions, newPosition])
     alert(`✅ ${type} position entered: ${quantity} shares of ${symbol} at ₹${entryPrice}`)
+  }
+
+  function handleManualEntry() {
+    const symbol = manualEntrySymbol.toUpperCase().trim()
+    const price = parseFloat(manualEntryPrice)
+    const quantity = parseInt(manualEntryQuantity)
+
+    if (!symbol) {
+      alert('⚠️ Please enter a stock symbol')
+      return
+    }
+
+    if (isNaN(price) || price <= 0) {
+      alert('⚠️ Please enter a valid entry price')
+      return
+    }
+
+    if (isNaN(quantity) || quantity <= 0) {
+      alert('⚠️ Please enter a valid quantity')
+      return
+    }
+
+    // Check if position already exists
+    if (intradayPositions.some(p => p.symbol === symbol)) {
+      alert(`⚠️ You already have an open position in ${symbol}`)
+      return
+    }
+
+    enterPosition(symbol, price, quantity, manualEntryType)
+    
+    // Clear form
+    setManualEntrySymbol('')
+    setManualEntryPrice('')
+    setManualEntryQuantity('')
+    setManualEntryType('BUY')
   }
 
   function exitPosition(symbol: string) {
@@ -1618,6 +1659,130 @@ export default function StockTracker() {
                 <div style={{ fontSize: '1.8em', fontWeight: 'bold' }}>
                   {intradayPositions.length}
                 </div>
+              </div>
+            </div>
+
+            {/* Manual Position Entry Form */}
+            <div style={{
+              padding: '20px',
+              background: 'rgba(79, 172, 254, 0.1)',
+              border: '1px solid rgba(79, 172, 254, 0.3)',
+              borderRadius: '12px',
+              marginBottom: '25px'
+            }}>
+              <h4 style={{ marginBottom: '15px', fontSize: '1.1em' }}>📝 Enter Position Manually</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px', alignItems: 'end' }}>
+                {/* Symbol Input */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                    Symbol
+                  </label>
+                  <input
+                    type="text"
+                    value={manualEntrySymbol}
+                    onChange={(e) => setManualEntrySymbol(e.target.value.toUpperCase())}
+                    placeholder="e.g., RELIANCE"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Entry Price */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                    Entry Price
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={manualEntryPrice}
+                    onChange={(e) => setManualEntryPrice(e.target.value)}
+                    placeholder="₹"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={manualEntryQuantity}
+                    onChange={(e) => setManualEntryQuantity(e.target.value)}
+                    placeholder="Qty"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+
+                {/* Buy/Sell Toggle */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                    Type
+                  </label>
+                  <select
+                    value={manualEntryType}
+                    onChange={(e) => setManualEntryType(e.target.value as 'BUY' | 'SELL')}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '6px',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="BUY" style={{ background: '#1a1a1a' }}>BUY</option>
+                    <option value="SELL" style={{ background: '#1a1a1a' }}>SELL</option>
+                  </select>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleManualEntry}
+                  disabled={!manualEntrySymbol || !manualEntryPrice || !manualEntryQuantity}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    background: manualEntryType === 'BUY' 
+                      ? 'linear-gradient(135deg, #00ff64 0%, #00cc50 100%)'
+                      : 'linear-gradient(135deg, #ff0064 0%, #cc0050 100%)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#000',
+                    cursor: !manualEntrySymbol || !manualEntryPrice || !manualEntryQuantity ? 'not-allowed' : 'pointer',
+                    opacity: !manualEntrySymbol || !manualEntryPrice || !manualEntryQuantity ? 0.5 : 1
+                  }}
+                >
+                  {manualEntryType === 'BUY' ? '📈 BUY' : '📉 SELL'}
+                </button>
               </div>
             </div>
 
