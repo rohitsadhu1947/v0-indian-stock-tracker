@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as yahooFinance from 'yahoo-finance2';
+import { quoteSummary, quote as yahooQuote } from 'yahoo-finance2';
 import { convertToYahooSymbol, type FundamentalData } from '@/lib/fundamentals-utils';
 
 // Disable caching for this API route during development
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Using quoteSummary with multiple modules for complete picture
     let result;
     try {
-      result = await yahooFinance.quoteSummary(yahooSymbol, {
+      result = await quoteSummary(yahooSymbol, {
         modules: [
           'price',                  // Current price, market cap
           'summaryDetail',          // P/E, dividend yield, beta, etc.
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       // Try alternate approach with just quote
       console.log(`📊 Step 2: Trying Yahoo Finance quote() API for ${yahooSymbol}...`);
       try {
-        const quote = await yahooFinance.quote(yahooSymbol);
+        const quote = await yahooQuote(yahooSymbol);
         
         if (!quote) {
           throw new Error(`No data found for ${yahooSymbol}`);
