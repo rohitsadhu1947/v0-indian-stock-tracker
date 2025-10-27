@@ -1454,9 +1454,6 @@ export default function StockTracker() {
               console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
             }
             
-            // DEBUG: Log RAW candles data from API with FULL details
-            console.log(`🔍 ${stock.tradingsymbol} RAW CANDLES (first 2):`, JSON.stringify(candles.slice(0, 2), null, 2))
-            
             // Convert to DailyCandle format (Kite returns objects, not arrays!)
             const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
               date: new Date(c.date),
@@ -1467,31 +1464,8 @@ export default function StockTracker() {
               volume: c.volume
             }))
             
-            // DEBUG: Log first candle to see actual values
-            if (dailyCandles.length > 0) {
-              console.log(`🔍 ${stock.tradingsymbol} FIRST CANDLE PARSED:`, {
-                date_raw: candles[0].date,
-                date_parsed: dailyCandles[0].date.toISOString().split('T')[0],
-                open: dailyCandles[0].open,
-                high: dailyCandles[0].high,
-                low: dailyCandles[0].low,
-                close: dailyCandles[0].close,
-                volume: dailyCandles[0].volume
-              })
-            }
-            
             // Analyze historical patterns
             pattern = analyzeHistoricalPatterns(stock.tradingsymbol, dailyCandles)
-            
-            // DEBUG: Log pattern IMMEDIATELY after calculation
-            console.log(`📊 ${stock.tradingsymbol} RAW PATTERN:`, {
-              successRate: pattern.successRate,
-              volatility: pattern.volatilityConsistency,
-              momentum: pattern.momentumFollowThrough,
-              avgRange: pattern.averageDayRange,
-              gapFillRate: pattern.gapFillRate,
-              confidence: pattern.confidence
-            })
             
             // Generate intelligence
             intelligence = generateStockIntelligence(
@@ -1500,18 +1474,6 @@ export default function StockTracker() {
               data.current,
               dailyCandles
             )
-            
-            // DETAILED LOGGING FOR DEBUGGING
-            console.log(`🔍 ${stock.tradingsymbol} INTELLIGENCE:`, {
-              recommendation: intelligence.recommendation,
-              score: intelligence.historicalScore,
-              pattern: {
-                successRate: pattern.successRate.toFixed(1) + '%',
-                volatility: pattern.volatilityConsistency.toFixed(1) + '%',
-                momentum: pattern.momentumFollowThrough.toFixed(1) + '%',
-                avgRange: pattern.averageDayRange.toFixed(2) + '%'
-              }
-            })
           }
           
           // Calculate basic score for sorting
@@ -1535,7 +1497,11 @@ export default function StockTracker() {
           })
           
           successCount++
-          console.log(`✅ ${stock.tradingsymbol}: Success (${intelligence.recommendation}, score: ${intelligence.historicalScore})`)
+          
+          // Log only significant signals (BUY or STRONG_BUY)
+          if (intelligence.recommendation === 'STRONG_BUY' || intelligence.recommendation === 'BUY') {
+            console.log(`✅ ${stock.tradingsymbol}: ${intelligence.recommendation} (score: ${intelligence.historicalScore}, success: ${pattern.successRate.toFixed(0)}%)`)
+          }
           
           // Update progress
           setScanProgress(Math.round((i + 1) / totalStocks * 100))
