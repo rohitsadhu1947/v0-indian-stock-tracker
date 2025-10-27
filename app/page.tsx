@@ -1365,38 +1365,110 @@ export default function StockTracker() {
           const historicalData = await historicalResponse.json()
           const candles = historicalData.candles || []
           
-          // More lenient: Accept 2+ days instead of 5 for better results on weekends
+          // FALLBACK MODE: If no historical data, use current day data
+          let intelligence: any
+          let pattern: any
+          
           if (candles.length < 2) {
-            console.warn(`⚠️ ${stock.tradingsymbol}: Insufficient historical data (${candles.length} days) - need at least 2`)
-            failCount++
-            continue
+            console.log(`ℹ️ ${stock.tradingsymbol}: No historical data (${candles.length} days) - using current day analysis`)
+            
+            // Generate recommendation based ONLY on current day's data
+            const gap = ((data.current - data.open) / data.open) * 100
+            const dayRange = ((data.dayHigh - data.dayLow) / data.open) * 100
+            const volumeScore = data.volume >= minVolume ? 1 : 0
+            
+            // Simple scoring without historical patterns
+            let score = 0
+            const reasons: string[] = []
+            let recommendation: 'STRONG_BUY' | 'BUY' | 'WATCH' | 'SKIP' = 'WATCH'
+            
+            // Gap analysis
+            if (Math.abs(gap) >= 1.5) {
+              score += 30
+              reasons.push(`Strong gap: ${gap > 0 ? '+' : ''}${gap.toFixed(2)}%`)
+              if (Math.abs(gap) >= 2.5) recommendation = 'BUY'
+            } else if (Math.abs(gap) >= 0.5) {
+              score += 15
+              reasons.push(`Moderate gap: ${gap > 0 ? '+' : ''}${gap.toFixed(2)}%`)
+            }
+            
+            // Volume analysis
+            if (volumeScore) {
+              score += 25
+              reasons.push(`Good volume: ${(data.volume / 100000).toFixed(1)}L`)
+            }
+            
+            // Range analysis
+            if (dayRange >= 2) {
+              score += 25
+              reasons.push(`High volatility: ${dayRange.toFixed(2)}% range`)
+              if (dayRange >= 4 && Math.abs(gap) >= 2) recommendation = 'STRONG_BUY'
+            } else if (dayRange >= 1) {
+              score += 15
+              reasons.push(`Moderate range: ${dayRange.toFixed(2)}%`)
+            }
+            
+            // Price level
+            reasons.push(`Price: ₹${data.current.toFixed(2)}`)
+            
+            if (score < 30) recommendation = 'SKIP'
+            else if (score < 50) recommendation = 'WATCH'
+            
+            intelligence = {
+              symbol: stock.tradingsymbol,
+              recommendation,
+              confidence: Math.min(score, 100),
+              pattern: {
+                gapFillRate: 0,
+                volatilityConsistency: 0,
+                momentumFollowThrough: 0,
+                averageDayRange: dayRange,
+                successRate: 0,
+                bestEntry: gap > 0 ? 'GAP_UP' : gap < 0 ? 'GAP_DOWN' : 'BREAKOUT',
+                confidence: Math.min(score, 100)
+              },
+              reasons: [`⚠️ Current day analysis only (no historical data)`, ...reasons],
+              historicalScore: score,
+              keyLevels: {
+                support: [data.dayLow],
+                resistance: [data.dayHigh]
+              },
+              expectedMove: {
+                direction: gap > 0 ? 'UP' : gap < 0 ? 'DOWN' : 'NEUTRAL',
+                target: data.current * (gap > 0 ? 1.02 : 0.98),
+                stopLoss: data.current * (gap > 0 ? 0.985 : 1.015)
+              }
+            }
+            
+            pattern = intelligence.pattern
+            
+          } else {
+            // NORMAL MODE: We have historical data
+            if (candles.length < 5) {
+              console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
+            }
+            
+            // Convert to DailyCandle format
+            const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
+              date: new Date(c[0]),
+              open: c[1],
+              high: c[2],
+              low: c[3],
+              close: c[4],
+              volume: c[5]
+            }))
+            
+            // Analyze historical patterns
+            pattern = analyzeHistoricalPatterns(stock.tradingsymbol, dailyCandles)
+            
+            // Generate intelligence
+            intelligence = generateStockIntelligence(
+              stock.tradingsymbol,
+              pattern,
+              data.current,
+              dailyCandles
+            )
           }
-          
-          // If we have data but less than ideal, still analyze but note it
-          if (candles.length < 5) {
-            console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
-          }
-          
-          // Convert to DailyCandle format
-          const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
-            date: new Date(c[0]),
-            open: c[1],
-            high: c[2],
-            low: c[3],
-            close: c[4],
-            volume: c[5]
-          }))
-          
-          // Analyze historical patterns
-          const pattern = analyzeHistoricalPatterns(stock.tradingsymbol, dailyCandles)
-          
-          // Generate intelligence
-          const intelligence = generateStockIntelligence(
-            stock.tradingsymbol,
-            pattern,
-            data.current,
-            dailyCandles
-          )
           
           // Calculate basic score for sorting
           const gap = ((data.current - data.open) / data.open) * 100
