@@ -1327,7 +1327,7 @@ export default function StockTracker() {
 
       // Analyze each stock with rate limiting
       const results: any[] = []
-      const totalStocks = Math.min(stocks.length, 100) // Limit to 100 for speed
+      const totalStocks = Math.min(stocks.length, 150) // Try 150 stocks (more attempts = better chance of success)
       
       console.log(`🔄 Starting analysis of ${totalStocks} stocks...`)
       
@@ -1338,8 +1338,8 @@ export default function StockTracker() {
         const stock = stocks[i]
         
         try {
-          // Rate limiting: 200ms delay between requests
-          if (i > 0) await sleep(200)
+          // Rate limiting: 150ms delay between requests (faster but still safe)
+          if (i > 0) await sleep(150)
           
           // Fetch current quote
           console.log(`📊 [${i + 1}/${totalStocks}] Analyzing ${stock.tradingsymbol}...`)
@@ -1365,10 +1365,16 @@ export default function StockTracker() {
           const historicalData = await historicalResponse.json()
           const candles = historicalData.candles || []
           
-          if (candles.length < 5) {
-            console.warn(`⚠️ ${stock.tradingsymbol}: Insufficient historical data (${candles.length} days)`)
+          // More lenient: Accept 2+ days instead of 5 for better results on weekends
+          if (candles.length < 2) {
+            console.warn(`⚠️ ${stock.tradingsymbol}: Insufficient historical data (${candles.length} days) - need at least 2`)
             failCount++
             continue
+          }
+          
+          // If we have data but less than ideal, still analyze but note it
+          if (candles.length < 5) {
+            console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
           }
           
           // Convert to DailyCandle format

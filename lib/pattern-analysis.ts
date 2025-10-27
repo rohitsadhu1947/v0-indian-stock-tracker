@@ -54,7 +54,8 @@ export function analyzeHistoricalPatterns(
   symbol: string,
   dailyCandles: DailyCandle[]
 ): IntradayPattern {
-  if (dailyCandles.length < 5) {
+  // More lenient: work with 2+ days (was 5)
+  if (dailyCandles.length < 2) {
     return {
       gapFillRate: 0,
       volatilityConsistency: 0,
