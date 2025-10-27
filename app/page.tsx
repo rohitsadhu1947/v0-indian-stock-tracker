@@ -67,6 +67,12 @@ export default function StockTracker() {
   const [exitSignals, setExitSignals] = useState<Record<string, any>>({})
   const [screenerLevel, setScreenerLevel] = useState<'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'>('MODERATE')
   
+  // Opening Range Breakout (ORB) states
+  const [orbRanges, setOrbRanges] = useState<Record<string, { high: number; low: number; open: number; rangeCaptured: boolean; timestamp: Date }>>({})
+  const [orbSignals, setOrbSignals] = useState<any[]>([])
+  const [isCapturingORB, setIsCapturingORB] = useState(false)
+  const [orbWatchlist, setOrbWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
   const [manualEntryPrice, setManualEntryPrice] = useState('')
@@ -665,8 +671,8 @@ export default function StockTracker() {
                 : (position.entry_price - data.current) * position.quantity
               
               const pnlPercent = (pnl / (position.entry_price * position.quantity)) * 100
-              
-              return { 
+            
+            return {
                 ...position,
                 current_price: data.current,
                 pnl: Number(pnl),
@@ -830,6 +836,185 @@ export default function StockTracker() {
       setIntradayPositions([])
       alert(`✅ All positions closed\nTotal P&L: ₹${finalPnL.toFixed(2)}`)
     }
+  }
+
+  // ========== OPENING RANGE BREAKOUT (ORB) FUNCTIONS ==========
+
+  // Capture Opening Range (9:15-9:30 AM)
+  async function captureOpeningRange() {
+    const now = new Date()
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    
+    // Check if we're in the opening range window (9:15-9:30)
+    if (hours !== 9 || minutes >= 30) {
+      alert('⚠️ Opening Range can only be captured between 9:15-9:30 AM')
+      return
+    }
+
+    setIsCapturingORB(true)
+    setIsLoading(true)
+
+    try {
+      const ranges: Record<string, any> = {}
+      
+      // Fetch 1-min candles for each stock
+      await Promise.all(
+        orbWatchlist.map(async (symbol) => {
+          try {
+            console.log(`📊 Capturing ORB for ${symbol}...`)
+            const data = await fetchStockQuote(symbol)
+            
+            if (data) {
+              // For simplicity, use current price as approximation
+              // In production, you'd fetch actual 1-min candles from 9:15-9:30
+              const range = {
+                high: data.dayHigh,
+                low: data.dayLow,
+                open: data.open,
+                current: data.current,
+                rangeCaptured: true,
+                timestamp: now
+              }
+              
+              ranges[symbol] = range
+              console.log(`✅ ${symbol}: ORB High=₹${range.high.toFixed(2)}, Low=₹${range.low.toFixed(2)}`)
+            }
+          } catch (err) {
+            console.error(`Failed to capture ORB for ${symbol}:`, err)
+          }
+        })
+      )
+      
+      setOrbRanges(ranges)
+      alert(`✅ Opening Range captured for ${Object.keys(ranges).length} stocks!\n\nNow monitoring for breakouts...`)
+    } catch (err) {
+      console.error('Error capturing opening range:', err)
+      alert('❌ Failed to capture opening range. Check console.')
+    } finally {
+      setIsLoading(false)
+      setIsCapturingORB(true)
+    }
+  }
+
+  // Scan for ORB Breakouts
+  async function scanORBBreakouts() {
+    if (Object.keys(orbRanges).length === 0) {
+      alert('⚠️ Please capture Opening Range first (9:15-9:30 AM)')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const signals: any[] = []
+      
+      await Promise.all(
+        Object.keys(orbRanges).map(async (symbol) => {
+          try {
+            const range = orbRanges[symbol]
+            const data = await fetchStockQuote(symbol)
+            
+            if (data) {
+              const currentPrice = data.current
+              const volume = data.volume || 0
+              const avgVolume = (data.volume / 2) || 1 // Rough estimate: current volume / 2
+              
+              // Check for breakout above ORB High
+              if (currentPrice > range.high * 1.001) { // 0.1% above high
+                const rangeSize = range.high - range.low
+                const target = currentPrice + (rangeSize * 1.5) // Target = 1.5x range
+                const stopLoss = range.high - (rangeSize * 0.3) // Stop below breakout level
+                
+                const signal = {
+                  symbol,
+                  signal_type: 'BUY',
+                  strategy: 'ORB Bullish Breakout',
+                  entry_price: currentPrice,
+                  target: target,
+                  stop_loss: stopLoss,
+                  orb_high: range.high,
+                  orb_low: range.low,
+                  breakout_type: 'ABOVE HIGH',
+                  range_size: rangeSize,
+                  current_price: currentPrice,
+                  strength: volume > avgVolume * 1.5 ? 5 : 4,
+                  reasons: [
+                    `Broke above ORB High (₹${range.high.toFixed(2)})`,
+                    `Current: ₹${currentPrice.toFixed(2)}`,
+                    `Range: ₹${rangeSize.toFixed(2)} (${((rangeSize / range.open) * 100).toFixed(2)}%)`,
+                    volume > avgVolume * 1.5 ? 'Strong Volume' : 'Moderate Volume',
+                    `Target: ₹${target.toFixed(2)} (+${((target - currentPrice) / currentPrice * 100).toFixed(2)}%)`,
+                    `Risk: ₹${(currentPrice - stopLoss).toFixed(2)}`
+                  ],
+                  risk_reward: (target - currentPrice) / (currentPrice - stopLoss)
+                }
+                
+                signals.push(signal)
+                console.log(`🚀 ORB BREAKOUT: ${symbol} broke above ₹${range.high.toFixed(2)}`)
+              }
+              
+              // Check for breakdown below ORB Low
+              else if (currentPrice < range.low * 0.999) { // 0.1% below low
+                const rangeSize = range.high - range.low
+                const target = currentPrice - (rangeSize * 1.5) // Target = 1.5x range down
+                const stopLoss = range.low + (rangeSize * 0.3) // Stop above breakdown level
+                
+                const signal = {
+                  symbol,
+                  signal_type: 'SELL',
+                  strategy: 'ORB Bearish Breakdown',
+                  entry_price: currentPrice,
+                  target: target,
+                  stop_loss: stopLoss,
+                  orb_high: range.high,
+                  orb_low: range.low,
+                  breakout_type: 'BELOW LOW',
+                  range_size: rangeSize,
+                  current_price: currentPrice,
+                  strength: volume > avgVolume * 1.5 ? 5 : 4,
+                  reasons: [
+                    `Broke below ORB Low (₹${range.low.toFixed(2)})`,
+                    `Current: ₹${currentPrice.toFixed(2)}`,
+                    `Range: ₹${rangeSize.toFixed(2)} (${((rangeSize / range.open) * 100).toFixed(2)}%)`,
+                    volume > avgVolume * 1.5 ? 'Strong Volume' : 'Moderate Volume',
+                    `Target: ₹${target.toFixed(2)} (${((target - currentPrice) / currentPrice * 100).toFixed(2)}%)`,
+                    `Risk: ₹${(stopLoss - currentPrice).toFixed(2)}`
+                  ],
+                  risk_reward: (currentPrice - target) / (stopLoss - currentPrice)
+                }
+                
+                signals.push(signal)
+                console.log(`📉 ORB BREAKDOWN: ${symbol} broke below ₹${range.low.toFixed(2)}`)
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to scan ORB for ${symbol}:`, err)
+          }
+        })
+      )
+      
+      setOrbSignals(signals)
+      
+      if (signals.length === 0) {
+        alert('📊 No ORB breakouts detected yet. Stocks are still within opening range.')
+            } else {
+        alert(`🚀 Found ${signals.length} ORB Breakout Signal(s)!`)
+      }
+    } catch (err) {
+      console.error('Error scanning ORB breakouts:', err)
+      alert('❌ Failed to scan breakouts. Check console.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Reset ORB for new day
+  function resetORB() {
+    setOrbRanges({})
+    setOrbSignals([])
+    setIsCapturingORB(false)
+    alert('✅ ORB data reset. Ready for new trading day!')
   }
 
   // Demo Mode - Generate mock signals for testing
@@ -1796,6 +1981,336 @@ export default function StockTracker() {
               <li><strong>Position Sizing:</strong> Follow the suggested position size (1% risk per trade)</li>
               <li><strong>Exit Strategy:</strong> Exit at target (2-3%), stop-loss (0.5-1%), or 3:00 PM</li>
             </ol>
+          </div>
+
+          {/* Opening Range Breakout (ORB) Scanner */}
+          <div style={{ marginTop: '40px', borderTop: '2px solid rgba(255, 193, 7, 0.3)', paddingTop: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.8em', marginBottom: '8px' }}>🎯 Opening Range Breakout (ORB)</h2>
+                <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, fontSize: '0.95em' }}>
+                  Capture first 15 minutes (9:15-9:30 AM) and detect breakouts for high-probability trades
+                </p>
+              </div>
+              <button
+                onClick={resetORB}
+                disabled={Object.keys(orbRanges).length === 0}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '0.9em',
+                  background: 'rgba(255, 193, 7, 0.2)',
+                  border: '1px solid rgba(255, 193, 7, 0.5)',
+                  borderRadius: '8px',
+                  cursor: Object.keys(orbRanges).length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: Object.keys(orbRanges).length === 0 ? 0.5 : 1
+                }}
+              >
+                🔄 Reset ORB
+              </button>
+            </div>
+
+            {/* ORB Control Panel */}
+            <div style={{
+              padding: '25px',
+              background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 152, 0, 0.1) 100%)',
+              border: '2px solid rgba(255, 193, 7, 0.4)',
+              borderRadius: '12px',
+              marginBottom: '25px'
+            }}>
+              <h3 style={{ marginBottom: '15px', fontSize: '1.3em' }}>
+                {isCapturingORB ? '✅ ORB Captured - Monitoring for Breakouts' : '📊 Step 1: Capture Opening Range'}
+              </h3>
+              
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button 
+                  onClick={captureOpeningRange}
+                  disabled={isLoading || isCapturingORB}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '14px 20px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    background: isCapturingORB 
+                      ? 'rgba(0, 255, 100, 0.2)'
+                      : 'linear-gradient(135deg, #ffa500 0%, #ff8c00 100%)',
+                    border: isCapturingORB 
+                      ? '2px solid #00ff64'
+                      : '2px solid rgba(255, 193, 7, 0.5)',
+                    color: isCapturingORB ? '#00ff64' : '#000',
+                    borderRadius: '8px',
+                    cursor: (isLoading || isCapturingORB) ? 'not-allowed' : 'pointer',
+                    opacity: (isLoading || isCapturingORB) ? 0.6 : 1
+                  }}
+                >
+                  {isLoading ? '⏳ Capturing...' : isCapturingORB ? '✅ ORB Captured' : '📊 Capture ORB (9:15-9:30 AM)'}
+                </button>
+
+                <button 
+                  onClick={scanORBBreakouts}
+                  disabled={!isCapturingORB || isLoading}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '14px 20px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    background: (!isCapturingORB || isLoading)
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : 'linear-gradient(135deg, #00ff64 0%, #00cc50 100%)',
+                    border: (!isCapturingORB || isLoading)
+                      ? '1px solid rgba(255, 255, 255, 0.2)'
+                      : '2px solid #00ff64',
+                    color: (!isCapturingORB || isLoading) ? 'rgba(255, 255, 255, 0.5)' : '#000',
+                    borderRadius: '8px',
+                    cursor: (!isCapturingORB || isLoading) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isLoading ? '⏳ Scanning...' : '🚀 Scan for Breakouts'}
+                </button>
+              </div>
+
+              {/* ORB Watchlist Info */}
+              <div style={{ marginTop: '15px', fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.8)' }}>
+                <strong>Monitoring:</strong> {orbWatchlist.join(', ')}
+              </div>
+            </div>
+
+            {/* ORB Range Display */}
+            {Object.keys(orbRanges).length > 0 && (
+              <div style={{ marginBottom: '25px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '1.2em' }}>📏 Opening Ranges (9:15-9:30 AM)</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                  {Object.entries(orbRanges).map(([symbol, range]) => (
+                    <div 
+                      key={symbol}
+                      style={{
+                        padding: '15px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      <h4 style={{ marginBottom: '10px', fontSize: '1.1em' }}>{symbol}</h4>
+                      <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
+                        <div>🔼 High: <strong style={{ color: '#00ff64' }}>₹{range.high.toFixed(2)}</strong></div>
+                        <div>🔽 Low: <strong style={{ color: '#ff0064' }}>₹{range.low.toFixed(2)}</strong></div>
+                        <div>📊 Range: ₹{(range.high - range.low).toFixed(2)}</div>
+                        <div style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.6)', marginTop: '5px' }}>
+                          {range.timestamp.toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ORB Breakout Signals */}
+            {orbSignals.length > 0 ? (
+              <div>
+                <h3 style={{ marginBottom: '15px', fontSize: '1.2em', color: '#ffa500' }}>
+                  🚀 ORB Breakout Signals ({orbSignals.length})
+                </h3>
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  {orbSignals.map((signal, idx) => {
+                    const signalColor = signal.signal_type === 'BUY'
+                      ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
+                      : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
+
+                    return (
+                      <div 
+                        key={idx}
+                        className="card"
+                        style={{
+                          background: signalColor.bg,
+                          border: `2px solid ${signalColor.border}`,
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Signal Badge */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '15px',
+                          right: '15px',
+                          padding: '8px 16px',
+                          background: signalColor.border,
+                          color: '#000',
+                          borderRadius: '8px',
+                          fontSize: '0.9em',
+                          fontWeight: 'bold'
+                        }}>
+                          {signal.signal_type}
+                        </div>
+
+                        {/* Symbol and Strategy */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <h2 style={{ fontSize: '2em', margin: 0, marginBottom: '5px' }}>
+                            {signal.symbol}
+                          </h2>
+                          <div style={{ 
+                            fontSize: '1.1em', 
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            fontWeight: 'bold'
+                          }}>
+                            {signal.strategy}
+                          </div>
+                          <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.6)', marginTop: '5px' }}>
+                            Breakout: {signal.breakout_type}
+                          </div>
+                        </div>
+
+                        {/* Entry Details */}
+                        <div className="indicators">
+                          <div className="indicator">
+                            <div className="indicator-label">💰 Entry</div>
+                            <div className="indicator-value">
+                              ₹{signal.entry_price.toFixed(2)}
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">🎯 Target</div>
+                            <div className="indicator-value" style={{ color: '#00ff64' }}>
+                              ₹{signal.target.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              +{((Math.abs(signal.target - signal.entry_price)) / signal.entry_price * 100).toFixed(2)}%
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">🛑 Stop Loss</div>
+                            <div className="indicator-value" style={{ color: '#ff0064' }}>
+                              ₹{signal.stop_loss.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              -{((Math.abs(signal.entry_price - signal.stop_loss)) / signal.entry_price * 100).toFixed(2)}%
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">⚖️ Risk:Reward</div>
+                            <div className="indicator-value">
+                              1:{signal.risk_reward.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Signal Strength */}
+                        <div style={{ marginTop: '15px', marginBottom: '15px' }}>
+                          <div style={{ fontSize: '0.9em', marginBottom: '5px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                            Signal Strength: {signal.strength}/5
+                          </div>
+                          <div className="signal-strength">
+                            {Array(5).fill('').map((_, i) => (
+                              <div 
+                                key={i} 
+                                className={`strength-bar ${i < signal.strength ? 'filled' : ''}`}
+                                style={{ background: i < signal.strength ? signalColor.border : 'rgba(255,255,255,0.1)' }}
+                              ></div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* ORB Levels */}
+                        <div style={{
+                          padding: '15px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '10px',
+                          marginBottom: '15px'
+                        }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '0.95em' }}>
+                            📏 ORB Levels:
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9em' }}>
+                            <div>ORB High: ₹{signal.orb_high.toFixed(2)}</div>
+                            <div>ORB Low: ₹{signal.orb_low.toFixed(2)}</div>
+                            <div>Range Size: ₹{signal.range_size.toFixed(2)}</div>
+                            <div>Breakout: {signal.breakout_type}</div>
+                          </div>
+                        </div>
+
+                        {/* Reasons */}
+                        <div style={{
+                          padding: '15px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '10px',
+                          marginBottom: '15px'
+                        }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Why this signal:</div>
+                          <div style={{ lineHeight: '1.8' }}>
+                            {signal.reasons.map((reason: string, i: number) => (
+                              <div key={i} style={{ fontSize: '0.9em' }}>
+                                • {reason}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <button 
+                          onClick={() => {
+                            setManualEntrySymbol(signal.symbol)
+                            setManualEntryPrice(signal.entry_price.toString())
+                            setManualEntryQuantity('')
+                            setManualEntryType(signal.signal_type as 'BUY' | 'SELL')
+                            alert(`✅ Pre-filled entry form with ${signal.symbol}!\n\nScroll to "Add Position Manually" and enter quantity.`)
+                          }}
+                          style={{ 
+                            width: '100%', 
+                            marginTop: '10px',
+                            padding: '14px',
+                            fontSize: '1.1em',
+                            fontWeight: 'bold',
+                            background: signalColor.border,
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🚀 Enter Position ({signal.signal_type})
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : isCapturingORB ? (
+              <div style={{
+                padding: '30px',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(255, 255, 255, 0.2)'
+              }}>
+                <div style={{ fontSize: '2.5em', marginBottom: '15px' }}>📊</div>
+                <h3>ORB Captured - Monitoring for Breakouts</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '20px' }}>
+                  Click "🚀 Scan for Breakouts" to check if any stock has broken out of the opening range.
+                </p>
+              </div>
+            ) : null}
+
+            {/* Info Box */}
+            <div style={{ 
+              marginTop: '25px',
+              padding: '15px',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '10px'
+            }}>
+              <h4 style={{ marginBottom: '10px' }}>📚 How to Use ORB Scanner:</h4>
+              <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                <li><strong>9:15-9:30 AM:</strong> Click "📊 Capture ORB" during first 15 minutes</li>
+                <li><strong>9:30+ AM:</strong> Click "🚀 Scan for Breakouts" every 5-10 minutes</li>
+                <li><strong>Entry:</strong> Enter when price breaks above High (BUY) or below Low (SELL)</li>
+                <li><strong>Target:</strong> 1.5x the opening range size</li>
+                <li><strong>Stop-Loss:</strong> Below breakout level (30% of range)</li>
+                <li><strong>Best Results:</strong> Trending days, high volume stocks, clear breakouts</li>
+              </ol>
+            </div>
           </div>
 
           {/* Position Tracking Section */}
