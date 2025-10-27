@@ -1329,6 +1329,11 @@ export default function StockTracker() {
       const results: any[] = []
       const totalStocks = Math.min(stocks.length, 100) // Limit to 100 for speed
       
+      console.log(`🔄 Starting analysis of ${totalStocks} stocks...`)
+      
+      let successCount = 0
+      let failCount = 0
+      
       for (let i = 0; i < totalStocks; i++) {
         const stock = stocks[i]
         
@@ -1337,8 +1342,14 @@ export default function StockTracker() {
           if (i > 0) await sleep(200)
           
           // Fetch current quote
+          console.log(`📊 [${i + 1}/${totalStocks}] Analyzing ${stock.tradingsymbol}...`)
           const data = await fetchStockQuote(stock.tradingsymbol)
-          if (!data) continue
+          
+          if (!data) {
+            console.warn(`⚠️ ${stock.tradingsymbol}: No quote data available`)
+            failCount++
+            continue
+          }
           
           // Fetch historical data (last 10 days)
           const historicalResponse = await fetch(
@@ -1346,14 +1357,19 @@ export default function StockTracker() {
           )
           
           if (!historicalResponse.ok) {
-            console.warn(`Failed to fetch historical for ${stock.tradingsymbol}`)
+            console.warn(`⚠️ ${stock.tradingsymbol}: Failed to fetch historical (${historicalResponse.status})`)
+            failCount++
             continue
           }
           
           const historicalData = await historicalResponse.json()
           const candles = historicalData.candles || []
           
-          if (candles.length < 5) continue // Need at least 5 days
+          if (candles.length < 5) {
+            console.warn(`⚠️ ${stock.tradingsymbol}: Insufficient historical data (${candles.length} days)`)
+            failCount++
+            continue
+          }
           
           // Convert to DailyCandle format
           const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
@@ -1396,13 +1412,19 @@ export default function StockTracker() {
             instrumentToken: data.instrumentToken
           })
           
+          successCount++
+          console.log(`✅ ${stock.tradingsymbol}: Success (${intelligence.recommendation}, score: ${intelligence.historicalScore})`)
+          
           // Update progress
           setScanProgress(Math.round((i + 1) / totalStocks * 100))
           
         } catch (err) {
-          console.error(`Error analyzing ${stock.tradingsymbol}:`, err)
+          console.error(`❌ Error analyzing ${stock.tradingsymbol}:`, err)
+          failCount++
         }
       }
+
+      console.log(`\n📊 Scan Summary: ${successCount} successful, ${failCount} failed out of ${totalStocks} stocks`)
 
       // Sort by historical score (highest first)
       const sortedResults = results
@@ -1415,13 +1437,27 @@ export default function StockTracker() {
       const strongBuy = sortedResults.filter(r => r.recommendation === 'STRONG_BUY').length
       const buy = sortedResults.filter(r => r.recommendation === 'BUY').length
       
-      alert(
-        `✅ Intelligence Scan Complete!\n\n` +
-        `📊 Analyzed ${results.length} stocks with historical patterns\n` +
-        `🚨 ${strongBuy} STRONG BUY signals\n` +
-        `✅ ${buy} BUY signals\n` +
-        `👀 ${sortedResults.length - strongBuy - buy} WATCH signals`
-      )
+      if (results.length === 0) {
+        alert(
+          `⚠️ No stocks analyzed successfully!\n\n` +
+          `Attempted: ${totalStocks} stocks\n` +
+          `Failed: ${failCount} stocks\n\n` +
+          `Check browser console for details.\n` +
+          `Possible issues:\n` +
+          `- Market is closed (weekend/holiday)\n` +
+          `- API rate limiting\n` +
+          `- Authentication expired`
+        )
+      } else {
+        alert(
+          `✅ Intelligence Scan Complete!\n\n` +
+          `📊 Analyzed ${results.length} stocks with historical patterns\n` +
+          `❌ Failed ${failCount} stocks\n\n` +
+          `🚨 ${strongBuy} STRONG BUY signals\n` +
+          `✅ ${buy} BUY signals\n` +
+          `👀 ${sortedResults.length - strongBuy - buy} WATCH signals`
+        )
+      }
 
     } catch (error: any) {
       console.error('Universe scan error:', error)
