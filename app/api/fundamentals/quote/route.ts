@@ -89,7 +89,70 @@ export async function GET(request: NextRequest) {
         
       } catch (quoteError: any) {
         console.error(`❌ Quote API also failed:`, quoteError.message);
-        throw new Error(`Could not fetch data for ${symbol}. ${quoteError.message}`);
+        
+        // Last resort: try Screener.in (Indian stock data)
+        console.log(`📊 Last attempt: trying Screener.in for ${symbol}...`);
+        try {
+          const screenerUrl = `https://www.screener.in/api/company/${symbol}/`;
+          const screenerResponse = await fetch(screenerUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (screenerResponse.ok) {
+            const screenerData = await screenerResponse.json();
+            
+            if (screenerData && screenerData.name) {
+              console.log(`✅ Retrieved data from Screener.in for ${symbol}`);
+              
+              const fundamentalData: FundamentalData = {
+                symbol: symbol.toUpperCase(),
+                companyName: screenerData.name || symbol,
+                sector: screenerData.sector,
+                industry: screenerData.industry,
+                
+                marketCap: screenerData.market_cap ? screenerData.market_cap * 10000000 : 0,
+                peRatio: screenerData.current_pe,
+                pbRatio: screenerData.price_to_book,
+                eps: screenerData.eps,
+                
+                roe: screenerData.roe ? screenerData.roe / 100 : undefined,
+                roa: screenerData.roa ? screenerData.roa / 100 : undefined,
+                profitMargin: screenerData.npm ? screenerData.npm / 100 : undefined,
+                
+                debtToEquity: screenerData.debt_to_equity,
+                currentRatio: screenerData.current_ratio,
+                
+                dividendYield: screenerData.dividend_yield ? screenerData.dividend_yield / 100 : undefined,
+                
+                revenueGrowth: screenerData.sales_growth ? screenerData.sales_growth / 100 : undefined,
+                earningsGrowth: screenerData.profit_growth ? screenerData.profit_growth / 100 : undefined,
+                
+                fiftyTwoWeekHigh: screenerData.high_52_week,
+                fiftyTwoWeekLow: screenerData.low_52_week,
+                
+                bookValue: screenerData.book_value,
+                priceToBook: screenerData.price_to_book,
+                
+                lastUpdated: new Date()
+              };
+              
+              return NextResponse.json({
+                success: true,
+                data: fundamentalData,
+                source: 'Screener.in (Fallback)',
+                timestamp: new Date().toISOString(),
+                note: 'Yahoo Finance unavailable - used Indian stock database'
+              });
+            }
+          }
+        } catch (screenerError) {
+          console.error(`❌ Screener.in also failed:`, screenerError);
+        }
+        
+        throw new Error(`Could not fetch data for ${symbol} from any source. Yahoo Finance: ${yahooError.message}, Quote: ${quoteError.message}`);
       }
     }
     
