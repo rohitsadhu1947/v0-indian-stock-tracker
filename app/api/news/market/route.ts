@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { NewsItem } from '../quote/route';
+import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal } from '@/lib/sentiment-utils';
 
 // Disable caching for this API route
 export const dynamic = 'force-dynamic';
@@ -31,13 +32,18 @@ export async function GET() {
       if (etFeed.items && etFeed.items.length > 0) {
         console.log(`✅ Found ${etFeed.items.length} Economic Times articles`);
         etFeed.items.slice(0, 15).forEach(item => {
+          const title = item.title || 'No title';
+          const snippet = extractSnippet(item.contentSnippet || item.content || item.description || '');
+          const textForAnalysis = `${title} ${snippet}`;
+          
           allNews.push({
-            title: item.title || 'No title',
+            title,
             link: item.link || '',
             pubDate: item.pubDate || new Date().toISOString(),
             source: 'Economic Times',
-            snippet: extractSnippet(item.contentSnippet || item.content || item.description || ''),
-            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now()
+            snippet,
+            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+            sentiment: analyzeSentiment(textForAnalysis)
           });
         });
       }
@@ -54,13 +60,18 @@ export async function GET() {
       if (mcFeed.items && mcFeed.items.length > 0) {
         console.log(`✅ Found ${mcFeed.items.length} Moneycontrol articles`);
         mcFeed.items.slice(0, 15).forEach(item => {
+          const title = item.title || 'No title';
+          const snippet = extractSnippet(item.contentSnippet || item.content || item.description || '');
+          const textForAnalysis = `${title} ${snippet}`;
+          
           allNews.push({
-            title: item.title || 'No title',
+            title,
             link: item.link || '',
             pubDate: item.pubDate || new Date().toISOString(),
             source: 'Moneycontrol',
-            snippet: extractSnippet(item.contentSnippet || item.content || item.description || ''),
-            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now()
+            snippet,
+            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+            sentiment: analyzeSentiment(textForAnalysis)
           });
         });
       }
@@ -77,13 +88,18 @@ export async function GET() {
       if (ndtvFeed.items && ndtvFeed.items.length > 0) {
         console.log(`✅ Found ${ndtvFeed.items.length} NDTV Profit articles`);
         ndtvFeed.items.slice(0, 15).forEach(item => {
+          const title = item.title || 'No title';
+          const snippet = extractSnippet(item.contentSnippet || item.content || item.description || '');
+          const textForAnalysis = `${title} ${snippet}`;
+          
           allNews.push({
-            title: item.title || 'No title',
+            title,
             link: item.link || '',
             pubDate: item.pubDate || new Date().toISOString(),
             source: 'NDTV Profit',
-            snippet: extractSnippet(item.contentSnippet || item.content || item.description || ''),
-            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now()
+            snippet,
+            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+            sentiment: analyzeSentiment(textForAnalysis)
           });
         });
       }
@@ -100,13 +116,18 @@ export async function GET() {
       if (bsFeed.items && bsFeed.items.length > 0) {
         console.log(`✅ Found ${bsFeed.items.length} Business Standard articles`);
         bsFeed.items.slice(0, 15).forEach(item => {
+          const title = item.title || 'No title';
+          const snippet = extractSnippet(item.contentSnippet || item.content || item.description || '');
+          const textForAnalysis = `${title} ${snippet}`;
+          
           allNews.push({
-            title: item.title || 'No title',
+            title,
             link: item.link || '',
             pubDate: item.pubDate || new Date().toISOString(),
             source: 'Business Standard',
-            snippet: extractSnippet(item.contentSnippet || item.content || item.description || ''),
-            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now()
+            snippet,
+            timestamp: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+            sentiment: analyzeSentiment(textForAnalysis)
           });
         });
       }
@@ -122,10 +143,23 @@ export async function GET() {
 
     console.log(`✅ Total unique market news items: ${uniqueNews.length}`);
 
+    // Calculate aggregate sentiment for market
+    const topNews = uniqueNews.slice(0, 30); // Top 30 news items
+    const sentiments = topNews.map(item => item.sentiment);
+    const aggregateSentiment = calculateAggregateSentiment(sentiments);
+    const tradingSignal = getSentimentTradingSignal(aggregateSentiment);
+    
+    console.log(`📊 Market Sentiment: ${aggregateSentiment.overall} (${aggregateSentiment.positive} positive, ${aggregateSentiment.negative} negative, ${aggregateSentiment.neutral} neutral)`);
+    console.log(`💡 Market Signal: ${tradingSignal.signal} (strength: ${tradingSignal.strength}/10)`);
+
     return NextResponse.json({
       success: true,
-      count: uniqueNews.length,
-      news: uniqueNews.slice(0, 30) // Return top 30 news items
+      count: topNews.length,
+      news: topNews,
+      sentiment: {
+        aggregate: aggregateSentiment,
+        trading: tradingSignal
+      }
     });
 
   } catch (error: any) {

@@ -121,6 +121,8 @@ export default function StockTracker() {
   const [marketNews, setMarketNews] = useState<any[]>([])
   const [isFetchingNews, setIsFetchingNews] = useState(false)
   const [newsTab, setNewsTab] = useState<'stock' | 'market'>('stock')
+  const [stockSentiment, setStockSentiment] = useState<any>(null)
+  const [marketSentiment, setMarketSentiment] = useState<any>(null)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -1739,7 +1741,9 @@ export default function StockTracker() {
       
       if (result.success && result.news) {
         setStockNews(result.news)
+        setStockSentiment(result.sentiment)
         console.log(`✅ Loaded ${result.count} news items for ${targetSymbol}`)
+        console.log(`📊 Sentiment: ${result.sentiment.aggregate.overall} (${result.sentiment.trading.signal})`)
       }
       
     } catch (error: any) {
@@ -1767,7 +1771,9 @@ export default function StockTracker() {
       
       if (result.success && result.news) {
         setMarketNews(result.news)
+        setMarketSentiment(result.sentiment)
         console.log(`✅ Loaded ${result.count} market news items`)
+        console.log(`📊 Market Sentiment: ${result.sentiment.aggregate.overall} (${result.sentiment.trading.signal})`)
       }
       
     } catch (error: any) {
@@ -5035,6 +5041,61 @@ export default function StockTracker() {
                   </div>
                 )}
 
+                {/* Sentiment Summary Card */}
+                {!isFetchingNews && (newsTab === 'stock' ? stockSentiment : marketSentiment) && (newsTab === 'stock' ? stockNews : marketNews).length > 0 && (() => {
+                  const sentiment = newsTab === 'stock' ? stockSentiment : marketSentiment;
+                  const aggregate = sentiment.aggregate;
+                  const trading = sentiment.trading;
+                  
+                  return (
+                    <div style={{
+                      padding: '20px',
+                      background: `linear-gradient(135deg, ${aggregate.color}20, ${aggregate.color}10)`,
+                      border: `2px solid ${aggregate.color}`,
+                      borderRadius: '15px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '2.5em' }}>{aggregate.emoji}</span>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '1.5em', color: aggregate.color }}>
+                                {aggregate.overall} SENTIMENT
+                              </h4>
+                              <p style={{ margin: 0, fontSize: '0.9em', opacity: 0.8 }}>
+                                {aggregate.description}
+                              </p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '20px', fontSize: '0.9em', marginTop: '10px' }}>
+                            <span style={{ color: '#00ff64' }}>📈 {aggregate.positive} Positive</span>
+                            <span style={{ color: '#ff0064' }}>📉 {aggregate.negative} Negative</span>
+                            <span style={{ color: '#888888' }}>😐 {aggregate.neutral} Neutral</span>
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '20px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '12px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>TRADING SIGNAL</div>
+                          <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: aggregate.color }}>
+                            {trading.signal}
+                          </div>
+                          <div style={{ fontSize: '0.9em', marginTop: '5px', opacity: 0.8 }}>
+                            Strength: {trading.strength}/10
+                          </div>
+                          <div style={{ fontSize: '0.85em', marginTop: '10px', opacity: 0.7, maxWidth: '200px' }}>
+                            {trading.reason}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* News List */}
                 {!isFetchingNews && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -5070,15 +5131,35 @@ export default function StockTracker() {
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
                             <div style={{ flex: 1 }}>
-                              <h5 style={{ 
-                                margin: 0, 
-                                marginBottom: '8px', 
-                                fontSize: '1.05em', 
-                                color: '#4facfe',
-                                fontWeight: 'bold'
-                              }}>
-                                {item.title}
-                              </h5>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                <h5 style={{ 
+                                  margin: 0, 
+                                  fontSize: '1.05em', 
+                                  color: '#4facfe',
+                                  fontWeight: 'bold',
+                                  flex: 1
+                                }}>
+                                  {item.title}
+                                </h5>
+                                {item.sentiment && (
+                                  <span style={{
+                                    padding: '4px 12px',
+                                    background: `${item.sentiment.color}20`,
+                                    border: `1px solid ${item.sentiment.color}`,
+                                    borderRadius: '12px',
+                                    fontSize: '0.75em',
+                                    fontWeight: 'bold',
+                                    color: item.sentiment.color,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    <span>{item.sentiment.emoji}</span>
+                                    <span>{item.sentiment.label}</span>
+                                  </span>
+                                )}
+                              </div>
                               {item.snippet && (
                                 <p style={{ 
                                   margin: 0, 
@@ -5098,6 +5179,9 @@ export default function StockTracker() {
                               }}>
                                 <span>🏢 {item.source}</span>
                                 <span>⏰ {new Date(item.pubDate).toLocaleDateString()} {new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                {item.sentiment && item.sentiment.confidence > 0 && (
+                                  <span>💡 {item.sentiment.confidence}% confidence</span>
+                                )}
                               </div>
                             </div>
                             <div style={{ fontSize: '1.5em', opacity: 0.5 }}>
