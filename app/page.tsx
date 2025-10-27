@@ -1464,8 +1464,30 @@ export default function StockTracker() {
               volume: c[5]
             }))
             
+            // DEBUG: Log first candle to see actual values
+            if (dailyCandles.length > 0) {
+              console.log(`🔍 ${stock.tradingsymbol} FIRST CANDLE:`, {
+                date: dailyCandles[0].date.toISOString().split('T')[0],
+                open: dailyCandles[0].open,
+                high: dailyCandles[0].high,
+                low: dailyCandles[0].low,
+                close: dailyCandles[0].close,
+                volume: dailyCandles[0].volume
+              })
+            }
+            
             // Analyze historical patterns
             pattern = analyzeHistoricalPatterns(stock.tradingsymbol, dailyCandles)
+            
+            // DEBUG: Log pattern IMMEDIATELY after calculation
+            console.log(`📊 ${stock.tradingsymbol} RAW PATTERN:`, {
+              successRate: pattern.successRate,
+              volatility: pattern.volatilityConsistency,
+              momentum: pattern.momentumFollowThrough,
+              avgRange: pattern.averageDayRange,
+              gapFillRate: pattern.gapFillRate,
+              confidence: pattern.confidence
+            })
             
             // Generate intelligence
             intelligence = generateStockIntelligence(
