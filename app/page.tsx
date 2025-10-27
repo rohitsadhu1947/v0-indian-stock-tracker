@@ -1474,6 +1474,18 @@ export default function StockTracker() {
               data.current,
               dailyCandles
             )
+            
+            // DETAILED LOGGING FOR DEBUGGING
+            console.log(`🔍 ${stock.tradingsymbol} INTELLIGENCE:`, {
+              recommendation: intelligence.recommendation,
+              score: intelligence.historicalScore,
+              pattern: {
+                successRate: pattern.successRate.toFixed(1) + '%',
+                volatility: pattern.volatilityConsistency.toFixed(1) + '%',
+                momentum: pattern.momentumFollowThrough.toFixed(1) + '%',
+                avgRange: pattern.averageDayRange.toFixed(2) + '%'
+              }
+            })
           }
           
           // Calculate basic score for sorting
@@ -1512,7 +1524,7 @@ export default function StockTracker() {
 
       // Sort by historical score (highest first)
       const sortedResults = results
-        .filter(r => r.recommendation !== 'SKIP') // Filter out SKIP recommendations
+        // TEMPORARILY DISABLED: .filter(r => r.recommendation !== 'SKIP') // Filter out SKIP recommendations
         .sort((a, b) => b.historicalScore - a.historicalScore)
         .slice(0, 50) // Top 50 candidates
 
