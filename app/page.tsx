@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { formatSymbolForKite, generateTradingSignal } from '@/lib/kite-utils'
 import { 
   calculateVWAP, 
@@ -61,8 +61,10 @@ export default function StockTracker() {
   const [totalPnL, setTotalPnL] = useState(0)
   const [intradayWatchlist, setIntradayWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
   const [autoRefreshIntraday, setAutoRefreshIntraday] = useState(false)
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(60) // seconds
   const [isDemoData, setIsDemoData] = useState(false)
   const [intradayStockInput, setIntradayStockInput] = useState('')
+  const [exitSignals, setExitSignals] = useState<Record<string, any>>({})
   const [screenerLevel, setScreenerLevel] = useState<'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'>('MODERATE')
   
   // Manual position entry
@@ -98,6 +100,30 @@ export default function StockTracker() {
   useEffect(() => {
     localStorage.setItem('intradayWatchlist', JSON.stringify(intradayWatchlist))
   }, [intradayWatchlist])
+
+  // Auto-refresh positions at intervals
+  useEffect(() => {
+    if (!autoRefreshIntraday || intradayPositions.length === 0 || !authStatus.authenticated) {
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      console.log(`🔄 Auto-refreshing positions (${new Date().toLocaleTimeString()})...`)
+      monitorPositions()
+    }, autoRefreshInterval * 1000)
+
+    // Run immediately on enable
+    monitorPositions()
+
+    return () => clearInterval(intervalId)
+  }, [autoRefreshIntraday, autoRefreshInterval, intradayPositions.length, authStatus.authenticated])
+
+  // Request notification permissions on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
 
   // Check authentication status on mount
   useEffect(() => {
@@ -669,6 +695,91 @@ export default function StockTracker() {
       alert('❌ Failed to update prices. Check console for details.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Monitor positions with intelligent exit detection
+  async function monitorPositions() {
+    if (intradayPositions.length === 0) return
+
+    try {
+      const newExitSignals: Record<string, any> = {}
+      
+      // Update prices and check exit signals for all positions
+      const updatedPositions = await Promise.all(
+        intradayPositions.map(async (position) => {
+          try {
+            const data = await fetchStockQuote(position.symbol)
+            
+            if (data) {
+              const pnl = position.type === 'BUY' 
+                ? (data.current - position.entry_price) * position.quantity
+                : (position.entry_price - data.current) * position.quantity
+              
+              const pnlPercent = (pnl / (position.entry_price * position.quantity)) * 100
+              
+              const updatedPosition = {
+                ...position,
+                current_price: data.current,
+                pnl: Number(pnl),
+                pnl_percent: Number(pnlPercent)
+              }
+
+              // Check exit signal using intraday-utils
+              const exitCheck = checkExitSignal(updatedPosition, data.current, new Date())
+              
+              if (exitCheck.shouldExit) {
+                // Create exit signal object
+                const exitSignal = {
+                  shouldExit: true,
+                  reason: exitCheck.reason,
+                  strength: exitCheck.reason.includes('Stop Loss') || exitCheck.reason.includes('Time Stop') ? 5 : 3,
+                  reasons: [exitCheck.reason],
+                  pnl: pnl
+                }
+                
+                newExitSignals[position.symbol] = exitSignal
+                
+                // Send browser notification for critical exits (stop loss or time stop)
+                if (exitSignal.strength >= 4) {
+                  sendNotification(
+                    `🚨 EXIT SIGNAL: ${position.symbol}`,
+                    `${exitCheck.reason} | P&L: ₹${pnl.toFixed(2)}`
+                  )
+                }
+              }
+              
+              return updatedPosition
+            }
+            return position
+          } catch (err) {
+            console.error(`Failed to monitor ${position.symbol}:`, err)
+            return position
+          }
+        })
+      )
+      
+      setIntradayPositions(updatedPositions)
+      setExitSignals(newExitSignals)
+      
+      // Update total P&L
+      const totalPnL = updatedPositions.reduce((sum, pos) => sum + Number(pos.pnl || 0), 0)
+      setTotalPnL(totalPnL)
+      
+    } catch (err) {
+      console.error('Error monitoring positions:', err)
+    }
+  }
+
+  // Send browser notification
+  function sendNotification(title: string, body: string) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        requireInteraction: true
+      })
     }
   }
 
@@ -1850,6 +1961,68 @@ export default function StockTracker() {
               </div>
             </div>
 
+            {/* Auto-Refresh Controls */}
+            <div style={{
+              padding: '20px',
+              background: 'rgba(79, 172, 254, 0.1)',
+              border: '2px solid rgba(79, 172, 254, 0.3)',
+              borderRadius: '12px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={autoRefreshIntraday}
+                      onChange={(e) => setAutoRefreshIntraday(e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: 'bold', fontSize: '15px' }}>
+                      🤖 Auto-Monitor Positions
+                    </span>
+                  </label>
+                </div>
+
+                {autoRefreshIntraday && (
+                  <>
+                    <div style={{ height: '20px', width: '1px', background: 'rgba(255, 255, 255, 0.3)' }} />
+                    <div>
+                      <label style={{ marginRight: '8px', fontSize: '14px' }}>Update Every:</label>
+                      <select
+                        value={autoRefreshInterval}
+                        onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+                        style={{
+                          padding: '6px 12px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={30} style={{ background: '#1a1a1a' }}>30 seconds</option>
+                        <option value={60} style={{ background: '#1a1a1a' }}>1 minute</option>
+                        <option value={120} style={{ background: '#1a1a1a' }}>2 minutes</option>
+                        <option value={300} style={{ background: '#1a1a1a' }}>5 minutes</option>
+                      </select>
+                    </div>
+                    <div style={{ height: '20px', width: '1px', background: 'rgba(255, 255, 255, 0.3)' }} />
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                      ✅ Monitoring active - Exit signals will show automatically
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              {!autoRefreshIntraday && (
+                <div style={{ marginTop: '10px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                  💡 Enable to get real-time exit alerts based on targets, stop-loss, and momentum shifts
+                </div>
+              )}
+            </div>
+
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
               <button 
@@ -1941,9 +2114,11 @@ export default function StockTracker() {
                     const pnlValue = Number(position.pnl || 0)
                     const pnlPercent = Number(position.pnl_percent || 0)
                     const timeHeld = Math.floor((Date.now() - position.entry_time.getTime()) / 1000 / 60)
+                    const exitSignal = exitSignals[position.symbol]
 
                     return (
-                      <tr key={idx}>
+                      <React.Fragment key={idx}>
+                      <tr>
                         {/* Type Badge */}
                         <td>
                           <span style={{
@@ -2007,6 +2182,49 @@ export default function StockTracker() {
                           </button>
                         </td>
                       </tr>
+
+                      {/* Exit Signal Alert Row */}
+                      {exitSignal && (
+                        <tr style={{ 
+                          background: exitSignal.strength >= 4 
+                            ? 'rgba(255, 0, 100, 0.2)' 
+                            : 'rgba(255, 193, 7, 0.2)',
+                          borderLeft: `4px solid ${exitSignal.strength >= 4 ? '#ff0064' : '#ffc107'}`
+                        }}>
+                          <td colSpan={9} style={{ padding: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                              <div style={{ fontSize: '1.5em' }}>
+                                {exitSignal.strength >= 4 ? '🚨' : '⚠️'}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '1.05em' }}>
+                                  {exitSignal.strength >= 4 ? '🚨 STRONG EXIT SIGNAL' : '⚠️ Consider Exit'}
+                                </div>
+                                <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                  {exitSignal.reasons.join(' • ')}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => exitPosition(position.symbol)}
+                                style={{
+                                  padding: '10px 20px',
+                                  fontSize: '0.95em',
+                                  fontWeight: 'bold',
+                                  background: exitSignal.strength >= 4 ? '#ff0064' : '#ffc107',
+                                  color: '#000',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {exitSignal.strength >= 4 ? '🚨 EXIT NOW' : '⚠️ EXIT POSITION'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     )
                   })}
                 </tbody>
