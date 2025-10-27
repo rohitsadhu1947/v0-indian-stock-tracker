@@ -120,9 +120,10 @@ export default function StockTracker() {
   const [stockNews, setStockNews] = useState<any[]>([])
   const [marketNews, setMarketNews] = useState<any[]>([])
   const [isFetchingNews, setIsFetchingNews] = useState(false)
-  const [newsTab, setNewsTab] = useState<'stock' | 'market'>('stock')
+  const [newsTab, setNewsTab] = useState<'stock' | 'market' | 'multi'>('multi')
   const [stockSentiment, setStockSentiment] = useState<any>(null)
   const [marketSentiment, setMarketSentiment] = useState<any>(null)
+  const [multiLayerNews, setMultiLayerNews] = useState<any>(null)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -1717,6 +1718,48 @@ export default function StockTracker() {
     setScanResults([])
   }
 
+  // Fetch multi-layer news (stock + sector + macro)
+  async function fetchMultiLayerNews(symbol?: string) {
+    const targetSymbol = symbol || fundamentalSymbol.trim().toUpperCase()
+    
+    if (!targetSymbol) {
+      alert('⚠️ Please enter a stock symbol first')
+      return
+    }
+    
+    setIsFetchingNews(true)
+    
+    try {
+      console.log(`🎯 Fetching multi-layer news for ${targetSymbol}...`)
+      
+      const response = await fetch(`/api/news/multi-layer?symbol=${targetSymbol}&exchange=${fundamentalExchange}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch multi-layer news')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setMultiLayerNews(result)
+        // Also update individual states for backward compatibility
+        setStockNews(result.stockNews.news)
+        setStockSentiment(result.stockNews.sentiment)
+        console.log(`✅ Multi-layer analysis complete for ${targetSymbol}`)
+        console.log(`   📰 Stock: ${result.stockNews.sentiment.aggregate.overall}`)
+        if (result.sectorNews) console.log(`   🏢 Sector: ${result.sectorNews.sentiment.aggregate.overall}`)
+        if (result.macroNews) console.log(`   🌍 Macro: ${result.macroNews.sentiment.aggregate.overall}`)
+        console.log(`   ⚡ Combined: ${result.combinedSentiment.overall} (${result.combinedSentiment.tradingSignal.signal})`)
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching multi-layer news:', error)
+      alert(`❌ Failed to fetch news: ${error.message}`)
+    } finally {
+      setIsFetchingNews(false)
+    }
+  }
+
   // Fetch stock-specific news
   async function fetchStockNews(symbol?: string) {
     const targetSymbol = symbol || fundamentalSymbol.trim().toUpperCase()
@@ -1819,8 +1862,8 @@ export default function StockTracker() {
         console.log(`✅ ${symbol} fundamentals loaded`)
         console.log(`   Score: ${score.overall}/100 (${score.rating})`)
         
-        // Auto-fetch news for this stock
-        fetchStockNews(symbol)
+      // Auto-fetch multi-layer news for this stock
+      fetchMultiLayerNews(symbol)
       } else {
         throw new Error('No data received')
       }
@@ -4982,55 +5025,75 @@ export default function StockTracker() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
                   <h4 style={{ margin: 0 }}>📰 Latest News</h4>
                   
-                  {/* News Type Tabs */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      onClick={() => {
-                        setNewsTab('stock')
-                        if (stockNews.length === 0) fetchStockNews()
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: newsTab === 'stock' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
-                        border: newsTab === 'stock' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: newsTab === 'stock' ? 'bold' : 'normal'
-                      }}
-                    >
-                      {fundamentalData.symbol} News
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNewsTab('market')
-                        if (marketNews.length === 0) fetchMarketNews()
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: newsTab === 'market' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
-                        border: newsTab === 'market' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: newsTab === 'market' ? 'bold' : 'normal'
-                      }}
-                    >
-                      Market News
-                    </button>
-                    <button
-                      onClick={() => newsTab === 'stock' ? fetchStockNews() : fetchMarketNews()}
-                      disabled={isFetchingNews}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        cursor: isFetchingNews ? 'not-allowed' : 'pointer',
-                        opacity: isFetchingNews ? 0.5 : 1
-                      }}
-                    >
-                      {isFetchingNews ? '🔄' : '🔄 Refresh'}
-                    </button>
-                  </div>
+                {/* News Type Tabs */}
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => {
+                      setNewsTab('multi')
+                      if (!multiLayerNews) fetchMultiLayerNews()
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: newsTab === 'multi' ? 'linear-gradient(45deg, #f093fb, #f5576c)' : 'rgba(255, 255, 255, 0.1)',
+                      border: newsTab === 'multi' ? '2px solid #f5576c' : '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: newsTab === 'multi' ? 'bold' : 'normal'
+                    }}
+                  >
+                    🎯 Multi-Layer Analysis
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewsTab('stock')
+                      if (stockNews.length === 0) fetchStockNews()
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: newsTab === 'stock' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
+                      border: newsTab === 'stock' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: newsTab === 'stock' ? 'bold' : 'normal'
+                    }}
+                  >
+                    📰 {fundamentalData.symbol} News
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewsTab('market')
+                      if (marketNews.length === 0) fetchMarketNews()
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      background: newsTab === 'market' ? 'linear-gradient(45deg, #667eea, #764ba2)' : 'rgba(255, 255, 255, 0.1)',
+                      border: newsTab === 'market' ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: newsTab === 'market' ? 'bold' : 'normal'
+                    }}
+                  >
+                    🌍 Market News
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (newsTab === 'multi') fetchMultiLayerNews()
+                      else if (newsTab === 'stock') fetchStockNews()
+                      else fetchMarketNews()
+                    }}
+                    disabled={isFetchingNews}
+                    style={{
+                      padding: '8px 16px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      cursor: isFetchingNews ? 'not-allowed' : 'pointer',
+                      opacity: isFetchingNews ? 0.5 : 1
+                    }}
+                  >
+                    {isFetchingNews ? '🔄' : '🔄 Refresh'}
+                  </button>
+                </div>
                 </div>
 
                 {/* News Loading State */}
@@ -5041,8 +5104,147 @@ export default function StockTracker() {
                   </div>
                 )}
 
-                {/* Sentiment Summary Card */}
-                {!isFetchingNews && (newsTab === 'stock' ? stockSentiment : marketSentiment) && (newsTab === 'stock' ? stockNews : marketNews).length > 0 && (() => {
+                {/* Multi-Layer Sentiment Analysis */}
+                {!isFetchingNews && newsTab === 'multi' && multiLayerNews && (() => {
+                  const combined = multiLayerNews.combinedSentiment;
+                  const color = combined.overall === 'POSITIVE' ? '#00ff64' : combined.overall === 'NEGATIVE' ? '#ff0064' : '#888888';
+                  const emoji = combined.overall === 'POSITIVE' ? '🚀' : combined.overall === 'NEGATIVE' ? '💥' : '😐';
+                  
+                  return (
+                    <div style={{ marginBottom: '20px' }}>
+                      {/* Combined Sentiment Header */}
+                      <div style={{
+                        padding: '25px',
+                        background: `linear-gradient(135deg, ${color}20, ${color}10)`,
+                        border: `3px solid ${color}`,
+                        borderRadius: '15px',
+                        marginBottom: '15px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                              <span style={{ fontSize: '3em' }}>{emoji}</span>
+                              <div>
+                                <h3 style={{ margin: 0, fontSize: '1.8em', color }}>
+                                  {combined.overall} COMBINED SENTIMENT
+                                </h3>
+                                <p style={{ margin: '5px 0 0 0', fontSize: '1em', opacity: 0.9 }}>
+                                  {combined.reasoning}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Layer Breakdown */}
+                            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '15px' }}>
+                              <div style={{ flex: 1, minWidth: '150px', padding: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '0.85em', opacity: 0.7 }}>📰 STOCK NEWS</div>
+                                <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginTop: '5px' }}>
+                                  {multiLayerNews.stockNews.sentiment.aggregate.overall}
+                                </div>
+                                <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                                  Score: {combined.layers.stock.toFixed(2)}
+                                </div>
+                              </div>
+                              
+                              {multiLayerNews.sectorNews && (
+                                <div style={{ flex: 1, minWidth: '150px', padding: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '0.85em', opacity: 0.7 }}>🏢 SECTOR NEWS</div>
+                                  <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginTop: '5px' }}>
+                                    {multiLayerNews.sectorNews.sentiment.aggregate.overall}
+                                  </div>
+                                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                                    {multiLayerNews.sectorNews.sector} / {multiLayerNews.sectorNews.industry}
+                                  </div>
+                                  <div style={{ fontSize: '0.75em', opacity: 0.6, marginTop: '2px' }}>
+                                    Score: {combined.layers.sector.toFixed(2)}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {multiLayerNews.macroNews && (
+                                <div style={{ flex: 1, minWidth: '150px', padding: '10px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                                  <div style={{ fontSize: '0.85em', opacity: 0.7 }}>🌍 MACRO NEWS</div>
+                                  <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginTop: '5px' }}>
+                                    {multiLayerNews.macroNews.sentiment.aggregate.overall}
+                                  </div>
+                                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '5px' }}>
+                                    {multiLayerNews.macroNews.affectedFactors[0]}
+                                  </div>
+                                  <div style={{ fontSize: '0.75em', opacity: 0.6, marginTop: '2px' }}>
+                                    Score: {combined.layers.macro.toFixed(2)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Trading Signal */}
+                          <div style={{
+                            padding: '25px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            borderRadius: '12px',
+                            textAlign: 'center',
+                            minWidth: '200px'
+                          }}>
+                            <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '8px' }}>⚡ TRADING SIGNAL</div>
+                            <div style={{ fontSize: '1.8em', fontWeight: 'bold', color }}>
+                              {combined.tradingSignal.signal}
+                            </div>
+                            <div style={{ fontSize: '1.1em', marginTop: '8px', opacity: 0.9 }}>
+                              Strength: {combined.tradingSignal.strength}/10
+                            </div>
+                            <div style={{ fontSize: '0.9em', marginTop: '12px', opacity: 0.75, lineHeight: '1.4' }}>
+                              {combined.tradingSignal.reason}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Detailed News by Layer */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
+                        {/* Stock News */}
+                        <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                          <h5 style={{ margin: '0 0 10px 0', fontSize: '1.1em' }}>📰 Stock-Specific News ({multiLayerNews.stockNews.news.length})</h5>
+                          {multiLayerNews.stockNews.news.slice(0, 3).map((item: any, idx: number) => (
+                            <div key={idx} style={{ fontSize: '0.85em', padding: '8px 0', borderBottom: idx < 2 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none' }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: '3px' }}>{item.sentiment.emoji} {item.title.substring(0, 60)}...</div>
+                              <div style={{ opacity: 0.6, fontSize: '0.9em' }}>{item.source}</div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Sector News */}
+                        {multiLayerNews.sectorNews && (
+                          <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <h5 style={{ margin: '0 0 10px 0', fontSize: '1.1em' }}>🏢 Sector News ({multiLayerNews.sectorNews.news.length})</h5>
+                            {multiLayerNews.sectorNews.news.slice(0, 3).map((item: any, idx: number) => (
+                              <div key={idx} style={{ fontSize: '0.85em', padding: '8px 0', borderBottom: idx < 2 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '3px' }}>{item.sentiment.emoji} {item.title.substring(0, 60)}...</div>
+                                <div style={{ opacity: 0.6, fontSize: '0.9em' }}>{item.source}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Macro News */}
+                        {multiLayerNews.macroNews && (
+                          <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <h5 style={{ margin: '0 0 10px 0', fontSize: '1.1em' }}>🌍 Macro News ({multiLayerNews.macroNews.news.length})</h5>
+                            {multiLayerNews.macroNews.news.slice(0, 3).map((item: any, idx: number) => (
+                              <div key={idx} style={{ fontSize: '0.85em', padding: '8px 0', borderBottom: idx < 2 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '3px' }}>{item.sentiment.emoji} {item.title.substring(0, 60)}...</div>
+                                <div style={{ opacity: 0.6, fontSize: '0.9em' }}>{item.source}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Sentiment Summary Card (for stock/market tabs) */}
+                {!isFetchingNews && newsTab !== 'multi' && (newsTab === 'stock' ? stockSentiment : marketSentiment) && (newsTab === 'stock' ? stockNews : marketNews).length > 0 && (() => {
                   const sentiment = newsTab === 'stock' ? stockSentiment : marketSentiment;
                   const aggregate = sentiment.aggregate;
                   const trading = sentiment.trading;
@@ -5096,8 +5298,8 @@ export default function StockTracker() {
                   );
                 })()}
 
-                {/* News List */}
-                {!isFetchingNews && (
+                {/* News List (only for stock/market tabs, not multi-layer) */}
+                {!isFetchingNews && newsTab !== 'multi' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {(newsTab === 'stock' ? stockNews : marketNews).length === 0 ? (
                       <div style={{ padding: '40px 20px', textAlign: 'center', opacity: 0.6 }}>
