@@ -63,6 +63,7 @@ export default function StockTracker() {
   const [autoRefreshIntraday, setAutoRefreshIntraday] = useState(false)
   const [isDemoData, setIsDemoData] = useState(false)
   const [intradayStockInput, setIntradayStockInput] = useState('')
+  const [screenerLevel, setScreenerLevel] = useState<'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'>('MODERATE')
 
   // Load custom screener settings from localStorage
   useEffect(() => {
@@ -444,7 +445,7 @@ export default function StockTracker() {
           ? parseFloat(generateTradingSignal(data.current, data.prices, data.volumes).indicators.rsi)
           : 50
 
-        // Generate intraday signal
+        // Generate intraday signal with selected screener level
         const marketOpen = new Date()
         marketOpen.setHours(9, 15, 0, 0)
         
@@ -453,7 +454,8 @@ export default function StockTracker() {
           candles,
           data.current,
           rsi,
-          marketOpen
+          marketOpen,
+          screenerLevel
         )
 
         if (signal) {
@@ -1158,6 +1160,57 @@ export default function StockTracker() {
             <p><strong>Gap Up/Down:</strong> Stocks with significant overnight moves</p>
             <p><strong>High Volume:</strong> Stocks with volume {'>'} 2x average</p>
             <p><strong>Breakout Candidates:</strong> Strong momentum in first 15 minutes</p>
+            
+            {/* Screener Level Selector */}
+            <div style={{ marginTop: '15px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+              <div style={{ marginBottom: '8px', fontSize: '0.9em', fontWeight: 'bold' }}>
+                Select Risk Level:
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setScreenerLevel('CONSERVATIVE')}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    fontSize: '0.85em',
+                    background: screenerLevel === 'CONSERVATIVE' ? 'linear-gradient(135deg, #00ff64 0%, #00cc50 100%)' : 'rgba(0, 255, 100, 0.1)',
+                    border: screenerLevel === 'CONSERVATIVE' ? '2px solid #00ff64' : '1px solid rgba(0, 255, 100, 0.3)',
+                    color: screenerLevel === 'CONSERVATIVE' ? '#000' : '#fff',
+                    fontWeight: screenerLevel === 'CONSERVATIVE' ? 'bold' : 'normal'
+                  }}
+                >
+                  ⭐⭐⭐⭐⭐<br />CONSERVATIVE<br />(5/5 conditions)
+                </button>
+                <button
+                  onClick={() => setScreenerLevel('MODERATE')}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    fontSize: '0.85em',
+                    background: screenerLevel === 'MODERATE' ? 'linear-gradient(135deg, #ffa500 0%, #ff8c00 100%)' : 'rgba(255, 165, 0, 0.1)',
+                    border: screenerLevel === 'MODERATE' ? '2px solid #ffa500' : '1px solid rgba(255, 165, 0, 0.3)',
+                    color: screenerLevel === 'MODERATE' ? '#000' : '#fff',
+                    fontWeight: screenerLevel === 'MODERATE' ? 'bold' : 'normal'
+                  }}
+                >
+                  ⭐⭐⭐<br />MODERATE<br />(3-4/5 conditions)
+                </button>
+                <button
+                  onClick={() => setScreenerLevel('AGGRESSIVE')}
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    fontSize: '0.85em',
+                    background: screenerLevel === 'AGGRESSIVE' ? 'linear-gradient(135deg, #ff0064 0%, #cc0050 100%)' : 'rgba(255, 0, 100, 0.1)',
+                    border: screenerLevel === 'AGGRESSIVE' ? '2px solid #ff0064' : '1px solid rgba(255, 0, 100, 0.3)',
+                    color: screenerLevel === 'AGGRESSIVE' ? '#000' : '#fff',
+                    fontWeight: screenerLevel === 'AGGRESSIVE' ? 'bold' : 'normal'
+                  }}
+                >
+                  ⭐<br />AGGRESSIVE<br />(2+/5 conditions)
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Intraday Watchlist Manager */}
@@ -1371,6 +1424,10 @@ export default function StockTracker() {
                   const signalColor = signal.signal_type === 'BUY' 
                     ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
                     : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
+                  
+                  const riskColor = signal.risk_level === 'CONSERVATIVE' ? { bg: '#00ff64', text: '#000' } :
+                                   signal.risk_level === 'MODERATE' ? { bg: '#ffa500', text: '#000' } :
+                                   { bg: '#ff0064', text: '#fff' }
 
                   return (
                     <div 
@@ -1388,6 +1445,19 @@ export default function StockTracker() {
                           </h2>
                           <div style={{ fontSize: '1.3em', fontWeight: 'bold', marginTop: '5px' }}>
                             ₹{signal.entry_price.toFixed(2)}
+                          </div>
+                          {/* Risk Level Badge */}
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '4px 10px',
+                            background: riskColor.bg,
+                            color: riskColor.text,
+                            borderRadius: '6px',
+                            fontSize: '0.75em',
+                            fontWeight: 'bold',
+                            display: 'inline-block'
+                          }}>
+                            {signal.risk_level} • {signal.conditions_met}/{signal.total_conditions} conditions
                           </div>
                         </div>
                         <div style={{ 

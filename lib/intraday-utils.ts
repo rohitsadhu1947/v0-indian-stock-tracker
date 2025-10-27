@@ -32,6 +32,9 @@ export interface IntradaySignal {
   reasons: string[]
   risk_reward: number
   position_size_suggested: number
+  risk_level?: 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'
+  conditions_met?: number
+  total_conditions?: number
 }
 
 // Calculate VWAP (Volume Weighted Average Price)
@@ -107,13 +110,14 @@ export function checkVolumeConfirmation(
   return currentVolume > averageVolume * 2
 }
 
-// Generate intraday entry signal
+// Generate intraday entry signal with 3 risk levels
 export function generateIntradaySignal(
   symbol: string,
   candles: IntradayCandle[],
   currentPrice: number,
   rsi: number,
-  marketOpenTime: Date
+  marketOpenTime: Date,
+  screenerLevel: 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE' = 'CONSERVATIVE'
 ): IntradaySignal | null {
   if (!candles || candles.length < 20) {
     return null
@@ -129,43 +133,58 @@ export function generateIntradaySignal(
   const hasVolumeConfirmation = checkVolumeConfirmation(currentVolume, avgVolume)
 
   const reasons: string[] = []
+  let conditionsMet = 0
   let signalStrength = 0
 
   // Entry Condition 1: Momentum check
   if (hasMomentum) {
     reasons.push(`Momentum: ${movePercent > 0 ? '+' : ''}${movePercent.toFixed(2)}%`)
     signalStrength += 2
+    conditionsMet++
   }
 
   // Entry Condition 2: Volume confirmation
   if (hasVolumeConfirmation) {
     reasons.push(`Volume: ${(currentVolume / avgVolume).toFixed(1)}x avg`)
     signalStrength += 2
+    conditionsMet++
   }
 
-  // Entry Condition 3: RSI check (40-70)
-  if (rsi >= 40 && rsi <= 70) {
+  // Entry Condition 3: RSI check (relaxed for aggressive)
+  const rsiMin = screenerLevel === 'AGGRESSIVE' ? 30 : 40
+  const rsiMax = screenerLevel === 'AGGRESSIVE' ? 75 : 70
+  if (rsi >= rsiMin && rsi <= rsiMax) {
     reasons.push(`RSI: ${rsi.toFixed(0)} (Good range)`)
     signalStrength += 2
+    conditionsMet++
   }
 
-  // Entry Condition 4: Price above VWAP
-  const aboveVWAP = currentPrice > vwap
+  // Entry Condition 4: Price above VWAP (relaxed for aggressive)
+  const vwapThreshold = screenerLevel === 'AGGRESSIVE' ? 0.995 : 1.0
+  const aboveVWAP = currentPrice > vwap * vwapThreshold
   if (aboveVWAP) {
-    reasons.push(`Above VWAP (${vwap.toFixed(2)})`)
+    reasons.push(`${currentPrice > vwap ? 'Above' : 'Near'} VWAP (₹${vwap.toFixed(2)})`)
     signalStrength += 2
+    conditionsMet++
   }
 
-  // Entry Condition 5: Clear support level
-  const hasSupport = support > 0 && currentPrice > support * 1.005 // At least 0.5% above support
+  // Entry Condition 5: Clear support level (relaxed for aggressive)
+  const supportMargin = screenerLevel === 'AGGRESSIVE' ? 1.002 : 1.005 // 0.2-0.5% above support
+  const hasSupport = support > 0 && currentPrice > support * supportMargin
   if (hasSupport) {
     reasons.push(`Support at ₹${support.toFixed(2)}`)
     signalStrength += 2
+    conditionsMet++
   }
 
+  // Determine minimum conditions required based on screener level
+  const minConditions = screenerLevel === 'CONSERVATIVE' ? 5 : 
+                       screenerLevel === 'MODERATE' ? 3 : 2
+  const minStrength = screenerLevel === 'CONSERVATIVE' ? 10 : 
+                     screenerLevel === 'MODERATE' ? 6 : 4
+
   // Generate signal if conditions met
-  if (signalStrength >= 6) {
-    // At least 3 conditions must be true
+  if (conditionsMet >= minConditions && signalStrength >= minStrength) {
     const stopLoss = support > 0 ? support * 0.995 : currentPrice * 0.99 // 0.5-1% below
     const target = currentPrice * 1.025 // 2.5% above
     const riskReward = (target - currentPrice) / (currentPrice - stopLoss)
@@ -185,6 +204,9 @@ export function generateIntradaySignal(
       reasons,
       risk_reward: riskReward,
       position_size_suggested: positionSize,
+      risk_level: screenerLevel,
+      conditions_met: conditionsMet,
+      total_conditions: 5,
     }
   }
 
