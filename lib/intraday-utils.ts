@@ -58,7 +58,7 @@ export function calculateSupportResistance(candles: IntradayCandle[]): {
   support: number
   resistance: number
 } {
-  if (!candles || candles.length < 10) {
+  if (!candles || candles.length < 3) {
     return { support: 0, resistance: 0 }
   }
 
@@ -81,7 +81,7 @@ export function checkMomentum(
   candles: IntradayCandle[],
   marketOpenTime: Date
 ): { hasMomentum: boolean; movePercent: number } {
-  if (!candles || candles.length < 3) {
+  if (!candles || candles.length < 2) {
     return { hasMomentum: false, movePercent: 0 }
   }
 
@@ -119,7 +119,11 @@ export function generateIntradaySignal(
   marketOpenTime: Date,
   screenerLevel: 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE' = 'CONSERVATIVE'
 ): IntradaySignal | null {
-  if (!candles || candles.length < 20) {
+  // Minimum candles required based on screener level
+  const minCandles = screenerLevel === 'CONSERVATIVE' ? 20 :
+                    screenerLevel === 'MODERATE' ? 10 : 5
+  
+  if (!candles || candles.length < minCandles) {
     return null
   }
 
