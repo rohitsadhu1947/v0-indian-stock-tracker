@@ -119,6 +119,8 @@ export default function StockTracker() {
       return
     }
 
+    console.log(`✅ Position auto-refresh ENABLED - Interval: ${autoRefreshInterval}s`)
+
     const intervalId = setInterval(() => {
       console.log(`🔄 Auto-refreshing positions (${new Date().toLocaleTimeString()})...`)
       monitorPositions()
@@ -127,7 +129,10 @@ export default function StockTracker() {
     // Run immediately on enable
     monitorPositions()
 
-    return () => clearInterval(intervalId)
+    return () => {
+      console.log(`❌ Position auto-refresh STOPPED`)
+      clearInterval(intervalId)
+    }
   }, [autoRefreshIntraday, autoRefreshInterval, intradayPositions.length, authStatus.authenticated])
 
   // Auto-monitor Trade Watch for entry signals
