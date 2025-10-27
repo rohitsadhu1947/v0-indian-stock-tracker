@@ -2185,19 +2185,34 @@ export default function StockTracker() {
                         </div>
                       </div>
 
-                      {/* Action Button */}
-                      <button 
-                        onClick={() => addToWatchlist(signal.symbol)}
-                        style={{ 
-                          width: '100%', 
-                          marginTop: '15px',
-                          padding: '12px',
-                          fontSize: '1em',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        📊 Add to Watchlist
-                            </button>
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                        <button 
+                          onClick={() => addToTradeWatch(signal.symbol, 'Morning Screener', signal)}
+                          style={{ 
+                            flex: 1,
+                            padding: '12px',
+                            fontSize: '1em',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                            border: '2px solid rgba(79, 172, 254, 0.5)',
+                            color: '#000'
+                          }}
+                        >
+                          👁️ Add to Watch
+                        </button>
+                        <button 
+                          onClick={() => addToWatchlist(signal.symbol)}
+                          style={{ 
+                            flex: 1,
+                            padding: '12px',
+                            fontSize: '1em',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          📊 Add to List
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -2488,30 +2503,47 @@ export default function StockTracker() {
                           </div>
                         </div>
 
-                        {/* Action Button */}
-                        <button 
-                          onClick={() => {
-                            setManualEntrySymbol(signal.symbol)
-                            setManualEntryPrice(signal.entry_price.toString())
-                            setManualEntryQuantity('')
-                            setManualEntryType(signal.signal_type as 'BUY' | 'SELL')
-                            alert(`✅ Pre-filled entry form with ${signal.symbol}!\n\nScroll to "Add Position Manually" and enter quantity.`)
-                          }}
-                          style={{ 
-                            width: '100%', 
-                            marginTop: '10px',
-                            padding: '14px',
-                            fontSize: '1.1em',
-                            fontWeight: 'bold',
-                            background: signalColor.border,
-                            color: '#000',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          🚀 Enter Position ({signal.signal_type})
-                        </button>
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                          <button 
+                            onClick={() => addToTradeWatch(signal.symbol, 'ORB Scanner', signal)}
+                            style={{ 
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: '1em',
+                              fontWeight: 'bold',
+                              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                              border: '2px solid rgba(79, 172, 254, 0.5)',
+                              color: '#000',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👁️ Add to Watch
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setManualEntrySymbol(signal.symbol)
+                              setManualEntryPrice(signal.entry_price.toString())
+                              setManualEntryQuantity('')
+                              setManualEntryType(signal.signal_type as 'BUY' | 'SELL')
+                              alert(`✅ Pre-filled entry form with ${signal.symbol}!\n\nScroll to "Add Position Manually" and enter quantity.`)
+                            }}
+                            style={{ 
+                              flex: 1,
+                              padding: '14px',
+                              fontSize: '1em',
+                              fontWeight: 'bold',
+                              background: signalColor.border,
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🚀 Enter ({signal.signal_type})
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
@@ -2549,6 +2581,414 @@ export default function StockTracker() {
                 <li><strong>Target:</strong> 1.5x the opening range size</li>
                 <li><strong>Stop-Loss:</strong> Below breakout level (30% of range)</li>
                 <li><strong>Best Results:</strong> Trending days, high volume stocks, clear breakouts</li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Trade Watch (Smart Monitor Bucket) Section */}
+          <div style={{ marginTop: '40px', borderTop: '2px solid rgba(79, 172, 254, 0.3)', paddingTop: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.8em', marginBottom: '8px' }}>👁️ Trade Watch - Smart Monitor</h2>
+                <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, fontSize: '0.95em' }}>
+                  Add interesting stocks here - system monitors continuously and alerts when perfect entry conditions appear
+                </p>
+              </div>
+              <button
+                onClick={clearTradeWatch}
+                disabled={tradeWatch.length === 0}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '0.9em',
+                  background: 'rgba(255, 0, 100, 0.2)',
+                  border: '1px solid rgba(255, 0, 100, 0.5)',
+                  borderRadius: '8px',
+                  cursor: tradeWatch.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: tradeWatch.length === 0 ? 0.5 : 1
+                }}
+              >
+                🗑️ Clear All
+              </button>
+            </div>
+
+            {/* Monitoring Control Panel */}
+            <div style={{
+              padding: '25px',
+              background: 'linear-gradient(135deg, rgba(79, 172, 254, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%)',
+              border: '2px solid rgba(79, 172, 254, 0.4)',
+              borderRadius: '12px',
+              marginBottom: '25px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={isMonitoringWatch}
+                      onChange={(e) => setIsMonitoringWatch(e.target.checked)}
+                      disabled={tradeWatch.length === 0}
+                      style={{ width: '18px', height: '18px', cursor: tradeWatch.length === 0 ? 'not-allowed' : 'pointer' }}
+                    />
+                    <span style={{ fontWeight: 'bold', fontSize: '15px' }}>
+                      👁️ Auto-Monitor for Entry Signals
+                    </span>
+                  </label>
+                </div>
+
+                {isMonitoringWatch && (
+                  <>
+                    <div style={{ height: '20px', width: '1px', background: 'rgba(255, 255, 255, 0.3)' }} />
+                    <div>
+                      <label style={{ marginRight: '8px', fontSize: '14px' }}>Check Every:</label>
+                      <select
+                        value={watchMonitorInterval}
+                        onChange={(e) => setWatchMonitorInterval(Number(e.target.value))}
+                        style={{
+                          padding: '6px 12px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={60} style={{ background: '#1a1a1a' }}>1 minute</option>
+                        <option value={120} style={{ background: '#1a1a1a' }}>2 minutes</option>
+                        <option value={180} style={{ background: '#1a1a1a' }}>3 minutes</option>
+                        <option value={300} style={{ background: '#1a1a1a' }}>5 minutes</option>
+                      </select>
+                    </div>
+                    <div style={{ height: '20px', width: '1px', background: 'rgba(255, 255, 255, 0.3)' }} />
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                      ✅ Monitoring {tradeWatch.length} stock{tradeWatch.length !== 1 ? 's' : ''} - Will alert on perfect entry
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              {!isMonitoringWatch && tradeWatch.length > 0 && (
+                <div style={{ marginTop: '10px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                  💡 Enable monitoring to get alerts when entry conditions become perfect (4-5/5 conditions met)
+                </div>
+              )}
+
+              {tradeWatch.length === 0 && (
+                <div style={{ marginTop: '10px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                  💡 Add stocks from Morning Screener or ORB signals using "📊 Add to Watch" button
+                </div>
+              )}
+            </div>
+
+            {/* Entry Alerts (Perfect Entry Detected!) */}
+            {entryAlerts.length > 0 && (
+              <div style={{ marginBottom: '25px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '1.3em', color: '#00ff64' }}>
+                  🚨 PERFECT ENTRY OPPORTUNITIES ({entryAlerts.length})
+                </h3>
+                <div style={{ display: 'grid', gap: '20px' }}>
+                  {entryAlerts.map((alert, idx) => {
+                    const signalColor = alert.type === 'BUY'
+                      ? { bg: 'rgba(0, 255, 100, 0.2)', border: '#00ff64', text: '#00ff64' }
+                      : { bg: 'rgba(255, 0, 100, 0.2)', border: '#ff0064', text: '#ff0064' }
+
+                    return (
+                      <div 
+                        key={idx}
+                        className="card"
+                        style={{
+                          background: signalColor.bg,
+                          border: `3px solid ${signalColor.border}`,
+                          position: 'relative',
+                          animation: 'pulse 2s ease-in-out infinite'
+                        }}
+                      >
+                        {/* Flashing Alert Badge */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '15px',
+                          right: '15px',
+                          padding: '10px 20px',
+                          background: signalColor.border,
+                          color: '#000',
+                          borderRadius: '8px',
+                          fontSize: '1em',
+                          fontWeight: 'bold',
+                          animation: 'flash 1s ease-in-out infinite'
+                        }}>
+                          🚨 {alert.type} NOW!
+                        </div>
+
+                        {/* Symbol */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <h2 style={{ fontSize: '2.2em', margin: 0, marginBottom: '5px' }}>
+                            {alert.symbol}
+                          </h2>
+                          <div style={{ 
+                            fontSize: '1.2em', 
+                            color: signalColor.text,
+                            fontWeight: 'bold'
+                          }}>
+                            ✅ ALL CONDITIONS MET - PERFECT ENTRY!
+                          </div>
+                          <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.6)', marginTop: '5px' }}>
+                            {alert.timestamp.toLocaleTimeString()}
+                          </div>
+                        </div>
+
+                        {/* Entry Details */}
+                        <div className="indicators">
+                          <div className="indicator">
+                            <div className="indicator-label">💰 Entry NOW</div>
+                            <div className="indicator-value" style={{ color: signalColor.text }}>
+                              ₹{alert.entry_price.toFixed(2)}
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">🎯 Target</div>
+                            <div className="indicator-value" style={{ color: '#00ff64' }}>
+                              ₹{alert.target.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              +{((alert.target - alert.entry_price) / alert.entry_price * 100).toFixed(2)}%
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">🛑 Stop Loss</div>
+                            <div className="indicator-value" style={{ color: '#ff0064' }}>
+                              ₹{alert.stop_loss.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              -{((alert.entry_price - alert.stop_loss) / alert.entry_price * 100).toFixed(2)}%
+                            </div>
+                          </div>
+
+                          <div className="indicator">
+                            <div className="indicator-label">⚖️ Risk:Reward</div>
+                            <div className="indicator-value">
+                              1:{alert.risk_reward.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Conditions Met */}
+                        <div style={{
+                          padding: '15px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '10px',
+                          marginTop: '15px',
+                          marginBottom: '15px'
+                        }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '1em' }}>
+                            ✅ {alert.conditionsMet}/5 Conditions Met:
+                          </div>
+                          <div style={{ lineHeight: '1.8' }}>
+                            {alert.reasons.map((reason: string, i: number) => (
+                              <div key={i} style={{ fontSize: '0.95em' }}>
+                                {reason}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            onClick={() => {
+                              setManualEntrySymbol(alert.symbol)
+                              setManualEntryPrice(alert.entry_price.toString())
+                              setManualEntryQuantity('')
+                              setManualEntryType(alert.type as 'BUY' | 'SELL')
+                              removeFromTradeWatch(alert.symbol)
+                              alert(`✅ Pre-filled entry form!\n\nScroll to "Add Position Manually" and enter quantity.`)
+                            }}
+                            style={{ 
+                              flex: 1,
+                              padding: '16px',
+                              fontSize: '1.2em',
+                              fontWeight: 'bold',
+                              background: signalColor.border,
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🚀 ENTER NOW ({alert.type})
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEntryAlerts(entryAlerts.filter((_, i) => i !== idx))
+                              alert('✅ Alert dismissed')
+                            }}
+                            style={{ 
+                              padding: '16px 20px',
+                              fontSize: '1em',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✖️
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Trade Watch List */}
+            {tradeWatch.length > 0 ? (
+              <div>
+                <h3 style={{ marginBottom: '15px', fontSize: '1.2em' }}>
+                  📊 Watching ({tradeWatch.length})
+                </h3>
+                <div style={{ display: 'grid', gap: '15px' }}>
+                  {tradeWatch.map((watchItem, idx) => {
+                    const priceChangeColor = watchItem.priceChange >= 0 ? '#00ff64' : '#ff0064'
+                    const conditionsProgress = (watchItem.conditionsMet / 5) * 100
+
+                    return (
+                      <div 
+                        key={idx}
+                        style={{
+                          padding: '20px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: `2px solid ${conditionsProgress >= 80 ? '#00ff64' : 'rgba(255, 255, 255, 0.2)'}`,
+                          borderRadius: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                          <div>
+                            <h3 style={{ fontSize: '1.5em', margin: 0, marginBottom: '5px' }}>
+                              {watchItem.symbol}
+                            </h3>
+                            <div style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.6)' }}>
+                              Added from: {watchItem.addedFrom} • Expected: {watchItem.expectedType}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFromTradeWatch(watchItem.symbol)}
+                            style={{
+                              padding: '8px 16px',
+                              fontSize: '0.9em',
+                              background: 'rgba(255, 0, 100, 0.2)',
+                              border: '1px solid rgba(255, 0, 100, 0.5)',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✖️ Remove
+                          </button>
+                        </div>
+
+                        {/* Price Info */}
+                        <div style={{ marginBottom: '15px' }}>
+                          <div style={{ fontSize: '1.8em', fontWeight: 'bold' }}>
+                            ₹{watchItem.currentPrice.toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: '0.95em', color: priceChangeColor }}>
+                            {watchItem.priceChange >= 0 ? '+' : ''}{watchItem.priceChange?.toFixed(2)}% from add price
+                          </div>
+                        </div>
+
+                        {/* Conditions Progress */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                            <span style={{ fontSize: '0.9em', fontWeight: 'bold' }}>
+                              Entry Conditions: {watchItem.conditionsMet}/5
+                            </span>
+                            <span style={{ fontSize: '0.9em', color: conditionsProgress >= 80 ? '#00ff64' : 'rgba(255, 255, 255, 0.7)' }}>
+                              {conditionsProgress.toFixed(0)}%
+                            </span>
+                          </div>
+                          <div style={{
+                            width: '100%',
+                            height: '10px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '5px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              width: `${conditionsProgress}%`,
+                              height: '100%',
+                              background: conditionsProgress >= 80 ? '#00ff64' : '#4facfe',
+                              transition: 'width 0.5s ease'
+                            }} />
+                          </div>
+                        </div>
+
+                        {/* Individual Conditions */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(5, 1fr)',
+                          gap: '8px',
+                          fontSize: '0.85em'
+                        }}>
+                          <div style={{ textAlign: 'center', color: watchItem.conditions?.momentum ? '#00ff64' : 'rgba(255, 255, 255, 0.5)' }}>
+                            {watchItem.conditions?.momentum ? '✅' : '⏳'} Momentum
+                          </div>
+                          <div style={{ textAlign: 'center', color: watchItem.conditions?.volume ? '#00ff64' : 'rgba(255, 255, 255, 0.5)' }}>
+                            {watchItem.conditions?.volume ? '✅' : '⏳'} Volume
+                          </div>
+                          <div style={{ textAlign: 'center', color: watchItem.conditions?.rsi ? '#00ff64' : 'rgba(255, 255, 255, 0.5)' }}>
+                            {watchItem.conditions?.rsi ? '✅' : '⏳'} RSI
+                          </div>
+                          <div style={{ textAlign: 'center', color: watchItem.conditions?.vwap ? '#00ff64' : 'rgba(255, 255, 255, 0.5)' }}>
+                            {watchItem.conditions?.vwap ? '✅' : '⏳'} VWAP
+                          </div>
+                          <div style={{ textAlign: 'center', color: watchItem.conditions?.support ? '#00ff64' : 'rgba(255, 255, 255, 0.5)' }}>
+                            {watchItem.conditions?.support ? '✅' : '⏳'} Level
+                          </div>
+                        </div>
+
+                        {/* Last Checked */}
+                        <div style={{ marginTop: '10px', fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.5)' }}>
+                          Last checked: {watchItem.lastChecked?.toLocaleTimeString()}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(255, 255, 255, 0.2)'
+              }}>
+                <div style={{ fontSize: '3em', marginBottom: '15px' }}>👁️</div>
+                <h3 style={{ marginBottom: '10px' }}>No Stocks in Trade Watch</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px' }}>
+                  Add stocks from Morning Screener or ORB signals that you're interested in but not ready to enter yet.
+                  System will monitor them and alert you when ALL entry conditions become perfect!
+                </p>
+              </div>
+            )}
+
+            {/* Info Box */}
+            <div style={{ 
+              marginTop: '25px',
+              padding: '15px',
+              background: 'rgba(79, 172, 254, 0.1)',
+              border: '1px solid rgba(79, 172, 254, 0.3)',
+              borderRadius: '10px'
+            }}>
+              <h4 style={{ marginBottom: '10px' }}>📚 How Trade Watch Works:</h4>
+              <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                <li><strong>Morning:</strong> Run screeners → See interesting stocks → Click "📊 Add to Watch"</li>
+                <li><strong>Auto-Monitor:</strong> System checks every 1-5 minutes for perfect entry conditions</li>
+                <li><strong>Entry Conditions:</strong> Momentum, Volume, RSI, VWAP, Support (needs 4-5/5)</li>
+                <li><strong>Alert:</strong> When conditions met → 🚨 Flashing card appears + browser notification</li>
+                <li><strong>Enter:</strong> One-click to pre-fill entry form → Add quantity → Execute!</li>
+                <li><strong>Benefits:</strong> No manual checking, never miss perfect entries, focus on your work!</li>
               </ol>
             </div>
           </div>
