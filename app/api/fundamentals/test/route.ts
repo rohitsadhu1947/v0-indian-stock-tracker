@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { quoteSummary, quote as yahooQuote } from 'yahoo-finance2';
+
+// Use require for yahoo-finance2 to work with Next.js
+const yahooFinance = require('yahoo-finance2').default;
 
 /**
  * Simple test endpoint to verify Yahoo Finance API is working
@@ -11,17 +13,17 @@ export async function GET() {
     
     // Test with a known good US stock first
     console.log('📊 Testing with AAPL (Apple)...');
-    const appleQuote = await yahooQuote('AAPL');
+    const appleQuote = await yahooFinance.quote('AAPL');
     console.log('✅ Apple quote:', appleQuote.symbol, appleQuote.regularMarketPrice);
     
     // Test with Indian stock
     console.log('📊 Testing with RELIANCE.NS...');
-    const relianceQuote = await yahooQuote('RELIANCE.NS');
+    const relianceQuote = await yahooFinance.quote('RELIANCE.NS');
     console.log('✅ Reliance quote:', relianceQuote.symbol, relianceQuote.regularMarketPrice);
     
     // Test with TCS
     console.log('📊 Testing with TCS.NS...');
-    const tcsQuote = await yahooQuote('TCS.NS');
+    const tcsQuote = await yahooFinance.quote('TCS.NS');
     console.log('✅ TCS quote:', tcsQuote.symbol, tcsQuote.regularMarketPrice);
     
     return NextResponse.json({
