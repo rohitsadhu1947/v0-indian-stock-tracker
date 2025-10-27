@@ -11,6 +11,7 @@ export interface IntradayCandle {
 
 export interface Position {
   symbol: string
+  type: 'BUY' | 'SELL'
   entry_price: number
   quantity: number
   entry_time: Date

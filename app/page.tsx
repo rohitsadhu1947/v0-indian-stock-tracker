@@ -552,13 +552,16 @@ export default function StockTracker() {
   function enterPosition(symbol: string, entryPrice: number, quantity: number, type: 'BUY' | 'SELL') {
     const newPosition: Position = {
       symbol,
-      entryPrice,
-      quantity,
       type,
-      entryTime: new Date(),
-      currentPrice: entryPrice,
+      entry_price: entryPrice,
+      quantity,
+      entry_time: new Date(),
+      target: type === 'BUY' ? entryPrice * 1.025 : entryPrice * 0.975,
+      stop_loss: type === 'BUY' ? entryPrice * 0.99 : entryPrice * 1.01,
+      current_price: entryPrice,
       pnl: 0,
-      pnlPercent: 0
+      pnl_percent: 0,
+      status: 'open'
     }
     
     setIntradayPositions([...intradayPositions, newPosition])
@@ -609,7 +612,7 @@ export default function StockTracker() {
     setIntradayPositions(intradayPositions.filter(p => p.symbol !== symbol))
     setTotalPnL(prev => Number(prev) + Number(pnl))
     
-    alert(`✅ Position closed: ${symbol}\nP&L: ₹${pnl.toFixed(2)} (${((pnl / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%)`)
+    alert(`✅ Position closed: ${symbol}\nP&L: ₹${pnl.toFixed(2)} (${((pnl / (position.entry_price * position.quantity)) * 100).toFixed(2)}%)`)
   }
 
   async function updatePositionPrices() {
@@ -620,16 +623,16 @@ export default function StockTracker() {
           const data = await fetchStockQuote(position.symbol)
           if (data) {
             const pnl = position.type === 'BUY' 
-              ? (data.current - position.entryPrice) * position.quantity
-              : (position.entryPrice - data.current) * position.quantity
+              ? (data.current - position.entry_price) * position.quantity
+              : (position.entry_price - data.current) * position.quantity
             
-            const pnlPercent = (pnl / (position.entryPrice * position.quantity)) * 100
+            const pnlPercent = (pnl / (position.entry_price * position.quantity)) * 100
             
             return {
               ...position,
-              currentPrice: data.current,
+              current_price: data.current,
               pnl: Number(pnl),
-              pnlPercent: Number(pnlPercent)
+              pnl_percent: Number(pnlPercent)
             }
           }
         } catch (err) {
@@ -647,23 +650,29 @@ export default function StockTracker() {
     const mockPositions: Position[] = [
       {
         symbol: 'RELIANCE',
-        entryPrice: 2830.50,
-        quantity: 10,
         type: 'BUY',
-        entryTime: new Date(Date.now() - 1000 * 60 * 45), // 45 min ago
-        currentPrice: 2858.20,
+        entry_price: 2830.50,
+        quantity: 10,
+        entry_time: new Date(Date.now() - 1000 * 60 * 45), // 45 min ago
+        target: 2901.26,
+        stop_loss: 2802.20,
+        current_price: 2858.20,
         pnl: 277.00,
-        pnlPercent: 0.98
+        pnl_percent: 0.98,
+        status: 'open'
       },
       {
         symbol: 'HDFCBANK',
-        entryPrice: 1635.80,
-        quantity: 15,
         type: 'BUY',
-        entryTime: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-        currentPrice: 1648.50,
+        entry_price: 1635.80,
+        quantity: 15,
+        entry_time: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
+        target: 1676.69,
+        stop_loss: 1619.44,
+        current_price: 1648.50,
         pnl: 190.50,
-        pnlPercent: 0.78
+        pnl_percent: 0.78,
+        status: 'open'
       }
     ]
     
@@ -1626,7 +1635,7 @@ export default function StockTracker() {
                         }}
                       >
                         📊 Add to Watchlist
-                      </button>
+                            </button>
                     </div>
                   )
                 })}
@@ -1885,111 +1894,96 @@ export default function StockTracker() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '20px' }}>
-                {intradayPositions.map((position, idx) => {
-                  const pnlColor = Number(position.pnl || 0) >= 0 
-                    ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
-                    : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
+              <table className="screener-table" style={{ width: '100%' }}>
+                    <thead>
+                        <tr>
+                    <th>Type</th>
+                            <th>Symbol</th>
+                    <th>Entry Price</th>
+                    <th>Current Price</th>
+                    <th>Qty</th>
+                    <th>Total Value</th>
+                    <th>P&L</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                  {intradayPositions.map((position, idx) => {
+                    const pnlColor = Number(position.pnl || 0) >= 0 ? 'positive' : 'negative'
+                    const pnlValue = Number(position.pnl || 0)
+                    const pnlPercent = Number(position.pnl_percent || 0)
+                    const timeHeld = Math.floor((Date.now() - position.entry_time.getTime()) / 1000 / 60)
 
-                  const timeHeld = Math.floor((Date.now() - position.entryTime.getTime()) / 1000 / 60)
-
-                  return (
-                    <div 
-                      key={idx}
-                      className="card"
-                      style={{
-                        background: pnlColor.bg,
-                        border: `2px solid ${pnlColor.border}`,
-                        position: 'relative'
-                      }}
-                    >
-                      {/* Position Type Badge */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '15px',
-                        right: '15px',
-                        padding: '6px 12px',
-                        background: position.type === 'BUY' ? '#00ff64' : '#ff0064',
-                        color: '#000',
-                        borderRadius: '6px',
-                        fontSize: '0.85em',
-                        fontWeight: 'bold'
-                      }}>
-                        {position.type}
-                      </div>
-
-                      {/* Symbol and Price */}
-                      <div style={{ marginBottom: '20px' }}>
-                        <h2 style={{ fontSize: '1.8em', margin: 0 }}>
-                          {position.symbol}
-                        </h2>
-                        <div style={{ 
-                          fontSize: '1.1em', 
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          marginTop: '5px'
-                        }}>
-                          Entry: ₹{position.entryPrice.toFixed(2)} × {position.quantity} shares
-                        </div>
-                        <div style={{ fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.5)' }}>
-                          {timeHeld} minutes ago
-                        </div>
-                      </div>
-
-                      {/* P&L Display */}
-                      <div style={{
-                        padding: '20px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '10px',
-                        marginBottom: '15px'
-                      }}>
-                        <div className="indicators">
-                          <div className="indicator">
-                            <div className="indicator-label">Current Price</div>
-                            <div className="indicator-value">
-                              ₹{position.currentPrice.toFixed(2)}
-                            </div>
-                          </div>
-
-                          <div className="indicator">
-                            <div className="indicator-label">P&L</div>
-                            <div className="indicator-value" style={{ color: pnlColor.text }}>
-                              {Number(position.pnl || 0) >= 0 ? '+' : ''}₹{Number(position.pnl || 0).toFixed(2)}
-                            </div>
-                            <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
-                              {Number(position.pnlPercent || 0) >= 0 ? '+' : ''}{Number(position.pnlPercent || 0).toFixed(2)}%
-                            </div>
-                          </div>
-
-                          <div className="indicator">
-                            <div className="indicator-label">Total Value</div>
-                            <div className="indicator-value">
-                              ₹{(position.currentPrice * position.quantity).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button 
-                          onClick={() => exitPosition(position.symbol)}
-                          style={{
-                            flex: 1,
-                            padding: '12px',
-                            fontSize: '1em',
-                            fontWeight: 'bold',
-                            background: pnlColor.border,
+                    return (
+                      <tr key={idx}>
+                        {/* Type Badge */}
+                        <td>
+                          <span style={{
+                            padding: '4px 10px',
+                            background: position.type === 'BUY' ? '#00ff64' : '#ff0064',
                             color: '#000',
-                            border: 'none'
-                          }}
-                        >
-                          🚪 Close Position
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                            borderRadius: '6px',
+                            fontSize: '0.85em',
+                            fontWeight: 'bold',
+                            display: 'inline-block'
+                          }}>
+                            {position.type}
+                          </span>
+                        </td>
+
+                        {/* Symbol */}
+                        <td><strong>{position.symbol}</strong></td>
+
+                        {/* Entry Price */}
+                        <td>₹{position.entry_price.toFixed(2)}</td>
+
+                        {/* Current Price */}
+                        <td>₹{position.current_price.toFixed(2)}</td>
+
+                        {/* Quantity */}
+                        <td>{position.quantity}</td>
+
+                        {/* Total Value */}
+                        <td>₹{(position.current_price * position.quantity).toFixed(2)}</td>
+
+                        {/* P&L */}
+                        <td className={pnlColor}>
+                          <strong>
+                            {pnlValue >= 0 ? '+' : ''}₹{pnlValue.toFixed(2)}
+                          </strong>
+                          <br />
+                          <span style={{ fontSize: '0.85em' }}>
+                            ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
+                          </span>
+                        </td>
+
+                        {/* Time Held */}
+                        <td style={{ fontSize: '0.9em' }}>{timeHeld}m ago</td>
+
+                        {/* Close Button */}
+                        <td>
+                          <button 
+                            onClick={() => exitPosition(position.symbol)}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.9em',
+                              fontWeight: 'bold',
+                              background: pnlValue >= 0 ? '#00ff64' : '#ff0064',
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Close
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             )}
 
             {/* Info Box */}
