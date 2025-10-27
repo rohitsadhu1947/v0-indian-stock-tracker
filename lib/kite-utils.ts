@@ -120,11 +120,13 @@ export function generateTradingSignal(
   prices: number[],
   volumes: number[]
 ): TradingSignal {
-  if (prices.length < 30) {
+  // Lower requirement from 30 to 15 (we get 19 from Kite API)
+  // RSI needs 14 periods minimum, so 15 is safe
+  if (prices.length < 15) {
     return {
       signal: 'HOLD',
       strength: 1,
-      reason: 'Insufficient data',
+      reason: 'Insufficient data (need 15+ days)',
       indicators: {
         rsi: 'N/A',
         macd: 'N/A',
@@ -135,10 +137,14 @@ export function generateTradingSignal(
   
   const rsi = calculateRSI(prices);
   const macd = calculateMACD(prices);
-  const bb = calculateBollingerBands(prices);
-  const sma20 = calculateSMA(prices, 20);
-  const sma50 = calculateSMA(prices, 50);
-  const avgVolume = calculateSMA(volumes, 20);
+  
+  // Adjust periods based on available data (we have 19 days)
+  const bbPeriod = Math.min(15, prices.length - 1)  // Use 15 instead of 20
+  const bb = calculateBollingerBands(prices, bbPeriod);
+  const sma15 = calculateSMA(prices, 15);  // Use 15 instead of 20
+  const sma20 = sma15;  // Alias for compatibility
+  const sma50 = null;  // Not enough data for 50-day SMA
+  const avgVolume = calculateSMA(volumes, 15);  // Use 15 instead of 20
   const currentVolume = volumes[0];
   
   let buySignals = 0;
@@ -172,13 +178,13 @@ export function generateTradingSignal(
     reasons.push('At Upper BB');
   }
   
-  // Moving Average signals
-  if (sma20 && sma50 && sma20 > sma50 && currentPrice > sma20) {
+  // Moving Average signals (simplified for limited data)
+  if (sma15 && currentPrice > sma15 * 1.02) {
     buySignals += 1;
-    reasons.push('Golden Cross');
-  } else if (sma20 && sma50 && sma20 < sma50 && currentPrice < sma20) {
+    reasons.push('Above SMA15 (+2%)');
+  } else if (sma15 && currentPrice < sma15 * 0.98) {
     sellSignals += 1;
-    reasons.push('Death Cross');
+    reasons.push('Below SMA15 (-2%)');
   }
   
   // Volume confirmation
