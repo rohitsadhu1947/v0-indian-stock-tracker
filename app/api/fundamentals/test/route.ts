@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import yahooFinance from 'yahoo-finance2';
+import * as yahooFinance from 'yahoo-finance2';
 
 /**
  * Simple test endpoint to verify Yahoo Finance API is working

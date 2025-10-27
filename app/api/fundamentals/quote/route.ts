@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import yahooFinance from 'yahoo-finance2';
+import * as yahooFinance from 'yahoo-finance2';
 import { convertToYahooSymbol, type FundamentalData } from '@/lib/fundamentals-utils';
 
 // Disable caching for this API route during development
