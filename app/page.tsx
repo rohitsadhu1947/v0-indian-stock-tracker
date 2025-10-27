@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { formatSymbolForKite, generateTradingSignal } from '@/lib/kite-utils'
-import { 
-  calculateVWAP, 
-  generateIntradaySignal, 
-  checkExitSignal, 
+import {
+  calculateVWAP,
+  generateIntradaySignal,
+  checkExitSignal,
   calculatePnL,
   detectGap,
   isMarketHours,
@@ -13,6 +13,15 @@ import {
   type IntradaySignal,
   type IntradayCandle
 } from '@/lib/intraday-utils'
+import {
+  analyzeHistoricalPatterns,
+  generateStockIntelligence,
+  analyzeMarketClose,
+  sleep,
+  type DailyCandle,
+  type StockIntelligence,
+  type MarketCloseAnalysis
+} from '@/lib/pattern-analysis'
 
 interface StockData {
   symbol: string
@@ -86,6 +95,11 @@ export default function StockTracker() {
   const [selectedSector, setSelectedSector] = useState<string>('All')
   const [minVolume, setMinVolume] = useState(100000) // 1 lakh minimum volume
   const [minGapPercent, setMinGapPercent] = useState(0.5) // 0.5% gap minimum
+  const [scanProgress, setScanProgress] = useState(0)
+  
+  // Market Close Analysis states
+  const [marketCloseAnalysis, setMarketCloseAnalysis] = useState<MarketCloseAnalysis | null>(null)
+  const [isAnalyzingClose, setIsAnalyzingClose] = useState(false)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -107,6 +121,27 @@ export default function StockTracker() {
     }
     if (savedIntradayWatchlist) {
       setIntradayWatchlist(JSON.parse(savedIntradayWatchlist))
+    }
+    
+    // Auto-load yesterday's market close analysis
+    const savedAnalysis = localStorage.getItem('marketCloseAnalysis')
+    const savedDate = localStorage.getItem('marketCloseDate')
+    
+    if (savedAnalysis && savedDate) {
+      try {
+        const analysis = JSON.parse(savedAnalysis)
+        const analysisDate = new Date(savedDate)
+        const today = new Date()
+        const daysDiff = Math.floor((today.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        // Only auto-load if less than 2 days old
+        if (daysDiff <= 2) {
+          setMarketCloseAnalysis(analysis)
+          console.log(`✅ Auto-loaded market analysis from ${analysisDate.toLocaleDateString()}`)
+        }
+      } catch (err) {
+        console.error('Error auto-loading analysis:', err)
+      }
     }
   }, [])
 
@@ -1259,7 +1294,7 @@ export default function StockTracker() {
     const stopLoss = watchItem.expectedType === 'BUY'
       ? data.current * 0.99   // 1% stop loss
       : data.current * 1.01
-
+            
             return {
       conditions,
       conditionsMet,
@@ -1272,13 +1307,14 @@ export default function StockTracker() {
 
   // ========== UNIVERSE SCANNER FUNCTIONS ==========
 
-  // Scan NIFTY 500 for best intraday candidates
+  // Scan NIFTY 500 for best intraday candidates (WITH HISTORICAL ANALYSIS)
   async function scanUniverse() {
     setIsScanningUniverse(true)
     setIsLoading(true)
+    setScanProgress(0)
 
     try {
-      console.log('🔍 Scanning NIFTY 500 universe for intraday candidates...')
+      console.log('🔍 Scanning NIFTY 500 universe with historical analysis...')
 
       // Fetch universe stocks
       const universeResponse = await fetch('/api/kite/universe')
@@ -1289,87 +1325,103 @@ export default function StockTracker() {
 
       console.log(`📊 Fetched ${stocks.length} stocks from universe`)
 
-      // Analyze each stock (batch processing)
+      // Analyze each stock with rate limiting
       const results: any[] = []
-      const batchSize = 20 // Process 20 stocks at a time
+      const totalStocks = Math.min(stocks.length, 100) // Limit to 100 for speed
       
-      for (let i = 0; i < Math.min(stocks.length, 200); i += batchSize) { // Limit to first 200 for speed
-        const batch = stocks.slice(i, i + batchSize)
+      for (let i = 0; i < totalStocks; i++) {
+        const stock = stocks[i]
         
-        const batchResults = await Promise.all(
-          batch.map(async (stock: any) => {
-            try {
-              const data = await fetchStockQuote(stock.tradingsymbol)
-              
-              if (!data) return null
-
-              // Calculate intraday score
-              const gap = ((data.current - data.open) / data.open) * 100
-              const priceMove = Math.abs(gap)
-              const volumeRatio = data.volume / (data.volume / 2 || 1) // Rough estimate
-              
-              // Intraday score (0-100)
-              let score = 0
-              
-              // Gap score (0-40 points)
-              if (Math.abs(gap) >= minGapPercent) {
-                score += Math.min(Math.abs(gap) * 10, 40)
-              }
-              
-              // Volume score (0-30 points)
-              if (data.volume >= minVolume) {
-                score += Math.min((data.volume / minVolume) * 10, 30)
-              }
-              
-              // Volatility score (0-20 points) - based on day's range
-              const dayRange = ((data.dayHigh - data.dayLow) / data.open) * 100
-              score += Math.min(dayRange * 5, 20)
-              
-              // Liquidity bonus (0-10 points) - stocks with good volume
-              if (data.volume > minVolume * 2) {
-                score += 10
-              }
-
-              return {
-                symbol: stock.tradingsymbol,
-                current: data.current,
-                open: data.open,
-                high: data.dayHigh,
-                low: data.dayLow,
-                volume: data.volume,
-                gap: gap,
-                gapType: gap > 0 ? 'GAP_UP' : gap < 0 ? 'GAP_DOWN' : 'FLAT',
-                change: data.change,
-                changePercent: data.changePercent,
-                score: Math.round(score),
-                dayRange: dayRange,
-                reasons: [
-                  gap !== 0 ? `Gap: ${gap > 0 ? '+' : ''}${gap.toFixed(2)}%` : 'No gap',
-                  `Volume: ${(data.volume / 100000).toFixed(1)}L`,
-                  `Range: ${dayRange.toFixed(2)}%`,
-                  `Price: ₹${data.current.toFixed(2)}`
-                ]
-              }
-            } catch (err) {
-              console.error(`Error analyzing ${stock.tradingsymbol}:`, err)
-              return null
-            }
+        try {
+          // Rate limiting: 200ms delay between requests
+          if (i > 0) await sleep(200)
+          
+          // Fetch current quote
+          const data = await fetchStockQuote(stock.tradingsymbol)
+          if (!data) continue
+          
+          // Fetch historical data (last 10 days)
+          const historicalResponse = await fetch(
+            `/api/kite/historical?instrument_token=${data.instrumentToken}&interval=day`
+          )
+          
+          if (!historicalResponse.ok) {
+            console.warn(`Failed to fetch historical for ${stock.tradingsymbol}`)
+            continue
+          }
+          
+          const historicalData = await historicalResponse.json()
+          const candles = historicalData.candles || []
+          
+          if (candles.length < 5) continue // Need at least 5 days
+          
+          // Convert to DailyCandle format
+          const dailyCandles: DailyCandle[] = candles.map((c: any) => ({
+            date: new Date(c[0]),
+            open: c[1],
+            high: c[2],
+            low: c[3],
+            close: c[4],
+            volume: c[5]
+          }))
+          
+          // Analyze historical patterns
+          const pattern = analyzeHistoricalPatterns(stock.tradingsymbol, dailyCandles)
+          
+          // Generate intelligence
+          const intelligence = generateStockIntelligence(
+            stock.tradingsymbol,
+            pattern,
+            data.current,
+            dailyCandles
+          )
+          
+          // Calculate basic score for sorting
+          const gap = ((data.current - data.open) / data.open) * 100
+          const dayRange = ((data.dayHigh - data.dayLow) / data.open) * 100
+          
+          results.push({
+            ...intelligence,
+            current: data.current,
+            open: data.open,
+            high: data.dayHigh,
+            low: data.dayLow,
+            volume: data.volume,
+            gap: gap,
+            gapType: gap > 0 ? 'GAP_UP' : gap < 0 ? 'GAP_DOWN' : 'FLAT',
+            change: data.change,
+            changePercent: data.changePercent,
+            score: intelligence.historicalScore,
+            dayRange: dayRange,
+            instrumentToken: data.instrumentToken
           })
-        )
-
-        results.push(...batchResults.filter(r => r !== null))
-        console.log(`✅ Processed ${i + batchSize}/${Math.min(stocks.length, 200)} stocks`)
+          
+          // Update progress
+          setScanProgress(Math.round((i + 1) / totalStocks * 100))
+          
+        } catch (err) {
+          console.error(`Error analyzing ${stock.tradingsymbol}:`, err)
+        }
       }
 
-      // Sort by score (highest first)
+      // Sort by historical score (highest first)
       const sortedResults = results
-        .filter(r => r.score > 0) // Only stocks with some potential
-        .sort((a, b) => b.score - a.score)
+        .filter(r => r.recommendation !== 'SKIP') // Filter out SKIP recommendations
+        .sort((a, b) => b.historicalScore - a.historicalScore)
         .slice(0, 50) // Top 50 candidates
 
       setScanResults(sortedResults)
       
-      alert(`✅ Scan complete!\n\nFound ${sortedResults.length} intraday candidates\nTop score: ${sortedResults[0]?.score || 0}/100`)
+      const strongBuy = sortedResults.filter(r => r.recommendation === 'STRONG_BUY').length
+      const buy = sortedResults.filter(r => r.recommendation === 'BUY').length
+      
+      alert(
+        `✅ Intelligence Scan Complete!\n\n` +
+        `📊 Analyzed ${results.length} stocks with historical patterns\n` +
+        `🚨 ${strongBuy} STRONG BUY signals\n` +
+        `✅ ${buy} BUY signals\n` +
+        `👀 ${sortedResults.length - strongBuy - buy} WATCH signals`
+      )
 
     } catch (error: any) {
       console.error('Universe scan error:', error)
@@ -1377,7 +1429,103 @@ export default function StockTracker() {
     } finally {
       setIsScanningUniverse(false)
       setIsLoading(false)
+      setScanProgress(0)
     }
+  }
+
+  // Market Close Analyzer - Run after 3:30 PM for tomorrow's strategy
+  async function runMarketCloseAnalysis() {
+    setIsAnalyzingClose(true)
+    setIsLoading(true)
+
+    try {
+      console.log('🌙 Running Market Close Analysis for tomorrow\'s strategy...')
+
+      // First run universe scan with historical analysis
+      await scanUniverse()
+      
+      // Generate market close analysis from scan results
+      if (scanResults.length === 0) {
+        alert('⚠️ No scan data available')
+        return
+      }
+
+      const analysis = analyzeMarketClose(scanResults)
+      setMarketCloseAnalysis(analysis)
+      
+      // Save to localStorage for morning review
+      localStorage.setItem('marketCloseAnalysis', JSON.stringify(analysis))
+      localStorage.setItem('marketCloseDate', new Date().toISOString())
+      
+      alert(
+        `✅ Market Close Analysis Complete!\n\n` +
+        `📊 Tomorrow's Top ${analysis.topPicks.length} Picks Ready\n` +
+        `📈 Market Sentiment: ${analysis.marketSentiment}\n` +
+        `⚡ Risk Level: ${analysis.riskLevel}\n\n` +
+        `Analysis saved for tomorrow morning!`
+      )
+
+    } catch (error: any) {
+      console.error('Market close analysis error:', error)
+      alert(`❌ Analysis failed: ${error.message}`)
+    } finally {
+      setIsAnalyzingClose(false)
+      setIsLoading(false)
+    }
+  }
+
+  // Load yesterday's analysis
+  function loadYesterdayAnalysis() {
+    try {
+      const savedAnalysis = localStorage.getItem('marketCloseAnalysis')
+      const savedDate = localStorage.getItem('marketCloseDate')
+      
+      if (!savedAnalysis || !savedDate) {
+        alert('⚠️ No previous analysis found')
+        return
+      }
+      
+      const analysis = JSON.parse(savedAnalysis)
+      setMarketCloseAnalysis(analysis)
+      
+      // Check if analysis is from yesterday
+      const analysisDate = new Date(savedDate)
+      const today = new Date()
+      const daysDiff = Math.floor((today.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysDiff > 2) {
+        alert('⚠️ Analysis is more than 2 days old. Consider running a fresh scan.')
+      } else {
+        alert(`✅ Loaded analysis from ${analysisDate.toLocaleDateString()}`)
+      }
+      
+    } catch (error) {
+      console.error('Error loading analysis:', error)
+      alert('❌ Failed to load previous analysis')
+    }
+  }
+
+  // Load yesterday's top picks into screeners
+  function loadYesterdayPicks() {
+    if (!marketCloseAnalysis) {
+      alert('⚠️ No market close analysis available. Load yesterday\'s analysis first!')
+      return
+    }
+
+    const topStocks = marketCloseAnalysis.topPicks.slice(0, 15).map(p => p.symbol)
+    
+    // Update intraday watchlist
+    setIntradayWatchlist(topStocks)
+    
+    // Update screener group
+    const updatedGroups = {
+      ...screenerGroups,
+      'Yesterday\'s Analysis': topStocks
+    }
+    setScreenerGroups(updatedGroups)
+    setActiveScreenerGroup('Yesterday\'s Analysis')
+
+    alert(`✅ Loaded ${topStocks.length} stocks from yesterday's analysis!\n\nReady to run morning screener!`)
   }
 
   // Load top candidates into screener watchlists
@@ -3717,8 +3865,45 @@ export default function StockTracker() {
                   minWidth: '200px'
                 }}
               >
-                {isScanningUniverse ? '🔄 Scanning...' : '🔍 Scan NIFTY 500 Universe'}
+                {isScanningUniverse 
+                  ? `🔄 Scanning... ${scanProgress}%` 
+                  : '🔍 Scan Universe (Morning)'}
               </button>
+
+              <button
+                onClick={runMarketCloseAnalysis}
+                disabled={isAnalyzingClose || !authStatus.authenticated}
+                style={{
+                  padding: '15px 30px',
+                  fontSize: '1.1em',
+                  fontWeight: 'bold',
+                  background: isAnalyzingClose ? 'rgba(128, 128, 128, 0.3)' : 'linear-gradient(135deg, #ff6b6b, #c92a2a)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: isAnalyzingClose ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isAnalyzingClose ? '🔄 Analyzing...' : '🌙 Market Close Analysis (Evening)'}
+              </button>
+
+              {marketCloseAnalysis && (
+                <button
+                  onClick={loadYesterdayPicks}
+                  style={{
+                    padding: '15px 30px',
+                    fontSize: '1.1em',
+                    fontWeight: 'bold',
+                    background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⭐ Load Yesterday's Picks
+                </button>
+              )}
 
               {scanResults.length > 0 && (
                 <>
@@ -3801,22 +3986,23 @@ export default function StockTracker() {
                         <tr>
                       <th>Rank</th>
                             <th>Symbol</th>
-                      <th>Score</th>
+                      <th>Recommendation</th>
+                      <th>Confidence</th>
+                      <th>Success Rate</th>
                       <th>Current Price</th>
                       <th>Gap</th>
-                      <th>Type</th>
-                      <th>Volume</th>
-                      <th>Day Range</th>
-                      <th>Details</th>
+                      <th>Best Entry</th>
+                      <th>Historical Insights</th>
                       <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                     {scanResults.map((result, idx) => {
                       const gapColor = result.gap > 0 ? '#00ff64' : result.gap < 0 ? '#ff0064' : '#ffc107'
-                      const scoreColor = result.score >= 70 ? '#00ff64' : 
-                                        result.score >= 50 ? '#ffc107' : 
-                                        result.score >= 30 ? '#ff9800' : '#ff0064'
+                      const recommendationColor = 
+                        result.recommendation === 'STRONG_BUY' ? '#00ff64' :
+                        result.recommendation === 'BUY' ? '#00cc51' :
+                        result.recommendation === 'WATCH' ? '#ffc107' : '#ff9800'
                       
                       return (
                         <tr key={idx}>
@@ -3841,14 +4027,44 @@ export default function StockTracker() {
                           <td><strong style={{ fontSize: '1.1em' }}>{result.symbol}</strong></td>
                           <td>
                             <div style={{
-                              padding: '5px 12px',
-                              background: scoreColor,
+                              padding: '6px 14px',
+                              background: recommendationColor,
                               color: '#000',
-                              borderRadius: '20px',
+                              borderRadius: '8px',
+                              fontWeight: 'bold',
+                              display: 'inline-block',
+                              fontSize: '0.95em'
+                            }}>
+                              {result.recommendation === 'STRONG_BUY' ? '🚨 STRONG BUY' :
+                               result.recommendation === 'BUY' ? '✅ BUY' :
+                               result.recommendation === 'WATCH' ? '👀 WATCH' : '⏭️ SKIP'}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{
+                              padding: '5px 12px',
+                              background: result.confidence >= 70 ? 'rgba(0, 255, 100, 0.2)' :
+                                         result.confidence >= 50 ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 152, 0, 0.2)',
+                              border: `1px solid ${result.confidence >= 70 ? '#00ff64' :
+                                                   result.confidence >= 50 ? '#ffc107' : '#ff9800'}`,
+                              borderRadius: '6px',
                               fontWeight: 'bold',
                               display: 'inline-block'
                             }}>
-                              {result.score}/100
+                              {result.confidence}%
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{
+                              fontSize: '1.1em',
+                              fontWeight: 'bold',
+                              color: result.pattern?.successRate >= 70 ? '#00ff64' :
+                                     result.pattern?.successRate >= 60 ? '#ffc107' : '#ff9800'
+                            }}>
+                              {result.pattern?.successRate?.toFixed(0) || 'N/A'}%
+                            </div>
+                            <div style={{ fontSize: '0.8em', opacity: 0.7 }}>
+                              {result.pattern?.averageDayRange?.toFixed(2) || 'N/A'}% avg range
                             </div>
                           </td>
                           <td>₹{result.current.toFixed(2)}</td>
@@ -3867,21 +4083,17 @@ export default function StockTracker() {
                           <td>
                             <span style={{
                               padding: '5px 10px',
-                              background: result.gapType === 'GAP_UP' ? 'rgba(0, 255, 100, 0.2)' : 
-                                         result.gapType === 'GAP_DOWN' ? 'rgba(255, 0, 100, 0.2)' : 
-                                         'rgba(255, 193, 7, 0.2)',
-                              border: `1px solid ${result.gapType === 'GAP_UP' ? '#00ff64' : 
-                                                   result.gapType === 'GAP_DOWN' ? '#ff0064' : '#ffc107'}`,
+                              background: 'rgba(138, 43, 226, 0.2)',
+                              border: '1px solid rgba(138, 43, 226, 0.5)',
                               borderRadius: '6px',
-                              fontSize: '0.9em'
+                              fontSize: '0.9em',
+                              fontWeight: 'bold'
                             }}>
-                              {result.gapType.replace('_', ' ')}
+                              {result.pattern?.bestEntry?.replace('_', ' ') || 'BREAKOUT'}
                             </span>
                           </td>
-                          <td>{(result.volume / 100000).toFixed(1)}L</td>
-                          <td>{result.dayRange.toFixed(2)}%</td>
-                          <td style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.8)' }}>
-                            {result.reasons.join(' • ')}
+                          <td style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.8)', maxWidth: '300px' }}>
+                            {result.reasons?.slice(0, 3).join(' • ') || 'No data'}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
