@@ -596,22 +596,35 @@ export default function StockTracker() {
     alert(`✅ Position closed: ${symbol}\nP&L: ₹${pnl.toFixed(2)} (${((pnl / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%)`)
   }
 
-  function updatePositionPrices() {
+  async function updatePositionPrices() {
     // Update current prices for all open positions
-    intradayPositions.forEach(async (position) => {
-      try {
-        const data = await fetchStockQuote(position.symbol)
-        if (data) {
-          position.currentPrice = data.current
-          position.pnl = calculatePnL(position.entryPrice, data.current, position.quantity, position.type)
-          position.pnlPercent = (position.pnl / (position.entryPrice * position.quantity)) * 100
+    const updatedPositions = await Promise.all(
+      intradayPositions.map(async (position) => {
+        try {
+          const data = await fetchStockQuote(position.symbol)
+          if (data) {
+            const pnl = position.type === 'BUY' 
+              ? (data.current - position.entryPrice) * position.quantity
+              : (position.entryPrice - data.current) * position.quantity
+            
+            const pnlPercent = (pnl / (position.entryPrice * position.quantity)) * 100
+            
+            return {
+              ...position,
+              currentPrice: data.current,
+              pnl: Number(pnl),
+              pnlPercent: Number(pnlPercent)
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to update price for ${position.symbol}`)
         }
-      } catch (err) {
-        console.error(`Failed to update price for ${position.symbol}`)
-      }
-    })
+        return position
+      })
+    )
     
-    setIntradayPositions([...intradayPositions])
+    setIntradayPositions(updatedPositions)
+    alert('✅ Prices updated successfully!')
   }
 
   function addMockPositions() {
@@ -1858,7 +1871,7 @@ export default function StockTracker() {
             ) : (
               <div style={{ display: 'grid', gap: '20px' }}>
                 {intradayPositions.map((position, idx) => {
-                  const pnlColor = (position.pnl || 0) >= 0 
+                  const pnlColor = Number(position.pnl || 0) >= 0 
                     ? { bg: 'rgba(0, 255, 100, 0.1)', border: '#00ff64', text: '#00ff64' }
                     : { bg: 'rgba(255, 0, 100, 0.1)', border: '#ff0064', text: '#ff0064' }
 
@@ -1924,10 +1937,10 @@ export default function StockTracker() {
                           <div className="indicator">
                             <div className="indicator-label">P&L</div>
                             <div className="indicator-value" style={{ color: pnlColor.text }}>
-                              {(position.pnl || 0) >= 0 ? '+' : ''}₹{(position.pnl || 0).toFixed(2)}
+                              {Number(position.pnl || 0) >= 0 ? '+' : ''}₹{Number(position.pnl || 0).toFixed(2)}
                             </div>
                             <div style={{ fontSize: '0.8em', color: 'rgba(255, 255, 255, 0.6)' }}>
-                              {(position.pnlPercent || 0) >= 0 ? '+' : ''}{(position.pnlPercent || 0).toFixed(2)}%
+                              {Number(position.pnlPercent || 0) >= 0 ? '+' : ''}{Number(position.pnlPercent || 0).toFixed(2)}%
                             </div>
                           </div>
 
