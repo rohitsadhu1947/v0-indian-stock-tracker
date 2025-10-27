@@ -73,6 +73,12 @@ export default function StockTracker() {
   const [isCapturingORB, setIsCapturingORB] = useState(false)
   const [orbWatchlist, setOrbWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
   
+  // Trade Watch (Smart Monitor Bucket) states
+  const [tradeWatch, setTradeWatch] = useState<any[]>([])
+  const [entryAlerts, setEntryAlerts] = useState<any[]>([])
+  const [isMonitoringWatch, setIsMonitoringWatch] = useState(false)
+  const [watchMonitorInterval, setWatchMonitorInterval] = useState(120) // 2 minutes default
+  
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
   const [manualEntryPrice, setManualEntryPrice] = useState('')
@@ -123,6 +129,23 @@ export default function StockTracker() {
 
     return () => clearInterval(intervalId)
   }, [autoRefreshIntraday, autoRefreshInterval, intradayPositions.length, authStatus.authenticated])
+
+  // Auto-monitor Trade Watch for entry signals
+  useEffect(() => {
+    if (!isMonitoringWatch || tradeWatch.length === 0 || !authStatus.authenticated) {
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      console.log(`👁️ Monitoring Trade Watch for entry signals (${new Date().toLocaleTimeString()})...`)
+      monitorTradeWatch()
+    }, watchMonitorInterval * 1000)
+
+    // Run immediately on enable
+    monitorTradeWatch()
+
+    return () => clearInterval(intervalId)
+  }, [isMonitoringWatch, watchMonitorInterval, tradeWatch.length, authStatus.authenticated])
 
   // Request notification permissions on mount
   useEffect(() => {
@@ -1015,6 +1038,223 @@ export default function StockTracker() {
     setOrbSignals([])
     setIsCapturingORB(false)
     alert('✅ ORB data reset. Ready for new trading day!')
+  }
+
+  // ========== TRADE WATCH (SMART MONITOR BUCKET) FUNCTIONS ==========
+
+  // Add stock to Trade Watch
+  function addToTradeWatch(symbol: string, source: string = 'manual', initialData?: any) {
+    // Check if already in watch
+    if (tradeWatch.some(w => w.symbol === symbol)) {
+      alert(`⚠️ ${symbol} is already in Trade Watch`)
+      return
+    }
+
+    // Check if already in positions
+    if (intradayPositions.some(p => p.symbol === symbol)) {
+      alert(`⚠️ ${symbol} is already in your open positions`)
+      return
+    }
+
+    const watchItem = {
+      symbol,
+      addedAt: new Date(),
+      addedFrom: source,
+      currentPrice: initialData?.entry_price || initialData?.current_price || 0,
+      addedPrice: initialData?.entry_price || initialData?.current_price || 0,
+      targetPrice: initialData?.target || 0,
+      stopLoss: initialData?.stop_loss || 0,
+      expectedType: initialData?.signal_type || 'BUY',
+      conditions: {
+        momentum: false,
+        volume: false,
+        rsi: false,
+        vwap: false,
+        support: false
+      },
+      conditionsMet: 0,
+      lastChecked: new Date()
+    }
+
+    setTradeWatch([...tradeWatch, watchItem])
+    alert(`✅ ${symbol} added to Trade Watch!\n\nSystem will monitor for perfect entry conditions.`)
+  }
+
+  // Remove from Trade Watch
+  function removeFromTradeWatch(symbol: string) {
+    setTradeWatch(tradeWatch.filter(w => w.symbol !== symbol))
+    setEntryAlerts(entryAlerts.filter(a => a.symbol !== symbol))
+  }
+
+  // Clear all from Trade Watch
+  function clearTradeWatch() {
+    if (confirm(`Clear all ${tradeWatch.length} stocks from Trade Watch?`)) {
+      setTradeWatch([])
+      setEntryAlerts([])
+      alert('✅ Trade Watch cleared')
+    }
+  }
+
+  // Monitor Trade Watch for perfect entry signals
+  async function monitorTradeWatch() {
+    if (tradeWatch.length === 0) return
+
+    try {
+      const newAlerts: any[] = []
+      const updatedWatch = await Promise.all(
+        tradeWatch.map(async (watchItem) => {
+          try {
+            const data = await fetchStockQuote(watchItem.symbol)
+            
+            if (data) {
+              // Update current price
+              const updated = {
+                ...watchItem,
+                currentPrice: data.current,
+                priceChange: ((data.current - watchItem.addedPrice) / watchItem.addedPrice) * 100,
+                lastChecked: new Date()
+              }
+
+              // Analyze entry conditions
+              const analysis = analyzeEntryConditions(watchItem.symbol, data, watchItem)
+              updated.conditions = analysis.conditions
+              updated.conditionsMet = analysis.conditionsMet
+
+              // Check if perfect entry (all 5 conditions met OR 4+ for aggressive)
+              const isPerfectEntry = analysis.conditionsMet >= 4 // 4 out of 5 conditions
+              
+              if (isPerfectEntry && !entryAlerts.some(a => a.symbol === watchItem.symbol)) {
+                const alert = {
+                  symbol: watchItem.symbol,
+                  type: analysis.signalType,
+                  entry_price: data.current,
+                  target: analysis.target,
+                  stop_loss: analysis.stopLoss,
+                  conditions: analysis.conditions,
+                  conditionsMet: analysis.conditionsMet,
+                  reasons: analysis.reasons,
+                  strength: analysis.conditionsMet,
+                  timestamp: new Date(),
+                  risk_reward: (analysis.target - data.current) / (data.current - analysis.stopLoss)
+                }
+                
+                newAlerts.push(alert)
+                
+                // Send browser notification
+                sendNotification(
+                  `🚨 PERFECT ENTRY: ${watchItem.symbol}`,
+                  `${analysis.conditionsMet}/5 conditions met! Entry: ₹${data.current.toFixed(2)}`
+                )
+              }
+
+              return updated
+            }
+            return watchItem
+          } catch (err) {
+            console.error(`Failed to monitor ${watchItem.symbol}:`, err)
+            return watchItem
+          }
+        })
+      )
+
+      setTradeWatch(updatedWatch)
+      
+      if (newAlerts.length > 0) {
+        setEntryAlerts([...entryAlerts, ...newAlerts])
+      }
+    } catch (err) {
+      console.error('Error monitoring Trade Watch:', err)
+    }
+  }
+
+  // Analyze entry conditions for a stock
+  function analyzeEntryConditions(symbol: string, data: any, watchItem: any) {
+    const conditions = {
+      momentum: false,
+      volume: false,
+      rsi: false,
+      vwap: false,
+      support: false
+    }
+    const reasons: string[] = []
+    let conditionsMet = 0
+
+    // Simple heuristic analysis (in production, fetch actual intraday data)
+    
+    // 1. Momentum check
+    const priceChange = ((data.current - data.open) / data.open) * 100
+    if (watchItem.expectedType === 'BUY' && priceChange > 0.3) {
+      conditions.momentum = true
+      conditionsMet++
+      reasons.push(`✅ Momentum: +${priceChange.toFixed(2)}%`)
+    } else if (watchItem.expectedType === 'SELL' && priceChange < -0.3) {
+      conditions.momentum = true
+      conditionsMet++
+      reasons.push(`✅ Momentum: ${priceChange.toFixed(2)}%`)
+              } else {
+      reasons.push(`⏳ Momentum: ${priceChange.toFixed(2)}% (waiting)`)
+    }
+
+    // 2. Volume check (rough estimate)
+    const hasVolume = data.volume > 0
+    if (hasVolume) {
+      conditions.volume = true
+      conditionsMet++
+      reasons.push(`✅ Volume: Active`)
+    } else {
+      reasons.push(`⏳ Volume: Low`)
+    }
+
+    // 3. RSI check (estimate based on price movement)
+    const estimatedRSI = 50 + (priceChange * 2) // Rough approximation
+    if (estimatedRSI >= 45 && estimatedRSI <= 65) {
+      conditions.rsi = true
+      conditionsMet++
+      reasons.push(`✅ RSI: ~${Math.round(estimatedRSI)} (Good range)`)
+    } else {
+      reasons.push(`⏳ RSI: ~${Math.round(estimatedRSI)} (waiting)`)
+    }
+
+    // 4. VWAP check (use average of open and current)
+    const estimatedVWAP = (data.open + data.current) / 2
+    const nearVWAP = Math.abs(data.current - estimatedVWAP) / estimatedVWAP < 0.005 // Within 0.5%
+    if (nearVWAP) {
+      conditions.vwap = true
+      conditionsMet++
+      reasons.push(`✅ Near VWAP (₹${estimatedVWAP.toFixed(2)})`)
+            } else {
+      reasons.push(`⏳ Away from VWAP (₹${estimatedVWAP.toFixed(2)})`)
+    }
+
+    // 5. Support/Resistance check (use day low/high)
+    const nearSupport = Math.abs(data.current - data.dayLow) / data.dayLow < 0.01 // Within 1%
+    const nearResistance = Math.abs(data.current - data.dayHigh) / data.dayHigh < 0.01
+    if ((watchItem.expectedType === 'BUY' && nearSupport) || 
+        (watchItem.expectedType === 'SELL' && nearResistance)) {
+      conditions.support = true
+      conditionsMet++
+      reasons.push(`✅ At key level (₹${data.current.toFixed(2)})`)
+    } else {
+      reasons.push(`⏳ Not at key level yet`)
+    }
+
+    // Calculate target and stop loss
+    const target = watchItem.expectedType === 'BUY'
+      ? data.current * 1.025  // 2.5% target
+      : data.current * 0.975
+    
+    const stopLoss = watchItem.expectedType === 'BUY'
+      ? data.current * 0.99   // 1% stop loss
+      : data.current * 1.01
+
+    return {
+      conditions,
+      conditionsMet,
+      reasons,
+      signalType: watchItem.expectedType,
+      target,
+      stopLoss
+    }
   }
 
   // Demo Mode - Generate mock signals for testing
