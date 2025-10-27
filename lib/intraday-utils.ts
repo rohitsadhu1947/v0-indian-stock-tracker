@@ -140,15 +140,22 @@ export function generateIntradaySignal(
   let conditionsMet = 0
   let signalStrength = 0
 
-  // Entry Condition 1: Momentum check
-  if (hasMomentum) {
+  // Entry Condition 1: Momentum check (relaxed for aggressive)
+  const momentumMet = screenerLevel === 'AGGRESSIVE' 
+    ? Math.abs(movePercent) >= 0.3  // Any 0.3%+ move for aggressive
+    : hasMomentum
+  
+  if (momentumMet) {
     reasons.push(`Momentum: ${movePercent > 0 ? '+' : ''}${movePercent.toFixed(2)}%`)
     signalStrength += 2
     conditionsMet++
   }
 
-  // Entry Condition 2: Volume confirmation
-  if (hasVolumeConfirmation) {
+  // Entry Condition 2: Volume confirmation (relaxed for aggressive)
+  const volumeThreshold = screenerLevel === 'AGGRESSIVE' ? 1.5 : 2.0  // 1.5x for aggressive, 2x for others
+  const volumeConfirmed = currentVolume > avgVolume * volumeThreshold
+  
+  if (volumeConfirmed) {
     reasons.push(`Volume: ${(currentVolume / avgVolume).toFixed(1)}x avg`)
     signalStrength += 2
     conditionsMet++
@@ -183,9 +190,14 @@ export function generateIntradaySignal(
 
   // Determine minimum conditions required based on screener level
   const minConditions = screenerLevel === 'CONSERVATIVE' ? 5 : 
-                       screenerLevel === 'MODERATE' ? 3 : 2
+                       screenerLevel === 'MODERATE' ? 3 : 1  // Changed from 2 to 1 for aggressive
   const minStrength = screenerLevel === 'CONSERVATIVE' ? 10 : 
-                     screenerLevel === 'MODERATE' ? 6 : 4
+                     screenerLevel === 'MODERATE' ? 6 : 2  // Changed from 4 to 2 for aggressive
+
+  // Debug logging for aggressive mode
+  if (screenerLevel === 'AGGRESSIVE') {
+    console.log(`${symbol}: ${conditionsMet} conditions met, strength: ${signalStrength}`)
+  }
 
   // Generate signal if conditions met
   if (conditionsMet >= minConditions && signalStrength >= minStrength) {
