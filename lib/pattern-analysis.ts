@@ -226,14 +226,15 @@ export function generateStockIntelligence(
   // Best entry strategy
   reasons.push(`🎯 Best Entry: ${pattern.bestEntry.replace('_', ' ')}`);
 
-  // Determine recommendation (REALISTIC THRESHOLDS)
-  if (historicalScore >= 70 && pattern.successRate >= 50) {
+  // Determine recommendation (ADJUSTED FOR LIMITED HISTORICAL DATA)
+  // With 19 days of data, scores will be lower - adjust thresholds accordingly
+  if (historicalScore >= 55 && pattern.successRate >= 40) {
     recommendation = 'STRONG_BUY';
     reasons.unshift('🚨 STRONG INTRADAY CANDIDATE - High confidence based on patterns');
-  } else if (historicalScore >= 50) {
+  } else if (historicalScore >= 35) {
     recommendation = 'BUY';
     reasons.unshift('✅ GOOD INTRADAY CANDIDATE - Solid historical performance');
-  } else if (historicalScore >= 25) {
+  } else if (historicalScore >= 15) {
     recommendation = 'WATCH';
     reasons.unshift('👀 WATCH - Moderate potential, needs confirmation');
   } else {
