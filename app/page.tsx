@@ -1363,7 +1363,13 @@ export default function StockTracker() {
           }
           
           const historicalData = await historicalResponse.json()
-          const candles = historicalData.candles || []
+          const candles = historicalData.candles || historicalData.data || []
+          
+          console.log(`📈 ${stock.tradingsymbol}: Received ${candles.length} historical candles`)
+          
+          if (historicalData.meta) {
+            console.log(`   From: ${historicalData.meta.from?.split('T')[0]}, To: ${historicalData.meta.to?.split('T')[0]}`)
+          }
           
           // FALLBACK MODE: If no historical data, use current day data
           let intelligence: any
@@ -1442,7 +1448,7 @@ export default function StockTracker() {
             
             pattern = intelligence.pattern
             
-          } else {
+              } else {
             // NORMAL MODE: We have historical data
             if (candles.length < 5) {
               console.log(`ℹ️ ${stock.tradingsymbol}: Limited historical data (${candles.length} days) - analysis may be less accurate`)
@@ -1526,7 +1532,7 @@ export default function StockTracker() {
           `- API rate limiting\n` +
           `- Authentication expired`
         )
-      } else {
+            } else {
         alert(
           `✅ Intelligence Scan Complete!\n\n` +
           `📊 Analyzed ${results.length} stocks with historical patterns\n` +
