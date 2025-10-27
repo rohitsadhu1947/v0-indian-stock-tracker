@@ -30,6 +30,10 @@ import {
   type FundamentalData,
   type FundamentalScore
 } from '@/lib/fundamentals-utils'
+import {
+  generateCombinedIntelligence,
+  type CombinedIntelligence
+} from '@/lib/combined-intelligence'
 
 interface StockData {
   symbol: string
@@ -124,6 +128,9 @@ export default function StockTracker() {
   const [stockSentiment, setStockSentiment] = useState<any>(null)
   const [marketSentiment, setMarketSentiment] = useState<any>(null)
   const [multiLayerNews, setMultiLayerNews] = useState<any>(null)
+  
+  // Combined Intelligence state
+  const [combinedIntelligence, setCombinedIntelligence] = useState<CombinedIntelligence | null>(null)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -250,6 +257,55 @@ export default function StockTracker() {
       updateWatchlist()
     }
   }, [authStatus.authenticated])
+
+  // Calculate Combined Intelligence when we have all data
+  useEffect(() => {
+    if (!fundamentalData || !fundamentalScore || !multiLayerNews) {
+      setCombinedIntelligence(null)
+      return
+    }
+
+    // Check if we have technical data for this stock
+    const technicalData = stockData[fundamentalData.symbol]
+    if (!technicalData) {
+      console.log(`⏳ Waiting for technical data for ${fundamentalData.symbol}...`)
+      setCombinedIntelligence(null)
+      return
+    }
+
+    console.log(`🧠 Calculating Combined Intelligence for ${fundamentalData.symbol}...`)
+
+    // Generate trading signal from technical data
+    const technicalSignal = generateTradingSignal(
+      technicalData.current,
+      technicalData.prices,
+      technicalData.volumes
+    )
+
+    // Prepare data for combined intelligence
+    const technical = {
+      signal: technicalSignal.signal as any,
+      reason: technicalSignal.reason
+    }
+
+    const fundamental = {
+      pe: fundamentalData.peRatio,
+      roe: fundamentalData.roe,
+      debtToEquity: fundamentalData.debtToEquity,
+      marketCap: fundamentalData.marketCap
+    }
+
+    const sentiment = {
+      dayTradingSignal: multiLayerNews.dayTradingSignal,
+      combinedSentiment: multiLayerNews.combinedSentiment
+    }
+
+    // Generate combined intelligence
+    const intelligence = generateCombinedIntelligence(technical, fundamental, sentiment)
+    setCombinedIntelligence(intelligence)
+
+    console.log(`✅ Combined Intelligence: ${intelligence.scenario} (${intelligence.overallSignal})`)
+  }, [fundamentalData, fundamentalScore, multiLayerNews, stockData])
 
   async function checkAuthStatus() {
     try {
@@ -4756,6 +4812,187 @@ export default function StockTracker() {
                   </div>
                 </div>
               </div>
+
+              {/* 🧠 COMBINED INTELLIGENCE - The Ultimate Trading Strategy */}
+              {combinedIntelligence && (
+                <div style={{
+                  marginBottom: '20px',
+                  padding: '30px',
+                  background: `linear-gradient(135deg, ${combinedIntelligence.signalColor}15, ${combinedIntelligence.signalColor}08)`,
+                  border: `3px solid ${combinedIntelligence.signalColor}`,
+                  borderRadius: '20px',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  {/* Animated background effect */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    fontSize: '15em',
+                    opacity: 0.03,
+                    transform: 'rotate(-15deg)',
+                    pointerEvents: 'none'
+                  }}>
+                    {combinedIntelligence.scenarioEmoji}
+                  </div>
+
+                  {/* Header */}
+                  <div style={{ marginBottom: '25px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                      <span style={{ fontSize: '3.5em' }}>{combinedIntelligence.scenarioEmoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ 
+                          margin: 0, 
+                          fontSize: '2em', 
+                          color: combinedIntelligence.signalColor,
+                          textShadow: `0 0 20px ${combinedIntelligence.signalColor}40`
+                        }}>
+                          {combinedIntelligence.scenario}
+                        </h3>
+                        <div style={{ marginTop: '8px', fontSize: '1.1em', opacity: 0.9 }}>
+                          <strong style={{ color: combinedIntelligence.signalColor }}>
+                            {combinedIntelligence.overallSignal}
+                          </strong>
+                          {' • '}
+                          <span style={{ opacity: 0.8 }}>
+                            {combinedIntelligence.timeframe}
+                          </span>
+                          {' • '}
+                          <span style={{ 
+                            padding: '4px 12px', 
+                            background: `${combinedIntelligence.riskColor}20`,
+                            border: `1px solid ${combinedIntelligence.riskColor}`,
+                            borderRadius: '8px',
+                            color: combinedIntelligence.riskColor,
+                            fontSize: '0.9em',
+                            fontWeight: 'bold'
+                          }}>
+                            {combinedIntelligence.riskLevel} Risk
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{
+                        padding: '20px',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        borderRadius: '15px',
+                        textAlign: 'center',
+                        minWidth: '120px'
+                      }}>
+                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>CONFIDENCE</div>
+                        <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: combinedIntelligence.signalColor }}>
+                          {combinedIntelligence.confidence}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trading Strategy */}
+                  <div style={{
+                    padding: '20px',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    borderRadius: '15px',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '1.3em' }}>📋 Trading Strategy</h4>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                      gap: '15px'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>💰 Entry</div>
+                        <div style={{ fontSize: '1.1em', fontWeight: 'bold' }}>{combinedIntelligence.strategy.entry}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>🛑 Stop-Loss</div>
+                        <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#ff0064' }}>{combinedIntelligence.strategy.stopLoss}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>🎯 Target</div>
+                        <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#00ff64' }}>{combinedIntelligence.strategy.target}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Exit Conditions */}
+                    <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '8px' }}>🚪 Exit When:</div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                        gap: '8px' 
+                      }}>
+                        {combinedIntelligence.strategy.exitConditions.map((condition, idx) => (
+                          <div key={idx} style={{
+                            padding: '8px 12px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '8px',
+                            fontSize: '0.9em',
+                            borderLeft: `2px solid ${combinedIntelligence.signalColor}`
+                          }}>
+                            • {condition}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Explanation */}
+                  <div style={{
+                    padding: '20px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '15px',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '1.3em' }}>💡 Why This Strategy?</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
+                        <strong style={{ color: '#4facfe' }}>📊 Technical:</strong> {combinedIntelligence.explanation.technical}
+                      </div>
+                      <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
+                        <strong style={{ color: '#00ff64' }}>💼 Fundamental:</strong> {combinedIntelligence.explanation.fundamental}
+                      </div>
+                      <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
+                        <strong style={{ color: '#ffa500' }}>📰 Sentiment:</strong> {combinedIntelligence.explanation.sentiment}
+                      </div>
+                      <div style={{ 
+                        padding: '15px', 
+                        background: `${combinedIntelligence.signalColor}10`,
+                        border: `2px solid ${combinedIntelligence.signalColor}40`,
+                        borderRadius: '10px',
+                        fontSize: '1.05em',
+                        lineHeight: '1.6'
+                      }}>
+                        <strong style={{ color: combinedIntelligence.signalColor }}>🎯 Synthesis:</strong> {combinedIntelligence.explanation.synthesis}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alerts & Warnings */}
+                  {combinedIntelligence.alerts.length > 0 && (
+                    <div style={{
+                      padding: '15px 20px',
+                      background: 'rgba(255, 193, 7, 0.1)',
+                      border: '2px solid rgba(255, 193, 7, 0.4)',
+                      borderRadius: '12px'
+                    }}>
+                      <h5 style={{ margin: '0 0 12px 0', fontSize: '1.1em', color: '#ffc107' }}>⚠️ Important Alerts</h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {combinedIntelligence.alerts.map((alert, idx) => (
+                          <div key={idx} style={{ 
+                            fontSize: '0.95em', 
+                            padding: '8px',
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '6px'
+                          }}>
+                            {alert}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Category Scores */}
               <div style={{
