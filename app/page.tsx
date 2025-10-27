@@ -1749,7 +1749,18 @@ export default function StockTracker() {
       
     } catch (error: any) {
       console.error('❌ Error fetching fundamentals:', error)
-      alert(`❌ Failed to fetch fundamentals for ${symbol}:\n\n${error.message}\n\nTry different exchange (NSE/BSE) or check symbol spelling.`)
+      
+      // Try to get more details from the error response
+      let errorMessage = error.message || 'Unknown error'
+      let suggestion = 'Try different exchange (NSE/BSE) or check symbol spelling.'
+      
+      // If we have an error response with details, use that
+      if (error.message.includes('Failed to fetch fundamental data')) {
+        errorMessage = `Could not fetch data for ${symbol}`
+        suggestion = 'This could be due to:\n• Invalid symbol name\n• Yahoo Finance API issue\n• Network connectivity\n• Symbol not available on selected exchange\n\nCheck browser console for detailed error logs.'
+      }
+      
+      alert(`❌ ${errorMessage}\n\n${suggestion}`)
     } finally {
       setIsFetchingFundamentals(false)
     }

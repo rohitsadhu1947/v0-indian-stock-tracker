@@ -30,16 +30,68 @@ export async function GET(request: NextRequest) {
     
     // Fetch comprehensive data from Yahoo Finance
     // Using quoteSummary with multiple modules for complete picture
-    const result = await yahooFinance.quoteSummary(yahooSymbol, {
-      modules: [
-        'price',                  // Current price, market cap
-        'summaryDetail',          // P/E, dividend yield, beta, etc.
-        'financialData',          // Revenue, profit margins, debt
-        'defaultKeyStatistics',   // EPS, ROE, etc.
-        'earnings',               // Earnings history
-        'earningsHistory'         // Quarterly earnings
-      ]
-    });
+    let result;
+    try {
+      result = await yahooFinance.quoteSummary(yahooSymbol, {
+        modules: [
+          'price',                  // Current price, market cap
+          'summaryDetail',          // P/E, dividend yield, beta, etc.
+          'financialData',          // Revenue, profit margins, debt
+          'defaultKeyStatistics'    // EPS, ROE, etc.
+        ]
+      });
+    } catch (yahooError: any) {
+      console.error(`❌ Yahoo Finance API error for ${yahooSymbol}:`, yahooError.message);
+      
+      // Try alternate approach with just quote
+      console.log(`📊 Trying alternate approach for ${yahooSymbol}...`);
+      try {
+        const quote = await yahooFinance.quote(yahooSymbol);
+        
+        if (!quote) {
+          throw new Error(`No data found for ${yahooSymbol}`);
+        }
+        
+        // Return simplified data from quote
+        const fundamentalData: FundamentalData = {
+          symbol: symbol.toUpperCase(),
+          companyName: quote.longName || quote.shortName || symbol,
+          sector: quote.sector,
+          industry: quote.industry,
+          
+          marketCap: quote.marketCap || 0,
+          peRatio: quote.trailingPE || quote.forwardPE,
+          pbRatio: quote.priceToBook,
+          eps: quote.epsTrailingTwelveMonths,
+          
+          dividendYield: quote.dividendYield,
+          
+          fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+          fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+          beta: quote.beta,
+          averageVolume: quote.averageVolume,
+          
+          bookValue: quote.bookValue,
+          priceToBook: quote.priceToBook,
+          
+          lastUpdated: new Date()
+        };
+        
+        console.log(`✅ Retrieved basic data for ${yahooSymbol} using quote()`);
+        
+        return NextResponse.json({
+          success: true,
+          data: fundamentalData,
+          source: 'Yahoo Finance (Quote)',
+          timestamp: new Date().toISOString(),
+          note: 'Limited data available - using basic quote API'
+        });
+        
+      } catch (quoteError: any) {
+        console.error(`❌ Quote API also failed:`, quoteError.message);
+        throw new Error(`Could not fetch data for ${symbol}. ${quoteError.message}`);
+      }
+    }
     
     if (!result) {
       return NextResponse.json(
@@ -48,13 +100,20 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    console.log(`✅ Received data for ${yahooSymbol}`);
+    console.log(`✅ Received comprehensive data for ${yahooSymbol}`);
     
     // Extract and structure the data
     const price = result.price;
     const summaryDetail = result.summaryDetail;
     const financialData = result.financialData;
     const keyStats = result.defaultKeyStatistics;
+    
+    console.log(`📊 Data modules received:`, {
+      hasPrice: !!price,
+      hasSummaryDetail: !!summaryDetail,
+      hasFinancialData: !!financialData,
+      hasKeyStats: !!keyStats
+    });
     
     // Build FundamentalData object
     const fundamentalData: FundamentalData = {
@@ -127,29 +186,49 @@ export async function GET(request: NextRequest) {
     
   } catch (error: any) {
     console.error('❌ Error fetching fundamentals:', error);
+    console.error('   Error stack:', error.stack);
     
     // Handle specific Yahoo Finance errors
-    if (error.message?.includes('No data found')) {
+    if (error.message?.includes('No data found') || error.message?.includes('Not Found')) {
       return NextResponse.json(
         { 
-          error: `Symbol not found on Yahoo Finance. Try different exchange (NSE/BSE)`,
-          details: error.message 
+          error: `Symbol "${symbol}" not found on Yahoo Finance`,
+          suggestion: 'Try different exchange (NSE/BSE) or verify symbol spelling',
+          details: error.message,
+          yahooSymbol: convertToYahooSymbol(symbol, exchange)
         },
         { status: 404 }
       );
     }
     
-    if (error.message?.includes('Too Many Requests')) {
+    if (error.message?.includes('Too Many Requests') || error.message?.includes('429')) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again in a moment.' },
+        { 
+          error: 'Rate limit exceeded',
+          suggestion: 'Please wait a minute and try again',
+          details: error.message 
+        },
         { status: 429 }
+      );
+    }
+    
+    if (error.message?.includes('ECONNREFUSED') || error.message?.includes('network')) {
+      return NextResponse.json(
+        { 
+          error: 'Network error connecting to Yahoo Finance',
+          suggestion: 'Check your internet connection',
+          details: error.message 
+        },
+        { status: 503 }
       );
     }
     
     return NextResponse.json(
       { 
         error: 'Failed to fetch fundamental data',
-        details: error.message 
+        suggestion: 'Try again or check console for details',
+        details: error.message,
+        errorType: error.name || 'Unknown'
       },
       { status: 500 }
     );
