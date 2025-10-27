@@ -38,9 +38,10 @@ export async function GET(request: NextRequest) {
     const kc = new KiteConnect({ api_key: apiKey });
     kc.setAccessToken(accessToken);
 
-    // Calculate default date range (last 30 days for better data availability)
+    // Calculate default date range (last 60 days for proper technical indicators)
+    // 60 calendar days = ~40 trading days (enough for all indicators)
     const to = toDate ? new Date(toDate) : new Date();
-    const from = fromDate ? new Date(fromDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const from = fromDate ? new Date(fromDate) : new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
     // Fetch historical data
     console.log(`📊 Fetching historical for token ${instrumentToken}, interval ${interval}, from ${from.toISOString().split('T')[0]} to ${to.toISOString().split('T')[0]}`);
