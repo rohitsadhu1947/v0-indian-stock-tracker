@@ -215,7 +215,7 @@ export async function GET(request: NextRequest) {
     // Generate daily analysis
     const dailyAnalysis = generateDailyAnalysis(dashboard)
     
-    const fullDashboard: MarketDashboard = {
+    const fullDashboard = {
       timestamp: new Date(),
       indices,
       sectorPerformance,
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
       topGainers,
       topLosers,
       mostActive,
-      sentiment,
+      marketSentiment: sentiment,  // Renamed for frontend consistency
       dailyAnalysis,
       alerts: dailyAnalysis.alerts
     }
