@@ -489,45 +489,69 @@ export function generateStockSpotlight(
 ): StockSpotlight[] {
   const spotlight: StockSpotlight[] = []
   
-  // Analyze top gainers (5-10% and above with high volume)
-  const strongGainers = topGainers.filter(s => s.changePercent >= 5).slice(0, 5)
+  // ADAPTIVE THRESHOLDS - Analyze top movers regardless of absolute percentage
+  // This provides intelligence even on quiet market days
   
-  for (const stock of strongGainers) {
+  // Strong gainers: Take top 5 gainers OR those above 1%
+  const strongGainers = topGainers
+    .filter(s => s.changePercent >= 1) // Lowered from 5% to 1%
+    .slice(0, 5)
+  
+  // If less than 3 strong gainers, just take the top 3 gainers period
+  const gainersToAnalyze = strongGainers.length >= 3 
+    ? strongGainers 
+    : topGainers.slice(0, 3)
+  
+  for (const stock of gainersToAnalyze) {
     const avgVolume = stock.volume / 1.5 // Rough estimate
     const volumeRatio = stock.volume / avgVolume
     const sector = sectorPerformance.find(s => s.sector === stock.sector)
     const sectorChange = sector?.change || 0
     
-    // Determine signal based on momentum and volume
-    let signal: StockSpotlight['signal'] = 'BUY'
-    let signalStrength = 3
+    // ADAPTIVE signal thresholds based on actual market moves
+    let signal: StockSpotlight['signal'] = 'WATCH'
+    let signalStrength = 2
     
-    if (stock.changePercent > 10 && volumeRatio > 2) {
+    if (stock.changePercent > 5 && volumeRatio > 2) {
       signal = 'STRONG_BUY'
       signalStrength = 5
-    } else if (stock.changePercent > 7 && volumeRatio > 1.5) {
+    } else if (stock.changePercent > 3 && volumeRatio > 1.5) {
       signal = 'MOMENTUM_BUY'
       signalStrength = 4
+    } else if (stock.changePercent > 1.5) {
+      signal = 'BUY'
+      signalStrength = 3
+    } else if (stock.changePercent > 0.5) {
+      signal = 'WATCH'
+      signalStrength = 2
     }
     
-    // Generate narrative analysis
+    // Generate narrative analysis - ADAPTIVE to move size
     const keyFactors: string[] = []
     let priceAction = ''
     let analysis = ''
     let recommendation = ''
     let risk: StockSpotlight['risk'] = 'MODERATE'
     
-    if (stock.changePercent > 15) {
+    if (stock.changePercent > 10) {
       priceAction = `Surging ${stock.changePercent.toFixed(2)}% intraday with explosive momentum`
       keyFactors.push(`🚀 Explosive ${stock.changePercent.toFixed(1)}% surge`)
       risk = 'HIGH'
-    } else if (stock.changePercent > 10) {
+    } else if (stock.changePercent > 5) {
       priceAction = `Strong rally of ${stock.changePercent.toFixed(2)}% on heavy volumes`
       keyFactors.push(`📈 Strong ${stock.changePercent.toFixed(1)}% gain`)
       risk = 'MODERATE'
-    } else {
-      priceAction = `Gaining ${stock.changePercent.toFixed(2)}% with steady buying`
+    } else if (stock.changePercent > 2) {
+      priceAction = `Gaining ${stock.changePercent.toFixed(2)}% with solid buying interest`
       keyFactors.push(`✅ Solid ${stock.changePercent.toFixed(1)}% advance`)
+      risk = 'LOW'
+    } else if (stock.changePercent > 1) {
+      priceAction = `Up ${stock.changePercent.toFixed(2)}% with steady accumulation`
+      keyFactors.push(`📊 Steady ${stock.changePercent.toFixed(1)}% gain`)
+      risk = 'LOW'
+    } else {
+      priceAction = `Edging up ${stock.changePercent.toFixed(2)}% with positive momentum`
+      keyFactors.push(`➕ Marginal ${stock.changePercent.toFixed(1)}% gain`)
       risk = 'LOW'
     }
     
@@ -564,13 +588,15 @@ export function generateStockSpotlight(
       analysis += `This counter-trend move signals exceptional buying interest despite market weakness. `
     }
     
-    // Generate recommendation
+    // Generate recommendation - ADAPTIVE
     if (signal === 'STRONG_BUY') {
-      recommendation = `Immediate entry opportunity. Buy on dips with target of ${(stock.changePercent * 1.2).toFixed(1)}% gain. Place stop-loss ${(stock.changePercent * 0.3).toFixed(1)}% below entry. Book 50% at target, trail rest.`
+      recommendation = `Immediate entry opportunity. Buy on dips with target of ${(stock.changePercent * 1.2).toFixed(1)}% gain. Place stop-loss ${Math.max(stock.changePercent * 0.3, 2).toFixed(1)}% below entry. Book 50% at target, trail rest.`
     } else if (signal === 'MOMENTUM_BUY') {
       recommendation = `Strong momentum play. Enter on pullbacks or breakout confirmation. Target ${(stock.changePercent * 1.15).toFixed(1)}% move. Stop-loss below recent support. Partial booking recommended at ${stock.changePercent.toFixed(1)}%+.`
+    } else if (signal === 'BUY') {
+      recommendation = `Good entry opportunity. Add on dips with ${(stock.changePercent * 1.2).toFixed(1)}% target. Maintain ${Math.max(stock.changePercent * 0.5, 1.5).toFixed(1)}% stop-loss. Consider scaling in.`
     } else {
-      recommendation = `Watch for continuation. Entry above ${stock.current.toFixed(2)} with ${(stock.changePercent * 1.1).toFixed(1)}% target. Conservative stop-loss advised given existing gains.`
+      recommendation = `Watch for momentum build-up. Entry on strong volume above ${stock.current.toFixed(2)} with ${(stock.changePercent + 1).toFixed(1)}% target. Tight stop-loss advised.`
     }
     
     spotlight.push({
@@ -592,24 +618,39 @@ export function generateStockSpotlight(
     })
   }
   
-  // Analyze top losers (potential shorts or reversal candidates)
-  const strongLosers = topLosers.filter(s => s.changePercent <= -2).slice(0, 3)
+  // Analyze top losers - ADAPTIVE to actual market conditions
+  // Strong losers: Take top 3 losers OR those below -1%
+  const strongLosers = topLosers
+    .filter(s => s.changePercent <= -1) // Lowered from -2% to -1%
+    .slice(0, 3)
   
-  for (const stock of strongLosers) {
+  // If less than 2 strong losers, just take the top 2 losers period
+  const losersToAnalyze = strongLosers.length >= 2 
+    ? strongLosers 
+    : topLosers.slice(0, 2)
+  
+  for (const stock of losersToAnalyze) {
     const avgVolume = stock.volume / 1.5
     const volumeRatio = stock.volume / avgVolume
     const sector = sectorPerformance.find(s => s.sector === stock.sector)
     const sectorChange = sector?.change || 0
     
+    // ADAPTIVE signal thresholds for losers
     let signal: StockSpotlight['signal'] = 'WATCH'
     let signalStrength = 2
     
     if (stock.changePercent < -5 && volumeRatio > 1.5) {
       signal = 'SHORT'
       signalStrength = 4
-    } else if (stock.changePercent < -3) {
+    } else if (stock.changePercent < -3 && volumeRatio > 1.3) {
+      signal = 'SHORT'
+      signalStrength = 3
+    } else if (stock.changePercent < -2) {
       signal = 'SELL'
       signalStrength = 3
+    } else if (stock.changePercent < -1) {
+      signal = 'SELL'
+      signalStrength = 2
     }
     
     const keyFactors: string[] = []
