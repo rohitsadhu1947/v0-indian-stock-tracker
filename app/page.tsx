@@ -5944,6 +5944,151 @@ export default function StockTracker() {
                 </div>
               </div>
 
+              {/* 🎯 STOCK SPOTLIGHT - Detailed Intelligence */}
+              {marketDashboard.stockSpotlight && marketDashboard.stockSpotlight.length > 0 && (
+                <div className="screener-results" style={{ marginBottom: '25px' }}>
+                  <h4 style={{ marginBottom: '15px', fontSize: '1.5em' }}>🎯 Stock Spotlight - Market Intelligence</h4>
+                  <p style={{ margin: '0 0 20px 0', opacity: 0.8, fontSize: '1.05em' }}>
+                    Detailed analysis of key market movers with actionable insights
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {marketDashboard.stockSpotlight.map((stock: any, idx: number) => {
+                      const signalColor = 
+                        stock.signal === 'STRONG_BUY' ? '#00ff64' :
+                        stock.signal === 'MOMENTUM_BUY' ? '#4ade80' :
+                        stock.signal === 'BUY' ? '#a3e635' :
+                        stock.signal === 'SHORT' ? '#ff0064' :
+                        stock.signal === 'SELL' ? '#f87171' : '#ffc107';
+                      
+                      const signalBg = 
+                        stock.signal === 'STRONG_BUY' || stock.signal === 'MOMENTUM_BUY' || stock.signal === 'BUY' ? 
+                        'linear-gradient(135deg, rgba(0, 255, 100, 0.15), rgba(0, 255, 100, 0.05))' :
+                        stock.signal === 'SHORT' || stock.signal === 'SELL' ?
+                        'linear-gradient(135deg, rgba(255, 0, 100, 0.15), rgba(255, 0, 100, 0.05))' :
+                        'linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.05))';
+                      
+                      const riskColor = 
+                        stock.risk === 'HIGH' ? '#ff0064' :
+                        stock.risk === 'MODERATE' ? '#ffc107' : '#00ff64';
+                      
+                      return (
+                        <div key={idx} style={{
+                          padding: '25px',
+                          background: signalBg,
+                          border: `2px solid ${signalColor}40`,
+                          borderRadius: '15px',
+                          position: 'relative'
+                        }}>
+                          {/* Header */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+                            <div style={{ flex: 1, minWidth: '200px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                                <h3 style={{ margin: 0, fontSize: '2em', fontWeight: 'bold' }}>{stock.symbol}</h3>
+                                <span style={{
+                                  padding: '6px 14px',
+                                  background: `${signalColor}30`,
+                                  border: `2px solid ${signalColor}`,
+                                  borderRadius: '8px',
+                                  fontSize: '1em',
+                                  fontWeight: 'bold',
+                                  color: signalColor,
+                                  textTransform: 'uppercase'
+                                }}>
+                                  {stock.signal.replace('_', ' ')}
+                                </span>
+                                <div style={{ display: 'flex', gap: '2px' }}>
+                                  {[...Array(5)].map((_, i) => (
+                                    <span key={i} style={{ 
+                                      color: i < stock.signalStrength ? signalColor : 'rgba(255, 255, 255, 0.2)',
+                                      fontSize: '1.2em'
+                                    }}>★</span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '15px', fontSize: '0.95em', opacity: 0.8 }}>
+                                <span>Sector: <strong>{stock.sector}</strong></span>
+                                <span>Risk: <strong style={{ color: riskColor }}>{stock.risk}</strong></span>
+                              </div>
+                            </div>
+                            
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '2.5em', fontWeight: 'bold', marginBottom: '5px' }}>
+                                ₹{stock.current.toFixed(2)}
+                              </div>
+                              <div style={{
+                                fontSize: '1.5em',
+                                fontWeight: 'bold',
+                                color: stock.changePercent >= 0 ? '#00ff64' : '#ff0064'
+                              }}>
+                                {stock.changePercent >= 0 ? '▲' : '▼'} {Math.abs(stock.changePercent).toFixed(2)}%
+                              </div>
+                              <div style={{ fontSize: '0.9em', opacity: 0.7, marginTop: '5px' }}>
+                                Vol: {(stock.volume / 100000).toFixed(1)}L ({stock.volumeRatio.toFixed(1)}x avg)
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Analysis */}
+                          <div style={{
+                            padding: '20px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            borderRadius: '10px',
+                            marginBottom: '20px'
+                          }}>
+                            <div style={{ fontSize: '1.1em', lineHeight: '1.7', marginBottom: '15px' }}>
+                              {stock.analysis}
+                            </div>
+                            <div style={{ fontSize: '0.95em', opacity: 0.9, fontStyle: 'italic' }}>
+                              {stock.priceAction}
+                            </div>
+                          </div>
+                          
+                          {/* Key Factors */}
+                          <div style={{ marginBottom: '20px' }}>
+                            <h4 style={{ fontSize: '1.1em', marginBottom: '12px', opacity: 0.9 }}>📊 Key Factors:</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                              {stock.keyFactors.map((factor: string, i: number) => (
+                                <div key={i} style={{
+                                  padding: '10px 15px',
+                                  background: 'rgba(0, 0, 0, 0.2)',
+                                  borderRadius: '8px',
+                                  fontSize: '0.95em',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                                }}>
+                                  {factor}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Recommendation */}
+                          <div style={{
+                            padding: '20px',
+                            background: `${signalColor}10`,
+                            border: `2px solid ${signalColor}40`,
+                            borderRadius: '10px'
+                          }}>
+                            <h4 style={{ 
+                              fontSize: '1.1em',
+                              marginBottom: '10px',
+                              color: signalColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              💡 Trading Strategy
+                            </h4>
+                            <p style={{ margin: 0, fontSize: '1.05em', lineHeight: '1.6' }}>
+                              {stock.recommendation}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Indices Grid */}
               {marketDashboard.indices && marketDashboard.indices.length > 0 && (
                 <div className="screener-results" style={{ marginBottom: '25px' }}>
