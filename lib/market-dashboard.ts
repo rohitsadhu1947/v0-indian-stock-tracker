@@ -55,6 +55,24 @@ export interface TopMover {
   reason?: string
 }
 
+export interface StockSpotlight {
+  symbol: string
+  name: string
+  current: number
+  changePercent: number
+  volume: number
+  avgVolume: number
+  volumeRatio: number // volume / avgVolume
+  sector: string
+  signal: 'STRONG_BUY' | 'MOMENTUM_BUY' | 'BUY' | 'WATCH' | 'SELL' | 'SHORT'
+  signalStrength: number // 1-5
+  analysis: string // Detailed narrative analysis
+  keyFactors: string[] // Bullet points of why this stock is moving
+  priceAction: string // Description of price movement
+  recommendation: string // What to do with this stock
+  risk: 'LOW' | 'MODERATE' | 'HIGH'
+}
+
 export interface MarketSentiment {
   overall: 'VERY_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'VERY_BEARISH'
   score: number // 0-100
@@ -119,6 +137,7 @@ export interface MarketDashboard {
   topGainers: TopMover[]
   topLosers: TopMover[]
   mostActive: TopMover[]
+  stockSpotlight: StockSpotlight[] // Detailed analysis of key stocks
   sentiment: MarketSentiment
   dailyAnalysis: DailyMarketAnalysis
   fiiDii?: FIIDIIData
@@ -456,5 +475,187 @@ export function getSentimentEmoji(sentiment: string): string {
   if (sentiment === 'BEARISH') return '📉'
   if (sentiment === 'VERY_BEARISH' || sentiment === 'STRONG_BEARISH') return '🔴'
   return '❓'
+}
+
+/**
+ * Generate Stock Spotlight - Detailed analysis of key market movers
+ * Similar to Perplexity's market intelligence
+ */
+export function generateStockSpotlight(
+  topGainers: TopMover[],
+  topLosers: TopMover[],
+  sectorPerformance: SectorPerformance[],
+  marketSentiment: MarketSentiment
+): StockSpotlight[] {
+  const spotlight: StockSpotlight[] = []
+  
+  // Analyze top gainers (5-10% and above with high volume)
+  const strongGainers = topGainers.filter(s => s.changePercent >= 5).slice(0, 5)
+  
+  for (const stock of strongGainers) {
+    const avgVolume = stock.volume / 1.5 // Rough estimate
+    const volumeRatio = stock.volume / avgVolume
+    const sector = sectorPerformance.find(s => s.sector === stock.sector)
+    const sectorChange = sector?.change || 0
+    
+    // Determine signal based on momentum and volume
+    let signal: StockSpotlight['signal'] = 'BUY'
+    let signalStrength = 3
+    
+    if (stock.changePercent > 10 && volumeRatio > 2) {
+      signal = 'STRONG_BUY'
+      signalStrength = 5
+    } else if (stock.changePercent > 7 && volumeRatio > 1.5) {
+      signal = 'MOMENTUM_BUY'
+      signalStrength = 4
+    }
+    
+    // Generate narrative analysis
+    const keyFactors: string[] = []
+    let priceAction = ''
+    let analysis = ''
+    let recommendation = ''
+    let risk: StockSpotlight['risk'] = 'MODERATE'
+    
+    if (stock.changePercent > 15) {
+      priceAction = `Surging ${stock.changePercent.toFixed(2)}% intraday with explosive momentum`
+      keyFactors.push(`🚀 Explosive ${stock.changePercent.toFixed(1)}% surge`)
+      risk = 'HIGH'
+    } else if (stock.changePercent > 10) {
+      priceAction = `Strong rally of ${stock.changePercent.toFixed(2)}% on heavy volumes`
+      keyFactors.push(`📈 Strong ${stock.changePercent.toFixed(1)}% gain`)
+      risk = 'MODERATE'
+    } else {
+      priceAction = `Gaining ${stock.changePercent.toFixed(2)}% with steady buying`
+      keyFactors.push(`✅ Solid ${stock.changePercent.toFixed(1)}% advance`)
+      risk = 'LOW'
+    }
+    
+    // Volume analysis
+    if (volumeRatio > 3) {
+      keyFactors.push(`🔥 Exceptional volume surge (${volumeRatio.toFixed(1)}x average)`)
+    } else if (volumeRatio > 2) {
+      keyFactors.push(`📊 Heavy volumes (${volumeRatio.toFixed(1)}x average)`)
+    } else if (volumeRatio > 1.5) {
+      keyFactors.push(`📈 Above-average volumes (${volumeRatio.toFixed(1)}x)`)
+    }
+    
+    // Sector context
+    if (sectorChange > 2) {
+      keyFactors.push(`🎯 Sector strength: ${stock.sector} up ${sectorChange.toFixed(1)}%`)
+      analysis = `${stock.symbol} is leading the ${stock.sector} sector rally. ${priceAction}. `
+    } else if (sectorChange > 0) {
+      keyFactors.push(`✅ Sector support: ${stock.sector} up ${sectorChange.toFixed(1)}%`)
+      analysis = `${stock.symbol} is outperforming in a positive ${stock.sector} sector. ${priceAction}. `
+    } else {
+      keyFactors.push(`⚡ Outperformer: Leading while ${stock.sector} is weak`)
+      analysis = `${stock.symbol} shows exceptional strength, rallying despite ${stock.sector} sector weakness. ${priceAction}. `
+    }
+    
+    // Market context
+    if (marketSentiment.overall.includes('BULLISH')) {
+      keyFactors.push(`🌊 Riding overall bullish market sentiment`)
+      analysis += `The broader market's bullish momentum provides strong support. `
+    } else if (marketSentiment.overall === 'NEUTRAL') {
+      keyFactors.push(`💪 Strong relative strength vs flat market`)
+      analysis += `Stock is bucking the flat market trend with strong buying interest. `
+    } else {
+      keyFactors.push(`🚨 Remarkable strength in bearish market`)
+      analysis += `This counter-trend move signals exceptional buying interest despite market weakness. `
+    }
+    
+    // Generate recommendation
+    if (signal === 'STRONG_BUY') {
+      recommendation = `Immediate entry opportunity. Buy on dips with target of ${(stock.changePercent * 1.2).toFixed(1)}% gain. Place stop-loss ${(stock.changePercent * 0.3).toFixed(1)}% below entry. Book 50% at target, trail rest.`
+    } else if (signal === 'MOMENTUM_BUY') {
+      recommendation = `Strong momentum play. Enter on pullbacks or breakout confirmation. Target ${(stock.changePercent * 1.15).toFixed(1)}% move. Stop-loss below recent support. Partial booking recommended at ${stock.changePercent.toFixed(1)}%+.`
+    } else {
+      recommendation = `Watch for continuation. Entry above ${stock.current.toFixed(2)} with ${(stock.changePercent * 1.1).toFixed(1)}% target. Conservative stop-loss advised given existing gains.`
+    }
+    
+    spotlight.push({
+      symbol: stock.symbol,
+      name: stock.name,
+      current: stock.current,
+      changePercent: stock.changePercent,
+      volume: stock.volume,
+      avgVolume,
+      volumeRatio,
+      sector: stock.sector,
+      signal,
+      signalStrength,
+      analysis,
+      keyFactors,
+      priceAction,
+      recommendation,
+      risk
+    })
+  }
+  
+  // Analyze top losers (potential shorts or reversal candidates)
+  const strongLosers = topLosers.filter(s => s.changePercent <= -2).slice(0, 3)
+  
+  for (const stock of strongLosers) {
+    const avgVolume = stock.volume / 1.5
+    const volumeRatio = stock.volume / avgVolume
+    const sector = sectorPerformance.find(s => s.sector === stock.sector)
+    const sectorChange = sector?.change || 0
+    
+    let signal: StockSpotlight['signal'] = 'WATCH'
+    let signalStrength = 2
+    
+    if (stock.changePercent < -5 && volumeRatio > 1.5) {
+      signal = 'SHORT'
+      signalStrength = 4
+    } else if (stock.changePercent < -3) {
+      signal = 'SELL'
+      signalStrength = 3
+    }
+    
+    const keyFactors: string[] = []
+    const priceAction = `Declining ${Math.abs(stock.changePercent).toFixed(2)}% with ${volumeRatio > 1.5 ? 'heavy' : 'moderate'} selling pressure`
+    
+    keyFactors.push(`📉 Down ${Math.abs(stock.changePercent).toFixed(1)}%`)
+    
+    if (volumeRatio > 2) {
+      keyFactors.push(`🔴 Heavy selling volumes (${volumeRatio.toFixed(1)}x average)`)
+    }
+    
+    if (sectorChange < -1) {
+      keyFactors.push(`⚠️ Sector weakness: ${stock.sector} down ${Math.abs(sectorChange).toFixed(1)}%`)
+    }
+    
+    if (stock.changePercent < -5) {
+      keyFactors.push(`🚨 Profit booking or negative catalyst`)
+    }
+    
+    const analysis = `${stock.symbol} is under pressure with ${Math.abs(stock.changePercent).toFixed(1)}% decline. ${volumeRatio > 1.5 ? 'Heavy selling volumes suggest institutional profit booking or negative news flow.' : 'Moderate volumes indicate cautious selling.'} ${sectorChange < -1 ? `The ${stock.sector} sector is also weak, amplifying the downside.` : `Despite sector stability, stock shows weakness.`}`
+    
+    const recommendation = signal === 'SHORT' 
+      ? `Short opportunity on rallies. Target ${Math.abs(stock.changePercent * 1.3).toFixed(1)}% decline. Stop-loss above recent high. Book profits at support levels.`
+      : signal === 'SELL'
+      ? `Exit longs if holding. Watch for support break. Avoid fresh longs until stabilization. Potential short on confirmation.`
+      : `Watch for stabilization signals. Avoid catching falling knife. Wait for volume decrease and price consolidation before considering entry.`
+    
+    spotlight.push({
+      symbol: stock.symbol,
+      name: stock.name,
+      current: stock.current,
+      changePercent: stock.changePercent,
+      volume: stock.volume,
+      avgVolume,
+      volumeRatio,
+      sector: stock.sector,
+      signal,
+      signalStrength,
+      analysis,
+      keyFactors,
+      priceAction,
+      recommendation,
+      risk: stock.changePercent < -5 ? 'HIGH' : 'MODERATE'
+    })
+  }
+  
+  return spotlight
 }
 

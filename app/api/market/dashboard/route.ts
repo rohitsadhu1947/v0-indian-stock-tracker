@@ -5,12 +5,14 @@ import type {
   SectorPerformance,
   MarketBreadth,
   TopMover,
+  StockSpotlight,
   MarketAlert
 } from '@/lib/market-dashboard'
 import {
   calculateBreadthSentiment,
   calculateMarketSentiment,
-  generateDailyAnalysis
+  generateDailyAnalysis,
+  generateStockSpotlight
 } from '@/lib/market-dashboard'
 
 export const dynamic = 'force-dynamic'
@@ -201,6 +203,11 @@ export async function GET(request: NextRequest) {
     
     console.log(`✅ Market sentiment: ${sentiment.overall} (${sentiment.score}/100)`)
     
+    // Generate Stock Spotlight - Detailed analysis of key movers
+    const stockSpotlight = generateStockSpotlight(topGainers, topLosers, sectorPerformance, sentiment)
+    
+    console.log(`✅ Generated ${stockSpotlight.length} stock spotlight analyses`)
+    
     // Build dashboard
     const dashboard: Partial<MarketDashboard> = {
       indices,
@@ -223,6 +230,7 @@ export async function GET(request: NextRequest) {
       topGainers,
       topLosers,
       mostActive,
+      stockSpotlight,  // Detailed analysis of key stocks
       marketSentiment: sentiment,  // Renamed for frontend consistency
       dailyAnalysis,
       alerts: dailyAnalysis.alerts
