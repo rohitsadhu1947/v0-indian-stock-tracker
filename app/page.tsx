@@ -1920,7 +1920,9 @@ export default function StockTracker() {
       if (result.success && result.data) {
         setMarketDashboard(result.data)
         console.log(`✅ Market dashboard loaded successfully`)
-        console.log(`📊 Market Sentiment: ${result.data.marketSentiment.overall} (${result.data.marketSentiment.score}/100)`)
+        if (result.data.marketSentiment) {
+          console.log(`📊 Market Sentiment: ${result.data.marketSentiment.overall} (${result.data.marketSentiment.score}/100)`)
+        }
       }
       
     } catch (error: any) {
