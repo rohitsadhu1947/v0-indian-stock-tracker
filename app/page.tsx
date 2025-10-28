@@ -60,7 +60,7 @@ export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
   const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals'>('watchlist')
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market'>('watchlist')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -145,6 +145,10 @@ export default function StockTracker() {
   
   // Combined Intelligence state
   const [combinedIntelligence, setCombinedIntelligence] = useState<CombinedIntelligence | null>(null)
+  
+  // Market Dashboard states
+  const [marketDashboard, setMarketDashboard] = useState<any>(null)
+  const [isFetchingMarketDashboard, setIsFetchingMarketDashboard] = useState(false)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -1897,6 +1901,36 @@ export default function StockTracker() {
     }
   }
 
+  // Fetch Market Dashboard
+  async function fetchMarketDashboard() {
+    setIsFetchingMarketDashboard(true)
+    setMarketDashboard(null)
+    
+    try {
+      console.log('📊 Fetching market dashboard...')
+      
+      const response = await fetch('/api/market/dashboard')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch market dashboard')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        setMarketDashboard(result.data)
+        console.log(`✅ Market dashboard loaded successfully`)
+        console.log(`📊 Market Sentiment: ${result.data.marketSentiment.overall} (${result.data.marketSentiment.score}/100)`)
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching market dashboard:', error)
+      alert(`❌ Failed to fetch market dashboard: ${error.message}`)
+    } finally {
+      setIsFetchingMarketDashboard(false)
+    }
+  }
+
   // Fetch fundamental data for a stock
   async function fetchFundamentals() {
     const symbol = fundamentalSymbol.trim().toUpperCase()
@@ -2290,6 +2324,17 @@ export default function StockTracker() {
           onClick={() => setActiveTab('fundamentals')}
         >
           📊 Fundamentals
+        </button>
+        <button 
+          className={`tab ${activeTab === 'market' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('market')
+            if (!marketDashboard) {
+              fetchMarketDashboard()
+            }
+          }}
+        >
+          🌐 Market
         </button>
       </div>
 
@@ -5783,6 +5828,383 @@ export default function StockTracker() {
                   <li><strong>Growth:</strong> Revenue Growth, Earnings Growth</li>
                   <li><strong>Overall Score:</strong> 0-100 rating (EXCELLENT → VERY POOR)</li>
                   <li><strong>Combined Signal:</strong> Technical + Fundamental analysis together!</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MARKET DASHBOARD TAB */}
+      {activeTab === 'market' && (
+        <div>
+          {/* Header */}
+          <div className="screener-results" style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <h3 style={{ marginBottom: '8px', fontSize: '2em' }}>🌐 Market Dashboard</h3>
+                <p style={{ margin: 0, opacity: 0.8 }}>
+                  Comprehensive market intelligence - Indices, Sectors, Breadth, Top Movers & Sentiment
+                </p>
+              </div>
+              <button
+                onClick={fetchMarketDashboard}
+                disabled={isFetchingMarketDashboard}
+                style={{
+                  padding: '12px 30px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  background: isFetchingMarketDashboard 
+                    ? 'rgba(255, 255, 255, 0.2)' 
+                    : 'linear-gradient(45deg, #667eea, #764ba2)',
+                  cursor: isFetchingMarketDashboard ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isFetchingMarketDashboard ? '🔄 Loading...' : '🔄 Refresh Dashboard'}
+              </button>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {isFetchingMarketDashboard && (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(102, 126, 234, 0.1)',
+              borderRadius: '15px',
+              border: '2px solid rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{ fontSize: '4em', marginBottom: '20px' }}>📊</div>
+              <h3>Fetching Market Data...</h3>
+              <p style={{ opacity: 0.7, marginTop: '10px' }}>
+                Loading indices, sectors, breadth, and market sentiment
+              </p>
+            </div>
+          )}
+
+          {/* Market Dashboard Content */}
+          {marketDashboard && !isFetchingMarketDashboard && (
+            <div>
+              {/* Market Sentiment Overview */}
+              <div style={{
+                marginBottom: '25px',
+                padding: '30px',
+                background: `linear-gradient(135deg, ${
+                  marketDashboard.marketSentiment.overall === 'BULLISH' ? 'rgba(0, 255, 100, 0.2)' :
+                  marketDashboard.marketSentiment.overall === 'BEARISH' ? 'rgba(255, 0, 100, 0.2)' : 'rgba(255, 193, 7, 0.2)'
+                }, rgba(0, 0, 0, 0.1))`,
+                border: `3px solid ${
+                  marketDashboard.marketSentiment.overall === 'BULLISH' ? '#00ff64' :
+                  marketDashboard.marketSentiment.overall === 'BEARISH' ? '#ff0064' : '#ffc107'
+                }`,
+                borderRadius: '20px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                      <span style={{ fontSize: '4em' }}>
+                        {marketDashboard.marketSentiment.overall === 'BULLISH' ? '🚀' :
+                         marketDashboard.marketSentiment.overall === 'BEARISH' ? '💥' : '😐'}
+                      </span>
+                      <div>
+                        <h2 style={{
+                          margin: 0,
+                          fontSize: '2.5em',
+                          color: marketDashboard.marketSentiment.overall === 'BULLISH' ? '#00ff64' :
+                                 marketDashboard.marketSentiment.overall === 'BEARISH' ? '#ff0064' : '#ffc107'
+                        }}>
+                          {marketDashboard.marketSentiment.overall}
+                        </h2>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '1.1em', opacity: 0.9 }}>
+                          {marketDashboard.marketSentiment.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    padding: '30px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '15px',
+                    textAlign: 'center',
+                    minWidth: '150px'
+                  }}>
+                    <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '8px' }}>SENTIMENT SCORE</div>
+                    <div style={{
+                      fontSize: '3.5em',
+                      fontWeight: 'bold',
+                      color: marketDashboard.marketSentiment.overall === 'BULLISH' ? '#00ff64' :
+                             marketDashboard.marketSentiment.overall === 'BEARISH' ? '#ff0064' : '#ffc107'
+                    }}>
+                      {marketDashboard.marketSentiment.score}
+                    </div>
+                    <div style={{ fontSize: '0.9em', opacity: 0.7 }}>out of 100</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Indices Grid */}
+              <div className="screener-results" style={{ marginBottom: '25px' }}>
+                <h4 style={{ marginBottom: '15px' }}>📊 Indices</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                  {marketDashboard.indices.map((index: any, idx: number) => {
+                    const changeColor = index.changePercent >= 0 ? '#00ff64' : '#ff0064';
+                    return (
+                      <div key={idx} className="card" style={{ padding: '20px' }}>
+                        <div style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '10px', opacity: 0.9 }}>
+                          {index.name}
+                        </div>
+                        <div style={{ fontSize: '2em', fontWeight: 'bold', marginBottom: '5px' }}>
+                          {index.current.toFixed(2)}
+                        </div>
+                        <div style={{
+                          fontSize: '1.2em',
+                          fontWeight: 'bold',
+                          color: changeColor,
+                          marginBottom: '10px'
+                        }}>
+                          {index.changePercent >= 0 ? '▲' : '▼'} {Math.abs(index.changePercent).toFixed(2)}%
+                        </div>
+                        <div style={{ fontSize: '0.85em', opacity: 0.6, lineHeight: '1.6' }}>
+                          <div>High: {index.high.toFixed(2)}</div>
+                          <div>Low: {index.low.toFixed(2)}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Market Breadth */}
+              <div className="screener-results" style={{ marginBottom: '25px' }}>
+                <h4 style={{ marginBottom: '15px' }}>📊 Market Breadth</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                  <div className="card" style={{
+                    padding: '20px',
+                    background: 'rgba(0, 255, 100, 0.1)',
+                    border: '2px solid rgba(0, 255, 100, 0.3)'
+                  }}>
+                    <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '5px' }}>Advancers</div>
+                    <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#00ff64' }}>
+                      {marketDashboard.marketBreadth.advancers}
+                    </div>
+                  </div>
+                  <div className="card" style={{
+                    padding: '20px',
+                    background: 'rgba(255, 0, 100, 0.1)',
+                    border: '2px solid rgba(255, 0, 100, 0.3)'
+                  }}>
+                    <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '5px' }}>Decliners</div>
+                    <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#ff0064' }}>
+                      {marketDashboard.marketBreadth.decliners}
+                    </div>
+                  </div>
+                  <div className="card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '5px' }}>A/D Ratio</div>
+                    <div style={{ fontSize: '3em', fontWeight: 'bold' }}>
+                      {marketDashboard.marketBreadth.advanceDeclineRatio.toFixed(2)}
+                    </div>
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '5px 12px',
+                      background: `${
+                        marketDashboard.marketBreadth.sentiment === 'STRONG_BULLISH' || marketDashboard.marketBreadth.sentiment === 'BULLISH' ? 'rgba(0, 255, 100, 0.2)' :
+                        marketDashboard.marketBreadth.sentiment === 'STRONG_BEARISH' || marketDashboard.marketBreadth.sentiment === 'BEARISH' ? 'rgba(255, 0, 100, 0.2)' : 'rgba(255, 193, 7, 0.2)'
+                      }`,
+                      borderRadius: '6px',
+                      fontSize: '0.85em',
+                      fontWeight: 'bold',
+                      textAlign: 'center'
+                    }}>
+                      {marketDashboard.marketBreadth.sentiment.replace('_', ' ')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sector Performance */}
+              <div className="screener-results" style={{ marginBottom: '25px' }}>
+                <h4 style={{ marginBottom: '15px' }}>🎨 Sector Performance</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
+                  {marketDashboard.sectorPerformance
+                    .sort((a: any, b: any) => b.change - a.change)
+                    .map((sector: any, idx: number) => {
+                      const changeColor = sector.change >= 0 ? '#00ff64' : '#ff0064';
+                      const sentimentColor = sector.sentiment === 'BULLISH' ? '#00ff64' :
+                                             sector.sentiment === 'BEARISH' ? '#ff0064' : '#ffc107';
+                      return (
+                        <div key={idx} className="card" style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>{sector.sector}</div>
+                            <div style={{
+                              padding: '4px 10px',
+                              background: `${sentimentColor}20`,
+                              border: `1px solid ${sentimentColor}`,
+                              borderRadius: '8px',
+                              fontSize: '0.75em',
+                              fontWeight: 'bold',
+                              color: sentimentColor
+                            }}>
+                              {sector.sentiment}
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: '2.5em',
+                            fontWeight: 'bold',
+                            color: changeColor,
+                            marginBottom: '10px'
+                          }}>
+                            {sector.change >= 0 ? '+' : ''}{sector.change.toFixed(2)}%
+                          </div>
+                          <div style={{ fontSize: '0.9em', opacity: 0.8, lineHeight: '1.6' }}>
+                            <div>🔼 Top: {sector.topGainer}</div>
+                            <div>🔽 Bottom: {sector.topLoser}</div>
+                            <div style={{ marginTop: '8px', opacity: 0.6 }}>
+                              {sector.stocksUp} up • {sector.stocksDown} down
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Top Gainers & Losers */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+                {/* Top Gainers */}
+                <div className="screener-results">
+                  <h4 style={{ marginBottom: '15px' }}>🚀 Top Gainers</h4>
+                  <table className="screener-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Volume</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marketDashboard.topGainers.slice(0, 5).map((stock: any, idx: number) => (
+                        <tr key={idx}>
+                          <td><strong>{stock.symbol}</strong></td>
+                          <td>₹{stock.current.toFixed(2)}</td>
+                          <td className="positive">
+                            +{stock.changePercent.toFixed(2)}%
+                          </td>
+                          <td>{(stock.volume / 100000).toFixed(1)}L</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Top Losers */}
+                <div className="screener-results">
+                  <h4 style={{ marginBottom: '15px' }}>💥 Top Losers</h4>
+                  <table className="screener-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Volume</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marketDashboard.topLosers.slice(0, 5).map((stock: any, idx: number) => (
+                        <tr key={idx}>
+                          <td><strong>{stock.symbol}</strong></td>
+                          <td>₹{stock.current.toFixed(2)}</td>
+                          <td className="negative">
+                            {stock.changePercent.toFixed(2)}%
+                          </td>
+                          <td>{(stock.volume / 100000).toFixed(1)}L</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Market Alerts */}
+              {marketDashboard.alerts && marketDashboard.alerts.length > 0 && (
+                <div className="screener-results" style={{
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  border: '2px solid rgba(255, 193, 7, 0.4)'
+                }}>
+                  <h4 style={{ marginBottom: '15px', color: '#ffc107' }}>⚠️ Market Alerts</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {marketDashboard.alerts.map((alert: any, idx: number) => (
+                      <div key={idx} style={{
+                        padding: '15px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 193, 7, 0.3)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#ffc107' }}>
+                            {alert.type.replace('_', ' ')}
+                          </div>
+                          <div style={{
+                            padding: '4px 12px',
+                            background: alert.severity === 'HIGH' ? 'rgba(255, 0, 100, 0.2)' :
+                                       alert.severity === 'MEDIUM' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(0, 255, 100, 0.2)',
+                            border: `1px solid ${alert.severity === 'HIGH' ? '#ff0064' : alert.severity === 'MEDIUM' ? '#ffc107' : '#00ff64'}`,
+                            borderRadius: '6px',
+                            fontSize: '0.8em',
+                            fontWeight: 'bold'
+                          }}>
+                            {alert.severity}
+                          </div>
+                        </div>
+                        <p style={{ margin: 0, opacity: 0.9, lineHeight: '1.5' }}>{alert.message}</p>
+                        {alert.action && (
+                          <div style={{ marginTop: '10px', fontSize: '0.9em', opacity: 0.8 }}>
+                            💡 <strong>Action:</strong> {alert.action}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              <div style={{ marginTop: '20px', textAlign: 'center', opacity: 0.6, fontSize: '0.9em' }}>
+                📅 Last updated: {new Date(marketDashboard.timestamp).toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!marketDashboard && !isFetchingMarketDashboard && (
+            <div style={{
+              marginTop: '30px',
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(102, 126, 234, 0.05)',
+              border: '2px dashed rgba(102, 126, 234, 0.3)',
+              borderRadius: '15px'
+            }}>
+              <div style={{ fontSize: '4em', marginBottom: '15px' }}>🌐</div>
+              <h3 style={{ marginBottom: '10px' }}>Market Dashboard Ready</h3>
+              <p style={{ fontSize: '1.1em', opacity: 0.8, marginBottom: '20px' }}>
+                Click "Refresh Dashboard" to load comprehensive market intelligence!
+              </p>
+              <div style={{
+                padding: '20px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '10px',
+                display: 'inline-block',
+                textAlign: 'left'
+              }}>
+                <h4 style={{ marginBottom: '10px' }}>💡 What You'll Get:</h4>
+                <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                  <li><strong>Indices:</strong> Real-time NIFTY, BANK, IT, AUTO, PHARMA levels</li>
+                  <li><strong>Market Sentiment:</strong> Overall bullish/bearish market mood</li>
+                  <li><strong>Market Breadth:</strong> Advance/Decline ratio, 52-week highs/lows</li>
+                  <li><strong>Sector Performance:</strong> Which sectors are leading/lagging</li>
+                  <li><strong>Top Movers:</strong> Biggest gainers and losers of the day</li>
+                  <li><strong>Market Alerts:</strong> Significant events and actionable insights</li>
                 </ul>
               </div>
             </div>
