@@ -5883,7 +5883,7 @@ export default function StockTracker() {
           )}
 
           {/* Market Dashboard Content */}
-          {marketDashboard && !isFetchingMarketDashboard && (
+          {marketDashboard && marketDashboard.marketSentiment && !isFetchingMarketDashboard && (
             <div>
               {/* Market Sentiment Overview */}
               <div style={{
@@ -5943,10 +5943,11 @@ export default function StockTracker() {
               </div>
 
               {/* Indices Grid */}
-              <div className="screener-results" style={{ marginBottom: '25px' }}>
-                <h4 style={{ marginBottom: '15px' }}>📊 Indices</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                  {marketDashboard.indices.map((index: any, idx: number) => {
+              {marketDashboard.indices && marketDashboard.indices.length > 0 && (
+                <div className="screener-results" style={{ marginBottom: '25px' }}>
+                  <h4 style={{ marginBottom: '15px' }}>📊 Indices</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                    {marketDashboard.indices.map((index: any, idx: number) => {
                     const changeColor = index.changePercent >= 0 ? '#00ff64' : '#ff0064';
                     return (
                       <div key={idx} className="card" style={{ padding: '20px' }}>
@@ -5971,12 +5972,14 @@ export default function StockTracker() {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Market Breadth */}
-              <div className="screener-results" style={{ marginBottom: '25px' }}>
-                <h4 style={{ marginBottom: '15px' }}>📊 Market Breadth</h4>
+              {marketDashboard.marketBreadth && (
+                <div className="screener-results" style={{ marginBottom: '25px' }}>
+                  <h4 style={{ marginBottom: '15px' }}>📊 Market Breadth</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                   <div className="card" style={{
                     padding: '20px',
@@ -6019,11 +6022,13 @@ export default function StockTracker() {
                     </div>
                   </div>
                 </div>
-              </div>
+                </div>
+              )}
 
               {/* Sector Performance */}
-              <div className="screener-results" style={{ marginBottom: '25px' }}>
-                <h4 style={{ marginBottom: '15px' }}>🎨 Sector Performance</h4>
+              {marketDashboard.sectorPerformance && marketDashboard.sectorPerformance.length > 0 && (
+                <div className="screener-results" style={{ marginBottom: '25px' }}>
+                  <h4 style={{ marginBottom: '15px' }}>🎨 Sector Performance</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
                   {marketDashboard.sectorPerformance
                     .sort((a: any, b: any) => b.change - a.change)
@@ -6066,13 +6071,15 @@ export default function StockTracker() {
                       );
                     })}
                 </div>
-              </div>
+                </div>
+              )}
 
               {/* Top Gainers & Losers */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '25px' }}>
-                {/* Top Gainers */}
-                <div className="screener-results">
-                  <h4 style={{ marginBottom: '15px' }}>🚀 Top Gainers</h4>
+              {marketDashboard.topGainers && marketDashboard.topLosers && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+                  {/* Top Gainers */}
+                  <div className="screener-results">
+                    <h4 style={{ marginBottom: '15px' }}>🚀 Top Gainers</h4>
                   <table className="screener-table">
                     <thead>
                       <tr>
@@ -6122,8 +6129,9 @@ export default function StockTracker() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Market Alerts */}
               {marketDashboard.alerts && marketDashboard.alerts.length > 0 && (
