@@ -88,11 +88,25 @@ export default function StockTracker() {
   const [exitSignals, setExitSignals] = useState<Record<string, any>>({})
   const [screenerLevel, setScreenerLevel] = useState<'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE'>('MODERATE')
   
+  // NIFTY 50 stocks for ORB Scanner
+  const NIFTY_50_STOCKS = [
+    'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
+    'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK',
+    'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'BAJFINANCE',
+    'HCLTECH', 'WIPRO', 'ULTRACEMCO', 'NTPC', 'SUNPHARMA',
+    'TITAN', 'NESTLEIND', 'POWERGRID', 'M&M', 'TATAMOTORS',
+    'TECHM', 'BAJAJFINSV', 'ADANIPORTS', 'ONGC', 'TATASTEEL',
+    'COALINDIA', 'JSWSTEEL', 'INDUSINDBK', 'SBILIFE', 'DRREDDY',
+    'DIVISLAB', 'CIPLA', 'GRASIM', 'HINDALCO', 'BRITANNIA',
+    'EICHERMOT', 'HEROMOTOCO', 'UPL', 'BPCL', 'SHREECEM',
+    'TATACONSUM', 'APOLLOHOSP', 'ADANIENT', 'VEDL', 'BAJAJ-AUTO'
+  ]
+  
   // Opening Range Breakout (ORB) states
   const [orbRanges, setOrbRanges] = useState<Record<string, { high: number; low: number; open: number; rangeCaptured: boolean; timestamp: Date }>>({})
   const [orbSignals, setOrbSignals] = useState<any[]>([])
   const [isCapturingORB, setIsCapturingORB] = useState(false)
-  const [orbWatchlist, setOrbWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  const [orbWatchlist, setOrbWatchlist] = useState<string[]>(NIFTY_50_STOCKS) // Now scanning all NIFTY 50!
   
   // Trade Watch (Smart Monitor Bucket) states
   const [tradeWatch, setTradeWatch] = useState<any[]>([])
