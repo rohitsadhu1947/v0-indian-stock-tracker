@@ -79,41 +79,29 @@ export const stockQuotes = pgTable('stock_quotes', {
   id: serial('id').primaryKey(),
   symbol: text('symbol').notNull(),
   exchange: text('exchange').notNull(),
-  instrumentToken: integer('instrument_token'),
-  lastPrice: real('last_price'),
-  open: real('open'),
-  high: real('high'),
-  low: real('low'),
-  close: real('close'),
-  volume: integer('volume'),
-  change: real('change'),
-  changePercent: real('change_percent'),
-  ohlc: jsonb('ohlc'), // Store OHLC data as JSON
-  fetchedAt: timestamp('fetched_at').defaultNow().notNull(),
+  data: jsonb('data').notNull(), // Store full quote response as JSON
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
 }, (table) => ({
   symbolExchangeIdx: uniqueIndex('stock_quotes_symbol_exchange_idx').on(table.symbol, table.exchange),
-  fetchedAtIdx: index('stock_quotes_fetched_at_idx').on(table.fetchedAt),
+  timestampIdx: index('stock_quotes_timestamp_idx').on(table.timestamp),
 }))
 
 export const historicalData = pgTable('historical_data', {
   id: serial('id').primaryKey(),
   symbol: text('symbol').notNull(),
-  exchange: text('exchange').notNull(),
-  instrumentToken: integer('instrument_token'),
   interval: text('interval').notNull(), // '1minute', '5minute', 'day', 'week'
-  candles: jsonb('candles').notNull(), // Store array of candles as JSON
   fromDate: timestamp('from_date').notNull(),
   toDate: timestamp('to_date').notNull(),
-  fetchedAt: timestamp('fetched_at').defaultNow().notNull(),
+  data: jsonb('data').notNull(), // Store array of candles as JSON
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
 }, (table) => ({
   symbolIntervalIdx: uniqueIndex('historical_data_symbol_interval_idx').on(
     table.symbol, 
-    table.exchange, 
     table.interval,
     table.fromDate,
     table.toDate
   ),
-  fetchedAtIdx: index('historical_data_fetched_at_idx').on(table.fetchedAt),
+  timestampIdx: index('historical_data_timestamp_idx').on(table.timestamp),
 }))
 
 // ============================================
