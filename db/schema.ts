@@ -50,6 +50,7 @@ export const positions = pgTable('positions', {
   userId: integer('user_id').references(() => users.id).notNull(),
   symbol: text('symbol').notNull(),
   exchange: text('exchange').notNull(),
+  positionType: text('position_type').notNull(), // 'BUY' or 'SELL'
   entryPrice: real('entry_price').notNull(),
   quantity: integer('quantity').notNull(),
   currentPrice: real('current_price'),
