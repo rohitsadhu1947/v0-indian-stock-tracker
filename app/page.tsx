@@ -156,6 +156,76 @@ export default function StockTracker() {
   const [manualEntryQuantity, setManualEntryQuantity] = useState('')
   const [manualEntryType, setManualEntryType] = useState<'BUY' | 'SELL'>('BUY')
 
+  // 🗄️ DATABASE: Load watchlist from database on mount
+  useEffect(() => {
+    if (!authStatus.authenticated) return
+    
+    async function loadWatchlistFromDB() {
+      try {
+        console.log('🗄️ Loading watchlist from database...')
+        const response = await fetch('/api/watchlist')
+        const result = await response.json()
+        
+        if (result.success && result.watchlist.length > 0) {
+          const symbols = result.watchlist.map((item: any) => item.symbol)
+          setWatchlist(symbols)
+          console.log(`✅ Loaded ${symbols.length} stocks from database:`, symbols.join(', '))
+        } else {
+          console.log('ℹ️ No watchlist found in database, using defaults')
+        }
+      } catch (error) {
+        console.error('❌ Error loading watchlist from database:', error)
+      }
+    }
+    
+    loadWatchlistFromDB()
+  }, [authStatus.authenticated])
+
+  // 🗄️ DATABASE: Load positions from database on mount
+  useEffect(() => {
+    if (!authStatus.authenticated) return
+    
+    async function loadPositionsFromDB() {
+      try {
+        console.log('🗄️ Loading positions from database...')
+        const response = await fetch('/api/positions')
+        const result = await response.json()
+        
+        if (result.success && result.positions.length > 0) {
+          // Convert DB format to frontend Position format
+          const loadedPositions = result.positions.map((pos: any) => ({
+            symbol: pos.symbol,
+            type: pos.positionType,
+            entry_price: pos.entryPrice,
+            current_price: pos.currentPrice,
+            quantity: pos.quantity,
+            entry_time: new Date(pos.entryTime),
+            target: pos.target,
+            stop_loss: pos.stopLoss,
+            pnl: pos.pnl,
+            pnl_percent: pos.pnlPercent,
+            status: 'open',
+            _dbId: pos.id // Store DB ID for updates
+          }))
+          
+          setIntradayPositions(loadedPositions)
+          
+          // Calculate total P&L
+          const totalPnL = loadedPositions.reduce((sum: number, pos: any) => sum + Number(pos.pnl || 0), 0)
+          setTotalPnL(totalPnL)
+          
+          console.log(`✅ Loaded ${loadedPositions.length} positions from database`)
+        } else {
+          console.log('ℹ️ No positions found in database')
+        }
+      } catch (error) {
+        console.error('❌ Error loading positions from database:', error)
+      }
+    }
+    
+    loadPositionsFromDB()
+  }, [authStatus.authenticated])
+
   // Load custom screener settings from localStorage
   useEffect(() => {
     const savedGroups = localStorage.getItem('screenerGroups')
@@ -458,7 +528,7 @@ export default function StockTracker() {
     setIsLoading(false)
           }
 
-          function addStock() {
+          async function addStock() {
     const symbol = stockInput.trim().toUpperCase()
             
             if (!symbol) {
@@ -469,6 +539,31 @@ export default function StockTracker() {
             if (watchlist.includes(symbol)) {
       alert('Stock already in watchlist')
       return
+    }
+    
+    // 🗄️ DATABASE: Save to database if authenticated
+    if (authStatus.authenticated) {
+      try {
+        console.log(`🗄️ Adding ${symbol} to database...`)
+        const response = await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, exchange })
+        })
+        
+        const result = await response.json()
+        
+        if (!result.success) {
+          alert(result.error || 'Failed to add to watchlist')
+          return
+        }
+        
+        console.log(`✅ Added ${symbol} to database`)
+      } catch (error) {
+        console.error('❌ Error adding to watchlist:', error)
+        alert('Failed to add stock to watchlist')
+        return
+      }
     }
     
     setWatchlist([...watchlist, symbol])
@@ -484,7 +579,29 @@ export default function StockTracker() {
     }
   }
 
-  function removeFromWatchlist(symbol: string) {
+  async function removeFromWatchlist(symbol: string) {
+    // 🗄️ DATABASE: Remove from database if authenticated
+    if (authStatus.authenticated) {
+      try {
+        console.log(`🗄️ Removing ${symbol} from database...`)
+        const response = await fetch('/api/watchlist', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, exchange })
+        })
+        
+        const result = await response.json()
+        
+        if (!result.success) {
+          console.error('Failed to remove from database:', result.error)
+        } else {
+          console.log(`✅ Removed ${symbol} from database`)
+        }
+      } catch (error) {
+        console.error('❌ Error removing from watchlist:', error)
+      }
+    }
+    
     setWatchlist(watchlist.filter(s => s !== symbol))
     const newData = { ...stockData }
     delete newData[symbol]
@@ -764,7 +881,7 @@ export default function StockTracker() {
   }
 
   // Position Management Functions
-  function enterPosition(symbol: string, entryPrice: number, quantity: number, type: 'BUY' | 'SELL') {
+  async function enterPosition(symbol: string, entryPrice: number, quantity: number, type: 'BUY' | 'SELL') {
     const newPosition: Position = {
       symbol,
       type,
@@ -777,6 +894,38 @@ export default function StockTracker() {
       pnl: 0,
       pnl_percent: 0,
       status: 'open'
+    }
+    
+    // 🗄️ DATABASE: Save to database if authenticated
+    if (authStatus.authenticated) {
+      try {
+        console.log(`🗄️ Saving position ${symbol} to database...`)
+        const response = await fetch('/api/positions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol,
+            exchange,
+            entryPrice,
+            quantity,
+            positionType: type,
+            stopLoss: newPosition.stop_loss,
+            target: newPosition.target
+          })
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          // Add DB ID to position for future updates
+          (newPosition as any)._dbId = result.position.id
+          console.log(`✅ Position saved to database with ID ${result.position.id}`)
+        } else {
+          console.error('Failed to save position:', result.error)
+        }
+      } catch (error) {
+        console.error('❌ Error saving position to database:', error)
+      }
     }
     
     setIntradayPositions([...intradayPositions, newPosition])
@@ -818,11 +967,31 @@ export default function StockTracker() {
     setManualEntryType('BUY')
   }
 
-  function exitPosition(symbol: string) {
+  async function exitPosition(symbol: string) {
     const position = intradayPositions.find(p => p.symbol === symbol)
     if (!position) return
 
     const pnl = position.pnl || 0
+    
+    // 🗄️ DATABASE: Close position in database if authenticated
+    if (authStatus.authenticated && (position as any)._dbId) {
+      try {
+        console.log(`🗄️ Closing position ${symbol} in database...`)
+        const response = await fetch(`/api/positions?id=${(position as any)._dbId}`, {
+          method: 'DELETE'
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          console.log(`✅ Position ${symbol} closed in database`)
+        } else {
+          console.error('Failed to close position:', result.error)
+        }
+      } catch (error) {
+        console.error('❌ Error closing position in database:', error)
+      }
+    }
     
     setIntradayPositions(intradayPositions.filter(p => p.symbol !== symbol))
     setTotalPnL(prev => Number(prev) + Number(pnl))

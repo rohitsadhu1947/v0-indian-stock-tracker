@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { KiteConnect } from 'kiteconnect';
 import { cookies } from 'next/headers';
+import { getCachedHistorical, cacheHistorical } from '@/lib/cache-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,15 +36,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
-
     // Calculate default date range (last 60 days for proper technical indicators)
     // 60 calendar days = ~40 trading days (enough for all indicators)
     const to = toDate ? new Date(toDate) : new Date();
     const from = fromDate ? new Date(fromDate) : new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
-    // Fetch historical data
+    // 🗄️ DATABASE CACHE: Check cache first
+    const cached = await getCachedHistorical(instrumentToken, interval, from, to)
+    
+    if (cached) {
+      console.log(`✅ Historical data served from cache (token ${instrumentToken}, ${interval})`)
+      return NextResponse.json({
+        success: true,
+        candles: cached,
+        data: cached, // Keep both for compatibility
+        meta: {
+          instrument_token: instrumentToken,
+          interval: interval,
+          from: from.toISOString(),
+          to: to.toISOString(),
+          candle_count: cached?.length || 0
+        },
+        timestamp: new Date().toISOString(),
+        cached: true
+      });
+    }
+
+    // Cache miss - fetch from Kite API
+    const kc = new KiteConnect({ api_key: apiKey });
+    kc.setAccessToken(accessToken);
+
     console.log(`📊 Fetching historical for token ${instrumentToken}, interval ${interval}, from ${from.toISOString().split('T')[0]} to ${to.toISOString().split('T')[0]}`);
     
     const historicalData = await kc.getHistoricalData(
@@ -54,6 +76,9 @@ export async function GET(request: NextRequest) {
     );
 
     console.log(`✅ Received ${historicalData?.length || 0} candles for token ${instrumentToken}`);
+
+    // Cache the result
+    await cacheHistorical(instrumentToken, interval, from, to, historicalData)
 
     return NextResponse.json({
       success: true,
@@ -67,6 +92,7 @@ export async function GET(request: NextRequest) {
         candle_count: historicalData?.length || 0
       },
       timestamp: new Date().toISOString(),
+      cached: false
     });
   } catch (error: any) {
     console.error('Error fetching historical data:', error);

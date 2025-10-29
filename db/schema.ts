@@ -280,9 +280,30 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   preferences: one(userPreferences),
 }))
 
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}))
+
+export const watchlistsRelations = relations(watchlists, ({ one }) => ({
+  user: one(users, {
+    fields: [watchlists.userId],
+    references: [users.id],
+  }),
+}))
+
 export const positionsRelations = relations(positions, ({ one }) => ({
   user: one(users, {
     fields: [positions.userId],
+    references: [users.id],
+  }),
+}))
+
+export const screenerResultsRelations = relations(screenerResults, ({ one }) => ({
+  user: one(users, {
+    fields: [screenerResults.userId],
     references: [users.id],
   }),
 }))
@@ -295,6 +316,20 @@ export const tradeHistoryRelations = relations(tradeHistory, ({ one }) => ({
   position: one(positions, {
     fields: [tradeHistory.positionId],
     references: [positions.id],
+  }),
+}))
+
+export const alertsRelations = relations(alerts, ({ one }) => ({
+  user: one(users, {
+    fields: [alerts.userId],
+    references: [users.id],
+  }),
+}))
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.userId],
+    references: [users.id],
   }),
 }))
 

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { KiteConnect } from 'kiteconnect';
 import { cookies } from 'next/headers';
+import { db } from '@/db';
+import { users, sessions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,6 +49,53 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24,
       path: '/',
     });
+
+    // 🗄️ DATABASE INTEGRATION: Save user and session to database
+    console.log('💾 Saving authentication to database...');
+    
+    try {
+      // 1. Check if user exists, create or update
+      const existingUsers = await db.select()
+        .from(users)
+        .where(eq(users.kiteUserId, session.user_id))
+        .limit(1);
+      
+      let userId: number;
+      
+      if (existingUsers.length > 0) {
+        // Update existing user's last login
+        await db.update(users)
+          .set({ lastLogin: new Date() })
+          .where(eq(users.kiteUserId, session.user_id));
+        userId = existingUsers[0].id;
+        console.log(`✅ Updated existing user: ${session.user_id} (ID: ${userId})`);
+      } else {
+        // Create new user
+        const [newUser] = await db.insert(users).values({
+          kiteUserId: session.user_id,
+          email: session.user_name ? `${session.user_name}@kite.trade` : null,
+          name: session.user_name || null,
+        }).returning();
+        userId = newUser.id;
+        console.log(`✅ Created new user: ${session.user_id} (ID: ${userId})`);
+      }
+      
+      // 2. Delete old sessions for this user (keep only latest)
+      await db.delete(sessions).where(eq(sessions.userId, userId));
+      
+      // 3. Create new session record
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      await db.insert(sessions).values({
+        userId,
+        accessToken: session.access_token,
+        expiresAt,
+      });
+      
+      console.log('✅ Session saved to database successfully!');
+    } catch (dbError) {
+      console.error('❌ Database save failed (non-fatal):', dbError);
+      // Don't block login if DB save fails - user can still use the app via cookies
+    }
 
     // Redirect back to home page
     return NextResponse.redirect(new URL('/?authenticated=true', request.url));

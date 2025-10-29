@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { KiteConnect } from 'kiteconnect';
 import { cookies } from 'next/headers';
+import { getCachedQuote, cacheQuote } from '@/lib/cache-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,17 +33,60 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
-
-    // Split symbols and fetch quotes
+    // Split symbols into array
     const symbolArray = symbols.split(',').map(s => s.trim());
-    const quotes = await kc.getQuote(symbolArray);
+    
+    // 🗄️ DATABASE CACHE: Check cache for each symbol
+    const quotesResult: Record<string, any> = {}
+    const uncachedSymbols: string[] = []
+    let cacheHits = 0
+    let cacheMisses = 0
+    
+    for (const fullSymbol of symbolArray) {
+      const [exchange, symbol] = fullSymbol.split(':')
+      const cached = await getCachedQuote(symbol, exchange)
+      
+      if (cached) {
+        quotesResult[fullSymbol] = cached
+        cacheHits++
+      } else {
+        uncachedSymbols.push(fullSymbol)
+        cacheMisses++
+      }
+    }
+    
+    // Fetch uncached symbols from Kite API
+    if (uncachedSymbols.length > 0) {
+      console.log(`📡 Fetching ${uncachedSymbols.length} symbols from Kite API (${cacheHits} from cache)`)
+      
+      const kc = new KiteConnect({ api_key: apiKey });
+      kc.setAccessToken(accessToken);
+      
+      const freshQuotes = await kc.getQuote(uncachedSymbols);
+      
+      // Merge fresh quotes and cache them
+      for (const [fullSymbol, quoteData] of Object.entries(freshQuotes)) {
+        quotesResult[fullSymbol] = quoteData
+        
+        // Cache for future use
+        const [exchange, symbol] = fullSymbol.split(':')
+        await cacheQuote(symbol, exchange, quoteData)
+      }
+    } else {
+      console.log(`✅ All ${symbolArray.length} quotes served from cache (100% cache hit rate!)`)
+    }
+
+    const cacheHitRate = symbolArray.length > 0 ? (cacheHits / symbolArray.length * 100).toFixed(0) : 0
 
     return NextResponse.json({
       success: true,
-      data: quotes,
+      data: quotesResult,
       timestamp: new Date().toISOString(),
+      cache: {
+        hits: cacheHits,
+        misses: cacheMisses,
+        hitRate: `${cacheHitRate}%`
+      }
     });
   } catch (error: any) {
     console.error('Error fetching quotes:', error);
