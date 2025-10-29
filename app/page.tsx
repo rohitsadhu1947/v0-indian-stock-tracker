@@ -58,7 +58,7 @@ interface AuthStatus {
 
 export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
-  const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  const [watchlist, setWatchlist] = useState<string[]>([]) // 🎯 Start with empty watchlist - user builds their own
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
   const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market'>('watchlist')
   const [isLoading, setIsLoading] = useState(false)
@@ -80,7 +80,7 @@ export default function StockTracker() {
   const [intradaySignals, setIntradaySignals] = useState<IntradaySignal[]>([])
   const [marketStatus, setMarketStatus] = useState(isMarketHours())
   const [totalPnL, setTotalPnL] = useState(0)
-  const [intradayWatchlist, setIntradayWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK'])
+  const [intradayWatchlist, setIntradayWatchlist] = useState<string[]>([]) // 🎯 Start empty for intraday as well
   const [autoRefreshIntraday, setAutoRefreshIntraday] = useState(false)
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(60) // seconds
   const [isDemoData, setIsDemoData] = useState(false)
