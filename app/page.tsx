@@ -644,6 +644,36 @@ export default function StockTracker() {
     
     results.sort((a, b) => b.strength - a.strength)
     setScreenerResults(results)
+    
+    // 🗄️ Save screener results to database
+    if (authStatus.authenticated && results.length > 0) {
+      try {
+        const signalCount = results.filter(r => r.signal === 'BUY' || r.signal === 'STRONG BUY').length
+        console.log(`💾 Saving screener results to database (${results.length} stocks, ${signalCount} signals)...`)
+        
+        const response = await fetch('/api/screener', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            screenerType: 'custom',
+            screenerLevel: null,
+            results: results,
+            totalStocks: stocksToScreen.length,
+            signalCount: signalCount
+          })
+        })
+        
+        const result = await response.json()
+        if (result.success) {
+          console.log(`✅ Screener results saved to database!`)
+        } else {
+          console.error('❌ Failed to save screener results:', result.error)
+        }
+      } catch (error) {
+        console.error('❌ Error saving screener results:', error)
+      }
+    }
+    
     setIsLoading(false)
   }
 
