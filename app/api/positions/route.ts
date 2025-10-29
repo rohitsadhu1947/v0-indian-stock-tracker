@@ -134,7 +134,8 @@ export async function POST(request: NextRequest) {
       target: target ? parseFloat(target) : null,
       pnl: 0,
       pnlPercent: 0,
-      status: 'OPEN'
+      status: 'OPEN',
+      entryTime: new Date() // ✅ Fix: Explicitly set entry time
     }).returning()
     
     console.log(`✅ Created position for ${symbol} (user ${userId})`)
