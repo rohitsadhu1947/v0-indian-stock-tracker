@@ -181,6 +181,14 @@ export default function StockTracker() {
     loadWatchlistFromDB()
   }, [authStatus.authenticated])
 
+  // 🚀 AUTO-FETCH: Fetch stock data when watchlist is loaded
+  useEffect(() => {
+    if (!authStatus.authenticated || watchlist.length === 0) return
+    
+    console.log(`🚀 Auto-fetching data for ${watchlist.length} stocks...`)
+    updateWatchlist()
+  }, [watchlist.length, authStatus.authenticated])
+
   // 🗄️ DATABASE: Load positions from database on mount
   useEffect(() => {
     if (!authStatus.authenticated) return
@@ -496,37 +504,40 @@ export default function StockTracker() {
     setIsLoading(true)
     setError(null)
     
+    // 🚀 PARALLEL FETCHING - Fetch all stocks at once!
+    console.log(`⚡ Fetching data for ${watchlist.length} stocks in parallel...`)
+    
+    const fetchPromises = watchlist.map(symbol => fetchStockQuote(symbol))
+    const results = await Promise.all(fetchPromises)
+    
     const newStockData: Record<string, StockData> = {}
     const newActiveSignals: any[] = []
-            
-            for (const symbol of watchlist) {
-      const data = await fetchStockQuote(symbol)
-              
-              if (data) {
+    
+    results.forEach((data, index) => {
+      if (data) {
+        const symbol = watchlist[index]
         newStockData[symbol] = data
         
         // Generate trading signal
         const analysis = generateTradingSignal(data.current, data.prices, data.volumes)
-                
-                if (analysis.signal.includes('STRONG')) {
+        
+        if (analysis.signal.includes('STRONG')) {
           newActiveSignals.push({
-                    symbol: symbol,
-                    signal: analysis.signal,
-                    price: data.current,
-                    reason: analysis.reason,
-                    time: new Date().toLocaleString()
+            symbol: symbol,
+            signal: analysis.signal,
+            price: data.current,
+            reason: analysis.reason,
+            time: new Date().toLocaleString()
           })
         }
       }
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
+    })
 
     setStockData(newStockData)
     setActiveSignals(prev => [...prev, ...newActiveSignals].slice(-15))
     setIsLoading(false)
-          }
+    console.log(`✅ Fetched ${Object.keys(newStockData).length} stocks in parallel!`)
+  }
 
           async function addStock() {
     const symbol = stockInput.trim().toUpperCase()
