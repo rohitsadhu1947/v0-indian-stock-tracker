@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { db } from '@/db';
-import { users, screenerResults } from '@/db/schema';
+import { screenerResults } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-
-async function getUserIdFromCookie(): Promise<number | null> {
-  const cookieStore = cookies();
-  const kiteUserId = cookieStore.get('kite_user_id')?.value;
-  if (!kiteUserId) return null;
-
-  const user = await db.select().from(users).where(eq(users.kiteUserId, kiteUserId)).limit(1);
-  return user.length > 0 ? user[0].id : null;
-}
+import { getAuthenticatedUserId } from '@/lib/auth-helpers';
 
 // GET: Fetch recent screener results for the user
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserIdFromCookie();
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
@@ -52,7 +43,7 @@ export async function GET(request: NextRequest) {
 // POST: Save new screener results
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserIdFromCookie();
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
@@ -92,7 +83,7 @@ export async function POST(request: NextRequest) {
 // DELETE: Clear old screener results (older than N days)
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = await getUserIdFromCookie();
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }

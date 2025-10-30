@@ -7,30 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { positions } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { cookies } from 'next/headers'
-
-/**
- * Helper function to get authenticated user ID
- */
-async function getAuthenticatedUserId(): Promise<number | null> {
-  try {
-    const cookieStore = await cookies()
-    const kiteUserId = cookieStore.get('kite_user_id')?.value
-    
-    if (!kiteUserId) {
-      return null
-    }
-    
-    // Get user from database using kite_user_id
-    const { users } = await import('@/db/schema')
-    const [user] = await db.select().from(users).where(eq(users.kiteUserId, kiteUserId)).limit(1)
-    
-    return user?.id || null
-  } catch (error) {
-    console.error('❌ Error getting authenticated user:', error)
-    return null
-  }
-}
+import { getAuthenticatedUserId } from '@/lib/auth-helpers'
 
 /**
  * GET /api/positions
