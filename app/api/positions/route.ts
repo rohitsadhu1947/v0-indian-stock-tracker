@@ -8,6 +8,7 @@ import { db } from '@/db'
 import { positions } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getCachedPositions, setCachedPositions, invalidatePositionsCache } from '@/lib/data-cache'
 
 /**
  * GET /api/positions
@@ -25,7 +26,19 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
     
-    // Fetch user's positions from database
+    // 🚀 Check cache first
+    const cached = getCachedPositions(userId)
+    if (cached) {
+      console.log(`⚡ Cache HIT: Positions for user ${userId} (${cached.length} items)`)
+      return NextResponse.json({
+        success: true,
+        positions: cached,
+        cached: true
+      })
+    }
+
+    // Cache miss - fetch from database
+    console.log(`📡 Cache MISS: Fetching positions from database for user ${userId}`)
     const userPositions = await db.select()
       .from(positions)
       .where(and(
@@ -33,26 +46,32 @@ export async function GET(request: NextRequest) {
         eq(positions.status, 'OPEN')
       ))
     
-    console.log(`✅ Fetched ${userPositions.length} active positions for user ${userId}`)
+    const positionsData = userPositions.map(pos => ({
+      id: pos.id,
+      symbol: pos.symbol,
+      exchange: pos.exchange,
+      entryPrice: pos.entryPrice,
+      currentPrice: pos.currentPrice,
+      quantity: pos.quantity,
+      positionType: pos.positionType,
+      stopLoss: pos.stopLoss,
+      target: pos.target,
+      pnl: pos.pnl,
+      pnlPercent: pos.pnlPercent,
+      status: pos.status,
+      entryTime: pos.entryTime,
+      exitTime: pos.exitTime
+    }))
+
+    // Cache the result
+    setCachedPositions(userId, positionsData)
+    
+    console.log(`✅ Fetched and cached ${userPositions.length} active positions for user ${userId}`)
     
     return NextResponse.json({
       success: true,
-      positions: userPositions.map(pos => ({
-        id: pos.id,
-        symbol: pos.symbol,
-        exchange: pos.exchange,
-        entryPrice: pos.entryPrice,
-        currentPrice: pos.currentPrice,
-        quantity: pos.quantity,
-        positionType: pos.positionType,
-        stopLoss: pos.stopLoss,
-        target: pos.target,
-        pnl: pos.pnl,
-        pnlPercent: pos.pnlPercent,
-        status: pos.status,
-        entryTime: pos.entryTime,
-        exitTime: pos.exitTime
-      }))
+      positions: positionsData,
+      cached: false
     })
   } catch (error) {
     console.error('❌ Error fetching positions:', error)
@@ -114,6 +133,9 @@ export async function POST(request: NextRequest) {
       status: 'OPEN',
       entryTime: new Date() // ✅ Fix: Explicitly set entry time
     }).returning()
+    
+    // Invalidate cache
+    invalidatePositionsCache(userId)
     
     console.log(`✅ Created position for ${symbol} (user ${userId})`)
     
@@ -232,6 +254,9 @@ export async function DELETE(request: NextRequest) {
         eq(positions.userId, userId)
       ))
       .returning()
+    
+    // Invalidate cache
+    invalidatePositionsCache(userId)
     
     if (!closedPosition) {
       return NextResponse.json({

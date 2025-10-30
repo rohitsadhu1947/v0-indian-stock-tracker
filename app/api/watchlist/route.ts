@@ -8,6 +8,7 @@ import { db } from '@/db'
 import { watchlists } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getCachedWatchlist, setCachedWatchlist, invalidateWatchlistCache } from '@/lib/data-cache'
 
 /**
  * GET /api/watchlist
@@ -25,19 +26,37 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
     
-    // Fetch user's watchlist from database
+    // 🚀 Check cache first
+    const cached = getCachedWatchlist(userId)
+    if (cached) {
+      console.log(`⚡ Cache HIT: Watchlist for user ${userId} (${cached.length} items)`)
+      return NextResponse.json({
+        success: true,
+        watchlist: cached,
+        cached: true
+      })
+    }
+
+    // Cache miss - fetch from database
+    console.log(`📡 Cache MISS: Fetching watchlist from database for user ${userId}`)
     const userWatchlist = await db.select().from(watchlists).where(eq(watchlists.userId, userId))
     
-    console.log(`✅ Fetched ${userWatchlist.length} watchlist items for user ${userId}`)
+    const watchlistData = userWatchlist.map(item => ({
+      symbol: item.symbol,
+      exchange: item.exchange,
+      instrumentToken: item.instrumentToken,
+      addedAt: item.addedAt
+    }))
+
+    // Cache the result
+    setCachedWatchlist(userId, watchlistData)
+    
+    console.log(`✅ Fetched and cached ${userWatchlist.length} watchlist items for user ${userId}`)
     
     return NextResponse.json({
       success: true,
-      watchlist: userWatchlist.map(item => ({
-        symbol: item.symbol,
-        exchange: item.exchange,
-        instrumentToken: item.instrumentToken,
-        addedAt: item.addedAt
-      }))
+      watchlist: watchlistData,
+      cached: false
     })
   } catch (error) {
     console.error('❌ Error fetching watchlist:', error)
@@ -100,6 +119,9 @@ export async function POST(request: NextRequest) {
       instrumentToken
     }).returning()
     
+    // Invalidate cache
+    invalidateWatchlistCache(userId)
+    
     console.log(`✅ Added ${symbol} to watchlist for user ${userId}`)
     
     return NextResponse.json({
@@ -149,6 +171,9 @@ export async function DELETE(request: NextRequest) {
         eq(watchlists.symbol, symbol.toUpperCase()),
         eq(watchlists.exchange, exchange)
       ))
+    
+    // Invalidate cache
+    invalidateWatchlistCache(userId)
     
     console.log(`✅ Removed ${symbol} from watchlist for user ${userId}`)
     
