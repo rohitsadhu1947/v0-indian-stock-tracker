@@ -72,6 +72,42 @@ export const positions = pgTable('positions', {
   symbolIdx: index('positions_symbol_idx').on(table.symbol),
 }))
 
+// Paper Trading Positions (simulated trades)
+export const paperPositions = pgTable('paper_positions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  symbol: text('symbol').notNull(),
+  exchange: text('exchange').notNull(),
+  positionType: text('position_type').notNull(), // 'BUY' or 'SELL'
+  entryPrice: real('entry_price').notNull(),
+  quantity: integer('quantity').notNull(),
+  currentPrice: real('current_price'),
+  stopLoss: real('stop_loss'),
+  target1: real('target1'), // 1.5% target
+  target2: real('target2'), // 2.5% target
+  pnl: real('pnl'),
+  pnlPercent: real('pnl_percent'),
+  status: text('status').notNull().default('open'), // 'open', 'closed', 'stopped'
+  entryTime: timestamp('entry_time').notNull(),
+  exitTime: timestamp('exit_time'),
+  exitPrice: real('exit_price'),
+  exitReason: text('exit_reason'), // 'target1', 'target2', 'stop_loss', 'manual'
+  notes: text('notes'),
+  strategy: text('strategy').notNull(), // 'momentum', 'breakout', 'orb', etc.
+  signalData: jsonb('signal_data'), // Full momentum signal data
+  momentumScore: integer('momentum_score'),
+  confidence: real('confidence'),
+  riskAmount: real('risk_amount'),
+  capitalRequired: real('capital_required'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('paper_positions_user_id_idx').on(table.userId),
+  statusIdx: index('paper_positions_status_idx').on(table.status),
+  symbolIdx: index('paper_positions_symbol_idx').on(table.symbol),
+  strategyIdx: index('paper_positions_strategy_idx').on(table.strategy),
+}))
+
 // ============================================
 // STOCK DATA CACHE
 // ============================================
@@ -263,6 +299,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   watchlists: many(watchlists),
   positions: many(positions),
+  paperPositions: many(paperPositions),
   screenerResults: many(screenerResults),
   tradeHistory: many(tradeHistory),
   alerts: many(alerts),
@@ -286,6 +323,13 @@ export const watchlistsRelations = relations(watchlists, ({ one }) => ({
 export const positionsRelations = relations(positions, ({ one }) => ({
   user: one(users, {
     fields: [positions.userId],
+    references: [users.id],
+  }),
+}))
+
+export const paperPositionsRelations = relations(paperPositions, ({ one }) => ({
+  user: one(users, {
+    fields: [paperPositions.userId],
     references: [users.id],
   }),
 }))

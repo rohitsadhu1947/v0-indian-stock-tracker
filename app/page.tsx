@@ -34,6 +34,10 @@ import {
   generateCombinedIntelligence,
   type CombinedIntelligence
 } from '@/lib/combined-intelligence'
+import {
+  type MomentumScanResult,
+  type MomentumSignal
+} from '@/lib/momentum-scanner'
 
 interface StockData {
   symbol: string
@@ -60,7 +64,7 @@ export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
   const [watchlist, setWatchlist] = useState<string[]>([]) // 🎯 Start with empty watchlist - user builds their own
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market'>('watchlist')
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum'>('watchlist')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -149,6 +153,21 @@ export default function StockTracker() {
   // Market Dashboard states
   const [marketDashboard, setMarketDashboard] = useState<any>(null)
   const [isFetchingMarketDashboard, setIsFetchingMarketDashboard] = useState(false)
+  
+  // 💰 Momentum Scanner states
+  const [momentumScanResult, setMomentumScanResult] = useState<MomentumScanResult | null>(null)
+  const [isScanningMomentum, setIsScanningMomentum] = useState(false)
+  const [momentumCapital, setMomentumCapital] = useState(300000) // ₹3L default
+  const [momentumMaxPositions, setMomentumMaxPositions] = useState(5)
+  const [momentumMinScore, setMomentumMinScore] = useState(45) // Lower default to 45
+  const [customStocksInput, setCustomStocksInput] = useState('') // Custom stocks to add
+  const [isQuickScan, setIsQuickScan] = useState(true) // Quick scan by default
+  
+  // 📝 Paper Trading states
+  const [isPaperMode, setIsPaperMode] = useState(true) // Default to paper mode for safety
+  const [paperPositions, setPaperPositions] = useState<any[]>([])
+  const [isLoadingPaperPositions, setIsLoadingPaperPositions] = useState(false)
+  const [isExecutingTrade, setIsExecutingTrade] = useState(false)
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -271,6 +290,13 @@ export default function StockTracker() {
       }
     }
   }, [])
+
+  // 📝 Load paper positions on mount/auth change
+  useEffect(() => {
+    if (authStatus.authenticated) {
+      loadPaperPositions()
+    }
+  }, [authStatus.authenticated])
 
   // Save screener settings to localStorage
   useEffect(() => {
@@ -2143,6 +2169,164 @@ export default function StockTracker() {
     }
   }
 
+  // 💰 Run Momentum Scanner for Swing Trades
+  async function runMomentumScanner() {
+    if (!authStatus.authenticated) {
+      alert('⚠️ Please login first')
+      return
+    }
+    
+    setIsScanningMomentum(true)
+    setMomentumScanResult(null)
+    
+    try {
+      console.log(`💰 Running momentum scanner (Capital: ₹${(momentumCapital / 100000).toFixed(1)}L, Max Positions: ${momentumMaxPositions})...`)
+      
+      // Parse custom stocks (comma-separated, trim whitespace, uppercase)
+      const customStocks = customStocksInput
+        .split(',')
+        .map(s => s.trim().toUpperCase())
+        .filter(s => s.length > 0)
+      
+      // Build query params
+      const params = new URLSearchParams({
+        capital: momentumCapital.toString(),
+        maxPositions: momentumMaxPositions.toString(),
+        minScore: momentumMinScore.toString(),
+        quickScan: isQuickScan.toString()
+      })
+      
+      // Add custom stocks if provided
+      if (customStocks.length > 0) {
+        params.append('customStocks', customStocks.join(','))
+        console.log(`📝 Including custom stocks: ${customStocks.join(', ')}`)
+      }
+      
+      const response = await fetch(`/api/scanner/momentum?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to run momentum scanner')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.scan) {
+        setMomentumScanResult(result.scan)
+        console.log(`✅ Momentum scan complete: ${result.scan.signalsFound} signals found`)
+        console.log(`📊 Market Sentiment: ${result.scan.marketSentiment}`)
+        
+        if (result.scan.signalsFound === 0) {
+          alert('⚠️ No momentum signals found. Try lowering the minimum score or widening your filters.')
+        } else {
+          alert(
+            `✅ Momentum Scan Complete!\n\n` +
+            `📊 Found ${result.scan.signalsFound} signals\n` +
+            `🔥 ${result.scan.strongBuyCount} STRONG_BUY signals\n` +
+            `📈 Market Sentiment: ${result.scan.marketSentiment}\n\n` +
+            `Check the Momentum tab for detailed analysis!`
+          )
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Error running momentum scanner:', error)
+      alert(`❌ Momentum scanner failed: ${error.message}`)
+    } finally {
+      setIsScanningMomentum(false)
+    }
+  }
+
+  // 📝 Load Paper Positions from Database
+  async function loadPaperPositions() {
+    if (!authStatus.authenticated) return
+    
+    setIsLoadingPaperPositions(true)
+    try {
+      console.log('📝 Loading paper positions from database...')
+      const response = await fetch('/api/positions/paper?status=all')
+      
+      if (!response.ok) {
+        throw new Error('Failed to load paper positions')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setPaperPositions(result.positions || [])
+        console.log(`✅ Loaded ${result.positions?.length || 0} paper positions`)
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading paper positions:', error)
+    } finally {
+      setIsLoadingPaperPositions(false)
+    }
+  }
+
+  // 📝 Execute Paper Trade
+  async function executePaperTrade(signal: any) {
+    if (!authStatus.authenticated) {
+      alert('⚠️ Please login first')
+      return
+    }
+    
+    setIsExecutingTrade(true)
+    try {
+      console.log(`📝 Executing paper trade: ${signal.symbol} (${signal.positionSize} shares @ ₹${signal.entryPrice})...`)
+      
+      const response = await fetch('/api/positions/paper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: signal.symbol,
+          exchange: 'NSE',
+          positionType: 'BUY',
+          entryPrice: signal.entryPrice,
+          quantity: signal.positionSize,
+          stopLoss: signal.stopLoss,
+          target1: signal.target1,
+          target2: signal.target2,
+          strategy: 'momentum',
+          momentumScore: signal.momentumScore,
+          confidence: signal.confidence,
+          rsi: signal.rsi,
+          volumeRatio: signal.volumeRatio,
+          reasons: signal.reasons,
+          warnings: signal.warnings,
+          capitalRequired: signal.capitalRequired,
+          riskAmount: signal.riskAmount,
+          signalData: signal, // Store full signal as JSONB
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Paper trade API error:', errorData)
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to execute paper trade`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(
+          `✅ Paper Trade Executed!\n\n` +
+          `${signal.symbol}: ${signal.positionSize} shares @ ₹${signal.entryPrice}\n` +
+          `Stop Loss: ₹${signal.stopLoss}\n` +
+          `Target 1: ₹${signal.target1}\n` +
+          `Target 2: ₹${signal.target2}\n\n` +
+          `Check your paper positions to track P&L!`
+        )
+        
+        // Reload paper positions
+        await loadPaperPositions()
+      }
+    } catch (error: any) {
+      console.error('❌ Error executing paper trade:', error)
+      alert(`❌ Failed to execute paper trade: ${error.message}`)
+    } finally {
+      setIsExecutingTrade(false)
+    }
+  }
+
   // Fetch fundamental data for a stock
   async function fetchFundamentals() {
     const symbol = fundamentalSymbol.trim().toUpperCase()
@@ -2547,6 +2731,12 @@ export default function StockTracker() {
           }}
         >
           🌐 Market
+        </button>
+        <button 
+          className={`tab ${activeTab === 'momentum' ? 'active' : ''}`}
+          onClick={() => setActiveTab('momentum')}
+        >
+          💰 Momentum
         </button>
       </div>
 
@@ -6570,6 +6760,769 @@ export default function StockTracker() {
                   <li><strong>Sector Performance:</strong> Which sectors are leading/lagging</li>
                   <li><strong>Top Movers:</strong> Biggest gainers and losers of the day</li>
                   <li><strong>Market Alerts:</strong> Significant events and actionable insights</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 💰 MOMENTUM SCANNER TAB */}
+      {activeTab === 'momentum' && (
+        <div>
+          {/* Scanner Controls */}
+          <div className="card" style={{ marginBottom: '25px', padding: '25px' }}>
+            <h3 style={{ marginBottom: '20px', fontSize: '1.8em' }}>💰 Momentum Swing Scanner</h3>
+            <p style={{ marginBottom: '20px', opacity: 0.85, lineHeight: '1.6' }}>
+              Systematic scanner for 1-2% swing trades. Target holding: 1-7 days. Scans NIFTY 500 for clean uptrends with volume confirmation.
+            </p>
+            
+            {/* Paper/Live Mode Toggle */}
+            <div style={{
+              marginBottom: '25px',
+              padding: '20px',
+              background: isPaperMode ? 'rgba(102, 126, 234, 0.1)' : 'rgba(255, 0, 100, 0.1)',
+              border: `2px solid ${isPaperMode ? 'rgba(102, 126, 234, 0.4)' : 'rgba(255, 0, 100, 0.4)'}`,
+              borderRadius: '10px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <div>
+                  <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '5px' }}>
+                    {isPaperMode ? '📝 Paper Trading Mode' : '🔴 LIVE Trading Mode'}
+                  </div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8 }}>
+                    {isPaperMode 
+                      ? 'Risk-free simulation - test strategies before trading real money' 
+                      : '⚠️ Real money at risk - orders will be placed on your Zerodha account'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsPaperMode(!isPaperMode)}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '1em',
+                    background: isPaperMode ? 'rgba(255, 0, 100, 0.2)' : 'rgba(102, 126, 234, 0.2)',
+                    border: `2px solid ${isPaperMode ? '#ff0064' : '#667eea'}`,
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {isPaperMode ? 'Switch to LIVE' : 'Switch to Paper'}
+                </button>
+              </div>
+              
+              {/* Paper Positions Summary */}
+              {isPaperMode && paperPositions.length > 0 && (
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.9em',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ opacity: 0.7, marginBottom: '5px' }}>📊 Paper Positions:</div>
+                  <div style={{ fontWeight: 'bold' }}>
+                    {paperPositions.filter(p => p.status === 'open').length} open • {' '}
+                    {paperPositions.filter(p => p.status === 'closed').length} closed • {' '}
+                    Total P&L: ₹
+                    {paperPositions
+                      .reduce((sum, p) => sum + (p.pnl || 0), 0)
+                      .toFixed(2)}
+                  </div>
+                </div>
+              )}
+              
+              {/* Detailed Paper Positions Table */}
+              {isPaperMode && paperPositions.length > 0 && (
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '10px',
+                  padding: '20px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ marginBottom: '15px', fontSize: '1.3em' }}>📝 Your Paper Positions</h4>
+                  
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      fontSize: '0.9em'
+                    }}>
+                      <thead>
+                        <tr style={{
+                          background: 'rgba(102, 126, 234, 0.1)',
+                          borderBottom: '2px solid rgba(102, 126, 234, 0.3)'
+                        }}>
+                          <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold' }}>Symbol</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold' }}>Type</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold' }}>Status</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Qty</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Entry</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Current</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Stop Loss</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Target 1</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>Target 2</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>P&L</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>P&L %</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paperPositions.map((position, index) => {
+                          const pnl = position.pnl || 0
+                          const pnlPercent = position.pnlPercent || 0
+                          const isProfitable = pnl >= 0
+                          
+                          return (
+                            <tr key={position.id} style={{
+                              background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(102, 126, 234, 0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'}
+                            >
+                              <td style={{ padding: '12px 10px', fontWeight: 'bold' }}>
+                                {position.symbol}
+                                <div style={{ fontSize: '0.75em', opacity: 0.6, marginTop: '2px' }}>
+                                  {position.strategy}
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  background: position.positionType === 'BUY' 
+                                    ? 'rgba(0, 255, 100, 0.2)' 
+                                    : 'rgba(255, 0, 100, 0.2)',
+                                  border: `1px solid ${
+                                    position.positionType === 'BUY' 
+                                      ? 'rgba(0, 255, 100, 0.4)' 
+                                      : 'rgba(255, 0, 100, 0.4)'
+                                  }`,
+                                  borderRadius: '4px',
+                                  fontSize: '0.8em',
+                                  fontWeight: 'bold',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  {position.positionType === 'BUY' ? '📈 BUY' : '📉 SELL'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                <span style={{
+                                  padding: '4px 8px',
+                                  background: position.status === 'open' 
+                                    ? 'rgba(102, 126, 234, 0.2)' 
+                                    : position.status === 'closed' 
+                                      ? 'rgba(100, 100, 100, 0.2)'
+                                      : 'rgba(255, 0, 100, 0.2)',
+                                  border: `1px solid ${
+                                    position.status === 'open' 
+                                      ? 'rgba(102, 126, 234, 0.4)' 
+                                      : position.status === 'closed'
+                                        ? 'rgba(100, 100, 100, 0.4)'
+                                        : 'rgba(255, 0, 100, 0.4)'
+                                  }`,
+                                  borderRadius: '4px',
+                                  fontSize: '0.8em',
+                                  fontWeight: 'bold',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  {position.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right' }}>{position.quantity}</td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right' }}>₹{position.entryPrice.toFixed(2)}</td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold' }}>
+                                ₹{(position.currentPrice || position.entryPrice).toFixed(2)}
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', color: '#EF4444' }}>
+                                ₹{position.stopLoss?.toFixed(2) || '-'}
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', color: '#10B981' }}>
+                                ₹{position.target1?.toFixed(2) || '-'}
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'right', color: '#00ff64' }}>
+                                ₹{position.target2?.toFixed(2) || '-'}
+                              </td>
+                              <td style={{ 
+                                padding: '12px 10px', 
+                                textAlign: 'right', 
+                                fontWeight: 'bold',
+                                color: isProfitable ? '#00ff64' : '#ff0064'
+                              }}>
+                                ₹{pnl.toFixed(2)}
+                              </td>
+                              <td style={{ 
+                                padding: '12px 10px', 
+                                textAlign: 'right', 
+                                fontWeight: 'bold',
+                                color: isProfitable ? '#00ff64' : '#ff0064'
+                              }}>
+                                {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                              </td>
+                              <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                {position.status === 'open' && (
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(`Close position for ${position.symbol}?`)) {
+                                        try {
+                                          const response = await fetch('/api/positions/paper', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              id: position.id,
+                                              status: 'closed',
+                                              exitPrice: position.currentPrice || position.entryPrice,
+                                              exitTime: new Date(),
+                                              exitReason: 'manual',
+                                              notes: 'Manually closed'
+                                            })
+                                          })
+                                          
+                                          if (response.ok) {
+                                            await loadPaperPositions()
+                                            alert('✅ Position closed!')
+                                          } else {
+                                            throw new Error('Failed to close position')
+                                          }
+                                        } catch (error: any) {
+                                          alert(`❌ Error: ${error.message}`)
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '6px 12px',
+                                      background: 'rgba(255, 0, 100, 0.2)',
+                                      border: '1px solid rgba(255, 0, 100, 0.5)',
+                                      borderRadius: '4px',
+                                      color: '#fff',
+                                      cursor: 'pointer',
+                                      fontSize: '0.85em',
+                                      fontWeight: 'bold'
+                                    }}
+                                  >
+                                    Close
+                                  </button>
+                                )}
+                                {position.status === 'closed' && (
+                                  <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
+                                    {new Date(position.exitTime!).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                      
+                      {/* Summary Row */}
+                      <tfoot>
+                        <tr style={{
+                          background: 'rgba(102, 126, 234, 0.15)',
+                          borderTop: '2px solid rgba(102, 126, 234, 0.4)',
+                          fontWeight: 'bold'
+                        }}>
+                          <td colSpan={9} style={{ padding: '12px 10px', textAlign: 'right' }}>
+                            Total P&L:
+                          </td>
+                          <td colSpan={2} style={{ 
+                            padding: '12px 10px', 
+                            textAlign: 'right',
+                            fontSize: '1.1em',
+                            color: paperPositions.reduce((sum, p) => sum + (p.pnl || 0), 0) >= 0 ? '#00ff64' : '#ff0064'
+                          }}>
+                            ₹{paperPositions.reduce((sum, p) => sum + (p.pnl || 0), 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '12px 10px' }}></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  
+                  {/* Quick Stats */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '10px',
+                    marginTop: '15px',
+                    padding: '15px',
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: '8px',
+                    fontSize: '0.9em'
+                  }}>
+                    <div>
+                      <div style={{ opacity: 0.7, fontSize: '0.85em' }}>Open Positions</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#3B82F6' }}>
+                        {paperPositions.filter(p => p.status === 'open').length}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ opacity: 0.7, fontSize: '0.85em' }}>Closed Positions</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
+                        {paperPositions.filter(p => p.status === 'closed').length}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ opacity: 0.7, fontSize: '0.85em' }}>Win Rate</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
+                        {paperPositions.filter(p => p.status === 'closed').length > 0
+                          ? `${((paperPositions.filter(p => p.status === 'closed' && (p.pnl || 0) > 0).length / paperPositions.filter(p => p.status === 'closed').length) * 100).toFixed(0)}%`
+                          : '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ opacity: 0.7, fontSize: '0.85em' }}>Total Capital Used</div>
+                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
+                        ₹{(paperPositions
+                          .filter(p => p.status === 'open')
+                          .reduce((sum, p) => sum + (p.capitalRequired || 0), 0) / 1000).toFixed(0)}k
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Configuration */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: '20px',
+              marginBottom: '25px'
+            }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  💰 Capital (₹)
+                </label>
+                <input
+                  type="number"
+                  value={momentumCapital}
+                  onChange={(e) => setMomentumCapital(parseInt(e.target.value) || 300000)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '1em',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff'
+                  }}
+                  min={50000}
+                  max={100000000}
+                  step={50000}
+                />
+                <div style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '5px' }}>
+                  {`₹${(momentumCapital / 100000).toFixed(1)}L available`}
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  📊 Max Positions
+                </label>
+                <input
+                  type="number"
+                  value={momentumMaxPositions}
+                  onChange={(e) => setMomentumMaxPositions(parseInt(e.target.value) || 5)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '1em',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff'
+                  }}
+                  min={1}
+                  max={20}
+                />
+                <div style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '5px' }}>
+                  Simultaneous trades
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  🎯 Min Score
+                </label>
+                <input
+                  type="number"
+                  value={momentumMinScore}
+                  onChange={(e) => setMomentumMinScore(parseInt(e.target.value) || 45)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '1em',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff'
+                  }}
+                  min={0}
+                  max={100}
+                  step={5}
+                />
+                <div style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '5px' }}>
+                  45+ = balanced, 60+ = conservative, 75+ = aggressive
+                </div>
+              </div>
+            </div>
+            
+            {/* Custom Stocks Input */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                📝 Custom Stocks <span style={{ opacity: 0.6, fontWeight: 'normal' }}>(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={customStocksInput}
+                onChange={(e) => setCustomStocksInput(e.target.value)}
+                placeholder="e.g., INFY, TCS, RELIANCE (comma-separated)"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '1em',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '2px solid rgba(102, 126, 234, 0.3)',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }}
+              />
+              <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '8px', lineHeight: '1.5' }}>
+                💡 <strong>Add any stock to scan</strong> - Include stocks from tips, news, or research<br/>
+                • Separate multiple stocks with commas<br/>
+                • Leave empty to scan only NIFTY 500<br/>
+                • Examples: TATAMOTORS, ADANIENT, PAYTM
+              </div>
+            </div>
+            
+            {/* Quick Scan Toggle */}
+            <div style={{ 
+              marginBottom: '20px',
+              padding: '15px',
+              background: 'rgba(102, 126, 234, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(102, 126, 234, 0.3)'
+            }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer',
+                fontSize: '1em'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isQuickScan}
+                  onChange={(e) => setIsQuickScan(e.target.checked)}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    marginRight: '10px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <div>
+                  <strong>⚡ Quick Scan Mode</strong>
+                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '3px' }}>
+                    {isQuickScan 
+                      ? '✓ Scan top 100 stocks + custom (~30 seconds)'
+                      : '⏱ Full scan of 500 stocks (~2-3 minutes)'}
+                  </div>
+                </div>
+              </label>
+            </div>
+            
+            {/* Scan Button */}
+            <button
+              onClick={runMomentumScanner}
+              disabled={isScanningMomentum}
+              style={{
+                padding: '15px 30px',
+                fontSize: '1.2em',
+                background: isScanningMomentum ? '#666' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#fff',
+                fontWeight: 'bold',
+                cursor: isScanningMomentum ? 'not-allowed' : 'pointer',
+                width: '100%',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {isScanningMomentum 
+                ? (isQuickScan ? '⚡ Quick Scanning...' : '🔍 Full Scanning...') 
+                : (isQuickScan ? '⚡ Quick Scan (Top 100)' : '🔍 Full Scan (500 stocks)')}
+            </button>
+          </div>
+          
+          {/* Scan Results */}
+          {momentumScanResult && (
+            <div>
+              {/* Market Context */}
+              <div className="card" style={{ marginBottom: '25px', padding: '25px' }}>
+                <h3 style={{ marginBottom: '20px' }}>📊 Market Context</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                  <div style={{ padding: '15px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+                    <div style={{ opacity: 0.7, fontSize: '0.9em', marginBottom: '5px' }}>Market Sentiment</div>
+                    <div style={{ fontSize: '1.5em', fontWeight: 'bold' }}>
+                      {momentumScanResult.marketSentiment}
+                    </div>
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+                    <div style={{ opacity: 0.7, fontSize: '0.9em', marginBottom: '5px' }}>Signals Found</div>
+                    <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#00ff64' }}>
+                      {momentumScanResult.signalsFound}
+                    </div>
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+                    <div style={{ opacity: 0.7, fontSize: '0.9em', marginBottom: '5px' }}>STRONG BUY</div>
+                    <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#10B981' }}>
+                      {momentumScanResult.strongBuyCount}
+                    </div>
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+                    <div style={{ opacity: 0.7, fontSize: '0.9em', marginBottom: '5px' }}>BUY</div>
+                    <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#3B82F6' }}>
+                      {momentumScanResult.buyCount}
+                    </div>
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px' }}>
+                    <div style={{ opacity: 0.7, fontSize: '0.9em', marginBottom: '5px' }}>Capital Allocation</div>
+                    <div style={{ fontSize: '1.5em', fontWeight: 'bold' }}>
+                      {(momentumScanResult.recommendedCapitalAllocation * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Trading Signals - COMPACT GRID VIEW */}
+              {momentumScanResult.signals && momentumScanResult.signals.length > 0 ? (
+                <div className="screener-results">
+                  <h3 style={{ marginBottom: '20px' }}>🎯 Trading Signals ({momentumScanResult.signals.length})</h3>
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+                    gap: '15px',
+                    marginTop: '20px'
+                  }}>
+                  {momentumScanResult.signals.map((signal: MomentumSignal, index: number) => {
+                    const signalColor = 
+                      signal.signal === 'STRONG_BUY' ? '#10B981' :
+                      signal.signal === 'BUY' ? '#3B82F6' :
+                      signal.signal === 'WATCH' ? '#F59E0B' : '#9CA3AF'
+                    
+                    const riskReward = ((signal.target1 - signal.entryPrice) / (signal.entryPrice - signal.stopLoss)).toFixed(1)
+                    
+                    return (
+                      <div key={index} style={{
+                        background: 'linear-gradient(145deg, #1a1a1a, #2a2a2a)',
+                        borderRadius: '10px',
+                        padding: '15px',
+                        border: `2px solid ${signalColor}`,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                        fontSize: '0.9em'
+                      }}>
+                        {/* Compact Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '1.5em', fontWeight: 'bold', marginBottom: '4px' }}>
+                              {signal.symbol}
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', fontSize: '0.8em', opacity: 0.8, flexWrap: 'wrap' }}>
+                              <span style={{ 
+                                padding: '2px 6px', 
+                                background: signalColor, 
+                                borderRadius: '3px',
+                                fontWeight: 'bold'
+                              }}>
+                                {signal.signal.replace('_', ' ')}
+                              </span>
+                              <span>Score: {signal.momentumScore}</span>
+                              <span>Conf: {signal.confidence}%</span>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{signal.current.toFixed(2)}</div>
+                            <div style={{ 
+                              fontSize: '0.85em', 
+                              color: signal.changePercent >= 0 ? '#10B981' : '#EF4444',
+                              fontWeight: 'bold'
+                            }}>
+                              {signal.changePercent >= 0 ? '▲' : '▼'} {Math.abs(signal.changePercent).toFixed(2)}%
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Compact Trading Levels */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '6px',
+                          marginBottom: '10px',
+                          padding: '10px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '6px',
+                          fontSize: '0.85em'
+                        }}>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Entry</div>
+                            <div style={{ fontWeight: 'bold', color: '#3B82F6' }}>₹{signal.entryPrice.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Stop Loss</div>
+                            <div style={{ fontWeight: 'bold', color: '#EF4444' }}>
+                              ₹{signal.stopLoss.toFixed(2)}
+                              <span style={{ fontSize: '0.75em', opacity: 0.6, marginLeft: '3px' }}>
+                                ({(((signal.stopLoss - signal.entryPrice) / signal.entryPrice) * 100).toFixed(1)}%)
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Target 1</div>
+                            <div style={{ fontWeight: 'bold', color: '#10B981' }}>₹{signal.target1.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Target 2</div>
+                            <div style={{ fontWeight: 'bold', color: '#00ff64' }}>₹{signal.target2.toFixed(2)}</div>
+                          </div>
+                        </div>
+                        
+                        {/* Compact Position Info */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr 1fr',
+                          gap: '6px',
+                          padding: '8px',
+                          background: 'rgba(102, 126, 234, 0.1)',
+                          borderRadius: '6px',
+                          marginBottom: '10px',
+                          fontSize: '0.8em'
+                        }}>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.85em' }}>Qty</div>
+                            <div style={{ fontWeight: 'bold' }}>{signal.positionSize}</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.85em' }}>Capital</div>
+                            <div style={{ fontWeight: 'bold' }}>₹{(signal.capitalRequired / 1000).toFixed(0)}k</div>
+                          </div>
+                          <div>
+                            <div style={{ opacity: 0.6, fontSize: '0.85em' }}>R:R</div>
+                            <div style={{ fontWeight: 'bold', color: '#F59E0B' }}>1:{riskReward}</div>
+                          </div>
+                        </div>
+                        
+                        {/* Compact Technicals */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          borderRadius: '4px',
+                          fontSize: '0.75em',
+                          marginBottom: '10px'
+                        }}>
+                          <span>RSI: <strong>{signal.rsi.toFixed(0)}</strong></span>
+                          <span>Vol: <strong>{signal.volumeRatio.toFixed(1)}x</strong></span>
+                          <span>⏱ <strong>{signal.timeframe}</strong></span>
+                        </div>
+                        
+                        {/* Compact Reasons (first 3) */}
+                        <div style={{ 
+                          fontSize: '0.75em', 
+                          opacity: 0.8, 
+                          lineHeight: '1.4',
+                          marginBottom: '10px',
+                          maxHeight: '55px',
+                          overflow: 'hidden'
+                        }}>
+                          {signal.reasons.slice(0, 3).map((reason, i) => (
+                            <div key={i}>• {reason}</div>
+                          ))}
+                        </div>
+                        
+                        {/* Warnings (first one only) */}
+                        {signal.warnings.length > 0 && (
+                          <div style={{
+                            fontSize: '0.7em',
+                            padding: '5px',
+                            background: 'rgba(245, 158, 11, 0.1)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            borderRadius: '4px',
+                            marginBottom: '10px',
+                            color: '#FCA5A5'
+                          }}>
+                            ⚠️ {signal.warnings[0]}
+                          </div>
+                        )}
+                        
+                        {/* Execute Button */}
+                        <button
+                          onClick={() => executePaperTrade(signal)}
+                          disabled={isExecutingTrade || !isPaperMode}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            background: isPaperMode 
+                              ? (isExecutingTrade ? '#666' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)')
+                              : 'rgba(255, 0, 100, 0.3)',
+                            border: isPaperMode ? 'none' : '2px solid #ff0064',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            fontWeight: 'bold',
+                            cursor: (isExecutingTrade || !isPaperMode) ? 'not-allowed' : 'pointer',
+                            opacity: (isExecutingTrade || !isPaperMode) ? 0.6 : 1,
+                            fontSize: '0.9em'
+                          }}
+                        >
+                          {isExecutingTrade 
+                            ? '⏳ Executing...' 
+                            : isPaperMode 
+                              ? '📝 Execute Paper Trade' 
+                              : '🔴 LIVE Trading Not Implemented'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
+                  <h3 style={{ marginBottom: '10px' }}>No Signals Found</h3>
+                  <p style={{ fontSize: '1.1em', opacity: 0.7 }}>
+                    Try lowering the minimum score or run the scan during market hours for better results.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Initial State */}
+          {!momentumScanResult && !isScanningMomentum && (
+            <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
+              <h3 style={{ marginBottom: '15px' }}>Ready to Find Money-Making Setups! 💰</h3>
+              <p style={{ fontSize: '1.1em', opacity: 0.8, marginBottom: '20px', lineHeight: '1.7' }}>
+                This scanner identifies high-probability swing trade opportunities with:
+              </p>
+              <div style={{
+                padding: '25px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '10px',
+                display: 'inline-block',
+                textAlign: 'left'
+              }}>
+                <ul style={{ marginLeft: '20px', lineHeight: '2' }}>
+                  <li><strong>Clean uptrends:</strong> SMA5 {'>'} SMA10 {'>'} SMA20</li>
+                  <li><strong>Volume confirmation:</strong> Above-average volume</li>
+                  <li><strong>Momentum:</strong> Recent strength (60%+ up days)</li>
+                  <li><strong>Risk management:</strong> Max 1.5% risk per trade</li>
+                  <li><strong>Position sizing:</strong> Automatic calculation based on your capital</li>
+                  <li><strong>Clear levels:</strong> Entry, stop-loss, targets pre-calculated</li>
                 </ul>
               </div>
             </div>
