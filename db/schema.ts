@@ -366,3 +366,78 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
   }),
 }))
 
+// ============================================
+// ANALYST REPORTS & MARKET INTELLIGENCE
+// ============================================
+
+export const analystReports = pgTable('analyst_reports', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  
+  // Report Classification
+  type: text('type').notNull(), // 'STOCK_REPORT' | 'MARKET_COMMENTARY'
+  symbol: text('symbol'), // Nullable for market commentary
+  
+  // Basic Info
+  title: text('title').notNull(),
+  source: text('source').notNull(), // 'HDFC Securities', 'Perplexity', etc.
+  reportDate: timestamp('report_date').notNull(),
+  uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+  
+  // File Storage
+  pdfPath: text('pdf_path').notNull(), // Local path: /uploads/reports/{hash}.pdf
+  fullText: text('full_text'), // Extracted PDF text
+  
+  // Structured Data (JSONB for flexibility)
+  structuredData: jsonb('structured_data'), // Different structure for stock vs market reports
+  /*
+    For STOCK_REPORT:
+    {
+      targetPrice: number,
+      currentPrice: number,
+      upside: number, // Percentage
+      rating: 'BUY' | 'ACCUMULATE' | 'HOLD' | 'REDUCE' | 'SELL',
+      analystName: string,
+      keyPoints: string[],
+      risks: string[],
+      financialHighlights: {...}
+    }
+    
+    For MARKET_COMMENTARY:
+    {
+      marketSentiment: 'BULLISH' | 'NEUTRAL' | 'BEARISH',
+      sectorsBullish: string[],
+      sectorsBearish: string[],
+      keyThemes: string[],
+      macroOutlook: string,
+      recommendations: string[]
+    }
+  */
+  
+  // AI Analysis
+  sentiment: text('sentiment'), // 'BULLISH' | 'NEUTRAL' | 'BEARISH'
+  sentimentScore: real('sentiment_score'), // -1 to 1
+  confidenceLevel: real('confidence_level'), // 0 to 1
+  summary: text('summary'), // AI-generated 2-3 line summary
+  
+  // Metadata
+  tags: jsonb('tags'), // ['earnings', 'growth', 'dividend'] etc.
+  isActive: boolean('is_active').default(true).notNull(),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('analyst_reports_user_id_idx').on(table.userId),
+  symbolIdx: index('analyst_reports_symbol_idx').on(table.symbol),
+  typeIdx: index('analyst_reports_type_idx').on(table.type),
+  reportDateIdx: index('analyst_reports_report_date_idx').on(table.reportDate),
+  sentimentIdx: index('analyst_reports_sentiment_idx').on(table.sentiment),
+}))
+
+export const analystReportsRelations = relations(analystReports, ({ one }) => ({
+  user: one(users, {
+    fields: [analystReports.userId],
+    references: [users.id],
+  }),
+}))
+
