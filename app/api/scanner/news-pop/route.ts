@@ -256,51 +256,59 @@ export async function GET(request: NextRequest) {
         enabled: preferences[0].telegramEnabled
       };
 
-      console.log(`✅ Telegram alerts enabled. Sending alerts for high-urgency news pops...`);
+      // Check if News Pop alerts are enabled in preferences
+      const alertPrefs = preferences[0].telegramAlertPreferences as any || {};
+      const newsAlertsEnabled = alertPrefs.newsPops !== false; // Default to true if not set
 
-      // Send alerts only for HIGH urgency pops with good scores (60+)
-      const highUrgencyPops = scoredNewsPops.filter(pop => {
-        // Determine urgency based on volume spike and score
-        const volumeSpike = pop.volumeSpike || 0;
-        const isHighUrgency = volumeSpike >= 3.0 || pop.totalScore >= 75;
-        return isHighUrgency && pop.totalScore >= 60;
-      });
+      if (!newsAlertsEnabled) {
+        console.log(`⚠️ News Pop alerts disabled in user preferences`);
+      } else {
+        console.log(`✅ Telegram alerts enabled. Sending alerts for high-urgency news pops...`);
 
-      console.log(`🚨 Found ${highUrgencyPops.length} high-urgency news pops to alert`);
-
-      for (const pop of highUrgencyPops) {
-        try {
-          // Get first news headline as snippet
-          const newsSnippet = pop.news && pop.news.length > 0 
-            ? pop.news[0].title
-            : undefined;
-
-          // Determine urgency
+        // Send alerts only for HIGH urgency pops with good scores (60+)
+        const highUrgencyPops = scoredNewsPops.filter(pop => {
+          // Determine urgency based on volume spike and score
           const volumeSpike = pop.volumeSpike || 0;
-          const urgency: 'HIGH' | 'MEDIUM' = volumeSpike >= 3.0 || pop.totalScore >= 75 ? 'HIGH' : 'MEDIUM';
+          const isHighUrgency = volumeSpike >= 3.0 || pop.totalScore >= 75;
+          return isHighUrgency && pop.totalScore >= 60;
+        });
 
-          await sendNewsPopAlert(telegramConfig, {
-            symbol: pop.symbol,
-            exchange: pop.exchange || 'NSE',
-            totalScore: pop.totalScore,
-            currentPrice: pop.current,
-            entryPrice: pop.tradePlan.entry,
-            stopLoss: pop.tradePlan.stopLoss,
-            target1: pop.tradePlan.target1,
-            target2: pop.tradePlan.target2,
-            positionSize: pop.tradePlan.positionSize,
-            capitalRequired: pop.tradePlan.capitalRequired,
-            riskAmount: pop.tradePlan.riskAmount,
-            volumeSpike: pop.volumeSpike || 0,
-            changePercent: pop.changePercent || 0,
-            newsSentiment: pop.newsSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL',
-            newsSnippet,
-            urgency
-          });
+        console.log(`🚨 Found ${highUrgencyPops.length} high-urgency news pops to alert`);
 
-          console.log(`  ✅ Alert sent for ${pop.symbol}`);
-        } catch (error: any) {
-          console.error(`  ❌ Failed to send alert for ${pop.symbol}:`, error.message);
+        for (const pop of highUrgencyPops) {
+          try {
+            // Get first news headline as snippet
+            const newsSnippet = pop.news && pop.news.length > 0 
+              ? pop.news[0].title
+              : undefined;
+
+            // Determine urgency
+            const volumeSpike = pop.volumeSpike || 0;
+            const urgency: 'HIGH' | 'MEDIUM' = volumeSpike >= 3.0 || pop.totalScore >= 75 ? 'HIGH' : 'MEDIUM';
+
+            await sendNewsPopAlert(telegramConfig, {
+              symbol: pop.symbol,
+              exchange: pop.exchange || 'NSE',
+              totalScore: pop.totalScore,
+              currentPrice: pop.current,
+              entryPrice: pop.tradePlan.entry,
+              stopLoss: pop.tradePlan.stopLoss,
+              target1: pop.tradePlan.target1,
+              target2: pop.tradePlan.target2,
+              positionSize: pop.tradePlan.positionSize,
+              capitalRequired: pop.tradePlan.capitalRequired,
+              riskAmount: pop.tradePlan.riskAmount,
+              volumeSpike: pop.volumeSpike || 0,
+              changePercent: pop.changePercent || 0,
+              newsSentiment: pop.newsSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL',
+              newsSnippet,
+              urgency
+            });
+
+            console.log(`  ✅ Alert sent for ${pop.symbol}`);
+          } catch (error: any) {
+            console.error(`  ❌ Failed to send alert for ${pop.symbol}:`, error.message);
+          }
         }
       }
     } else {

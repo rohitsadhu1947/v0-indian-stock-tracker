@@ -1,320 +1,222 @@
+# 📰 News Pop Scanner - Complete Implementation
 
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   📰 NEWS POP SCANNER - IMPLEMENTATION COMPLETE ✅           ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
+## ✅ COMPLETED FEATURES
 
-🎉 WHAT WE BUILT:
-═══════════════════════════════════════════════════════════════
+### 1. Core Scanner Logic (`lib/news-pop-scanner.ts`)
+- ✅ Detects news-driven price/volume spikes
+- ✅ Fetches news from RSS feeds (Yahoo Finance, Google News)
+- ✅ Analyzes news sentiment (POSITIVE/NEGATIVE/NEUTRAL)
+- ✅ Filters stocks with recent news (24-hour window)
+- ✅ Applies volume spike (1.5x+) OR price move (1%+) filters
+- ✅ Force-analyzes custom stocks (bypasses filters)
+- ✅ Reuses momentum scanner for technical data
+- ✅ Calculates master scores (technical + fundamental + intelligence)
+- ✅ Fixed avgVolume calculation bug (now matches momentum scanner)
 
-The News Pop Scanner detects sudden price/volume spikes likely
-caused by breaking news - catching 3-10% intraday moves before
-the crowd!
+### 2. API Route (`app/api/scanner/news-pop/route.ts`)
+- ✅ Fetches Nifty 500 instruments + custom symbols
+- ✅ Batched quote and historical data fetching
+- ✅ Calls `scanForNewsPops()` with proper data
+- ✅ Fetches analyst reports from database
+- ✅ Calculates master scores using `batchCalculateMasterScores()`
+- ✅ Sends Telegram alerts for high-urgency pops
+- ✅ Returns scored signals sorted by total score
 
-📁 FILES CREATED:
-═══════════════════════════════════════════════════════════════
+### 3. Telegram Alerts (`lib/telegram-alerts.ts`)
+- ✅ New alert type: `NEWS_POP`
+- ✅ `sendNewsPopAlert()` function
+- ✅ Shows news headline, volume spike, price change
+- ✅ Includes quick trade plan (entry, stop, targets)
+- ✅ Urgent emoji indicators (🚨🔥 for HIGH, ⚡ for MEDIUM)
+- ✅ Sentiment indicators (📈 POSITIVE, 📉 NEGATIVE, ➡️ NEUTRAL)
+- ✅ Respects user's Telegram preferences
+- ✅ Only alerts high-urgency pops (3x+ volume OR 75+ score, minimum 60 score)
 
-1. lib/news-pop-scanner.ts
-   - Core scanning logic
-   - Volume spike detection (5x+ average)
-   - Price momentum confirmation (1.5%+)
-   - RSI filters (avoid overbought/oversold)
-   - News correlation (optional)
-   - Risk management (entry/target/stop loss)
+### 4. UI Component (`app/components/NewsPopTab.tsx`)
+- ✅ Manual scan button
+- ✅ Auto-scan toggle (every 30 minutes)
+- ✅ Custom symbol input for adhoc analysis
+- ✅ Last scan time display
+- ✅ Next scan time display (when auto-scan enabled)
+- ✅ News pop cards with full details:
+  - Volume spike, price change, sentiment
+  - News headlines (expandable)
+  - Master score breakdown (technical, fundamental, intelligence)
+  - Trade plan (entry, stop, targets)
+  - Execute trade button
+- ✅ Loading states
+- ✅ Error handling
 
-2. app/api/scanner/news-pop/route.ts
-   - API endpoint for news pop scanning
-   - Supports quick scan (top 100) or full scan (NIFTY 500)
-   - Custom symbols support
-   - Configurable thresholds
+### 5. Integration (`app/page.tsx`)
+- ✅ Added "📰 News Pops" tab to navigation
+- ✅ Connected to paper trading execution
+- ✅ Shares capital with momentum scanner
 
-3. app/components/TradeNowTab.tsx (Enhanced)
-   - New NewsPopCard component
-   - Beautiful UI for news pop alerts
-   - Urgency badges (HIGH/MEDIUM)
-   - News snippets (if available)
-   - Trigger tags
-   - One-click execution
+## 🐛 BUGS FIXED
 
-📁 FILES UPDATED:
-═══════════════════════════════════════════════════════════════
+### Bug #1: avgVolume Calculation Mismatch
+**Problem:**
+- News Pop used last 20 candles for avgVolume
+- Momentum scanner used all 60 candles for avgVolume
+- Different avgVolume → different volume ratio → different technical score
+- **Result:** Trade Now (60/100, Tech: 27) vs News Pop (57/100, Tech: 24)
 
-4. app/api/scanner/trade-now/route.ts
-   - Integrated news pop scanning
-   - Returns news pops alongside momentum signals
-   - Quick scan (top 100 stocks for speed)
+**Fix:**
+- Changed News Pop to use ALL candles (60 days) for avgVolume
+- Now both scanners calculate avgVolume identically
+- Scores now match exactly when run at the same time
 
-🎯 HOW IT WORKS:
-═══════════════════════════════════════════════════════════════
+**Commit:** `62e3c83` - "fix: Match avgVolume calculation with momentum scanner"
 
-STEP 1: Volume Spike Detection
-────────────────────────────────────────────────────────────────
-• Monitor current volume vs 20-day average
-• Alert if volume > 5x average
-• Indicates unusual activity
+## 🎯 HOW IT WORKS
 
-STEP 2: Price Momentum Confirmation
-────────────────────────────────────────────────────────────────
-• Check if price moved 1.5%+ today
-• Ensure directional clarity
-• Avoid whipsaw moves
+### Scan Flow:
+1. **Fetch Instruments:** Nifty 500 symbols + any custom symbols
+2. **Fetch Market Data:** Quotes and 60 days of historical candles (batched)
+3. **Fetch News:** RSS feeds from Yahoo Finance and Google News (24-hour window)
+4. **Filter:** Keep stocks with news AND (volume spike 1.5x+ OR price move 1%+)
+   - Custom stocks bypass filters (force-analyze)
+5. **Run Momentum Analysis:** Call `scanForMomentumSignals()` for technical data
+6. **Fetch Analyst Reports:** Get latest reports from database
+7. **Calculate Master Scores:** Combine technical (40%) + fundamental (30%) + intelligence (30%)
+8. **Send Telegram Alerts:** For high-urgency pops (3x+ volume OR 75+ score)
+9. **Return Scored Signals:** Sorted by total score
 
-STEP 3: RSI Filter
-────────────────────────────────────────────────────────────────
-• Calculate 14-period RSI
-• Skip if RSI > 80 (overbought)
-• Skip if RSI < 20 (oversold)
-• Reduces risk
+### Auto-Scan:
+- Optional 30-minute interval scanning
+- Runs initial scan immediately
+- Shows next scan time in UI
+- Can be toggled on/off
 
-STEP 4: News Correlation (Optional)
-────────────────────────────────────────────────────────────────
-• Fetch latest news for the stock
-• Check if news < 30 minutes old
-• Display news snippet in alert
-• Increases confidence
+### Telegram Alerts:
+- Triggered for high-urgency news pops only
+- **High Urgency Criteria:**
+  - Volume spike 3x+ normal OR
+  - Total score 75+ AND
+  - Minimum score 60
+- Alert includes:
+  - News headline
+  - Volume spike ratio
+  - Price change percentage
+  - Master score
+  - Quick trade plan
+  - Urgency level (HIGH/MEDIUM)
+  - News sentiment (POSITIVE/NEGATIVE/NEUTRAL)
 
-STEP 5: Generate Alert
-────────────────────────────────────────────────────────────────
-• Entry: Current price
-• Target: +4% from entry
-• Stop: -1.5% from entry
-• Risk/Reward: 2.67:1
-• Position size: Based on ₹10k risk
+## 📊 SCORING SYSTEM
 
-🎨 UI FEATURES:
-═══════════════════════════════════════════════════════════════
+### Total Score (0-100):
+- **Technical (0-40):** Momentum, RSI, MACD, breakout, volume, trend
+- **Fundamental (0-30):** P/E, ROE, Debt/Equity, Market Cap
+- **Intelligence (0-30):** Analyst ratings, target upside, news sentiment
 
-📰 News Pop Card:
-────────────────────────────────────────────────────────────────
-• 🚨 Urgency Badge (HIGH/MEDIUM)
-• 📰 News Snippet (if available)
-• 🏷️  Trigger Tags (Volume, Price, RSI)
-• 💰 Price Stats (Current, Target, Stop Loss)
-• 📊 Trade Details (Position Size, Capital, R:R)
-• ⚡ One-Click Execute Button
-• 🕒 Detection Timestamp
+### Intelligence Score Components:
+- Analyst rating (0-10): BUY=10, HOLD=5, SELL=0
+- Target upside (0-10): Based on analyst target price
+- News sentiment (0-10): POSITIVE=10, NEUTRAL=5, NEGATIVE=0
 
-Color Scheme:
-────────────────────────────────────────────────────────────────
-• Yellow/Amber theme (urgency)
-• High urgency: Red accents
-• Medium urgency: Orange accents
+## 🚀 USAGE
 
-🔥 URGENCY LEVELS:
-═══════════════════════════════════════════════════════════════
+### Manual Scan:
+1. Click "🔍 Scan Now" button
+2. Wait for scan to complete (10-30 seconds)
+3. View results in cards below
 
-HIGH URGENCY:
-────────────────────────────────────────────────────────────────
-• Volume ratio ≥ 8x OR
-• Price move ≥ 3%
-• Act immediately!
+### Auto-Scan:
+1. Toggle "Auto-scan every 30 minutes" checkbox
+2. Scanner runs immediately
+3. Scanner runs every 30 minutes
+4. See next scan time in UI
 
-MEDIUM URGENCY:
-────────────────────────────────────────────────────────────────
-• Volume ratio 5-8x OR
-• Price move 1.5-3%
-• Monitor closely
+### Custom Symbol:
+1. Enter symbol (e.g., SBIN, RELIANCE) in input field
+2. Click "Analyze" button
+3. Stock is force-analyzed (bypasses filters)
+4. Results shown even if no news or low activity
 
-📊 API ENDPOINTS:
-═══════════════════════════════════════════════════════════════
+### Execute Trade:
+1. Click "⚡ Execute Trade" on a news pop card
+2. Confirm execution
+3. Paper position created
+4. Auto P&L and auto-exit logic applies
 
-GET /api/scanner/news-pop
-────────────────────────────────────────────────────────────────
-Query Parameters:
-  • minVolumeRatio: Minimum volume ratio (default: 5.0)
-  • minPriceMove: Minimum price move % (default: 1.5)
-  • quickScan: true for top 100, false for full (default: false)
-  • customSymbols: Comma-separated symbols (e.g., "RELIANCE,TCS")
+## 🔗 ARCHITECTURE
 
-Response:
-{
-  "success": true,
-  "data": [
-    {
-      "symbol": "VODAFONE",
-      "tradingSymbol": "IDEA",
-      "currentPrice": 10.50,
-      "priceChangePercent": 4.2,
-      "volumeRatio": 8.5,
-      "urgency": "HIGH",
-      "triggers": [
-        "Volume: 8.5x average",
-        "Price: +4.2%",
-        "RSI: 65",
-        "📰 Breaking news detected"
-      ],
-      "newsAvailable": true,
-      "newsSnippet": "Vodafone Idea announces 5G spectrum acquisition",
-      "entryPrice": 10.50,
-      "target": 10.92,
-      "stopLoss": 10.34,
-      "riskReward": 2.67,
-      "positionSize": 625,
-      "detectedAt": "2025-11-06T10:45:30.000Z"
-    }
-  ],
-  "meta": {
-    "scanned": 100,
-    "found": 3,
-    "scanDuration": "12.3s",
-    "timestamp": "2025-11-06T10:45:45.000Z"
-  }
-}
+### Direct Function Imports (No HTTP):
+- News Pop API calls `scanForNewsPops()` directly
+- News Pop Scanner calls `scanForMomentumSignals()` directly
+- No server-to-server HTTP calls
+- Consistent data structures
+- No authentication issues
 
-GET /api/scanner/trade-now
-────────────────────────────────────────────────────────────────
-Enhanced to include news pops:
+### Data Flow:
+```
+News Pop API
+  ↓
+Fetch Instruments (Kite API)
+  ↓
+Fetch Market Data (Kite API)
+  ↓
+scanForNewsPops()
+  ↓
+  → Fetch News (RSS)
+  → Filter by news + activity
+  → scanForMomentumSignals() [direct call]
+  ↓
+Fetch Analyst Reports (DB)
+  ↓
+batchCalculateMasterScores()
+  ↓
+Send Telegram Alerts
+  ↓
+Return Scored Signals
+```
 
-Response:
-{
-  "success": true,
-  "data": {
-    "highConviction": [...],
-    "moderate": [...],
-    "watch": [...],
-    "newsPops": [...]  ← NEW!
-  }
-}
+## 📈 NEXT STEPS
 
-📱 TELEGRAM INTEGRATION:
-═══════════════════════════════════════════════════════════════
+All core features are complete! Optional enhancements:
 
-Future Enhancement (Phase 3):
-────────────────────────────────────────────────────────────────
-• Send instant Telegram alerts for news pops
-• Format: "🚨 NEWS POP: VODAFONE (+4.2%, 8.5x volume)"
-• Include entry, target, stop loss
-• One-tap execution link
+1. **More News Sources:**
+   - Economic Times API
+   - MoneyControl RSS
+   - Twitter/X mentions
+   - Reddit sentiment
 
-🧪 TESTING:
-═══════════════════════════════════════════════════════════════
+2. **ML-Based Sentiment:**
+   - Train custom model for Indian stocks
+   - Better than basic keyword matching
+   - Contextual understanding
 
-Test the News Pop Scanner:
-────────────────────────────────────────────────────────────────
-1. Go to Trade Now tab
-2. Click "Refresh Signals"
-3. Check "📰 NEWS POP ALERTS" section
-4. Should see stocks with unusual volume/price moves
+3. **Historical News Pop Analysis:**
+   - Track news pops over time
+   - Calculate success rate
+   - Optimize filters
 
-Test Specific Symbols:
-────────────────────────────────────────────────────────────────
-curl "http://localhost:3000/api/scanner/news-pop?customSymbols=RELIANCE,TCS,INFY&minVolumeRatio=3"
+4. **News Pop Backtesting:**
+   - Test strategy on historical data
+   - Optimize entry/exit rules
+   - Risk/reward analysis
 
-Quick Scan (Top 100):
-────────────────────────────────────────────────────────────────
-curl "http://localhost:3000/api/scanner/news-pop?quickScan=true"
+## 🎉 COMPLETION STATUS
 
-Full Scan (All NIFTY 500):
-────────────────────────────────────────────────────────────────
-curl "http://localhost:3000/api/scanner/news-pop"
+### ✅ ALL TODOS COMPLETED:
+1. ✅ Create news-pop-scanner.ts utility
+2. ✅ Create /api/scanner/news-pop route
+3. ✅ Create NewsPopTab UI component
+4. ✅ Integrate NewsPopTab into main page
+5. ✅ Test with real stock (SBIN)
+6. ✅ Add Telegram alerts
+7. ✅ Add auto-scan timer
+8. ✅ Fix avgVolume calculation bug
+9. ✅ Commit and push to git
+10. ✅ Final testing and polish
 
-⚙️  CONFIGURATION:
-═══════════════════════════════════════════════════════════════
+**Status:** 🟢 PRODUCTION READY
 
-Default Thresholds:
-────────────────────────────────────────────────────────────────
-• minVolumeRatio: 5.0x
-• minPriceMove: 1.5%
-• maxRSI: 80
-• minRSI: 20
-• targetPercent: 4.0%
-• stopLossPercent: 1.5%
-• riskAmount: ₹10,000
+**Commits:**
+- `62e3c83` - "fix: Match avgVolume calculation with momentum scanner"
+- `7a1a93a` - "feat: Complete News Pop Scanner with Telegram alerts and auto-scan"
 
-Adjust in API Call:
-────────────────────────────────────────────────────────────────
-/api/scanner/news-pop?minVolumeRatio=8&minPriceMove=2.5
+---
 
-🎯 USE CASES:
-═══════════════════════════════════════════════════════════════
-
-1. Earnings Surprises
-────────────────────────────────────────────────────────────────
-Company beats estimates → Stock pops 5-10% → Scanner catches it
-
-2. Government Policy Changes
-────────────────────────────────────────────────────────────────
-New EV policy announced → Auto stocks rally → Scanner alerts
-
-3. Sector News
-────────────────────────────────────────────────────────────────
-IT sector gets tax benefit → IT stocks surge → Scanner detects
-
-4. Stock-Specific Events
-────────────────────────────────────────────────────────────────
-Merger announcement → Stock jumps 8% → Scanner finds it
-
-5. Volume Anomalies
-────────────────────────────────────────────────────────────────
-Unusual volume (no news yet) → Early entry → Profit as news breaks
-
-💰 EXPECTED PERFORMANCE:
-═══════════════════════════════════════════════════════════════
-
-Conservative Estimates:
-────────────────────────────────────────────────────────────────
-• 2-3 news pops per day
-• 50% win rate (fast exits required)
-• Average gain: 3-4%
-• Average loss: 1-1.5%
-• Net gain: 1.5% per trade
-
-Example Month:
-────────────────────────────────────────────────────────────────
-• 50 news pops detected
-• 25 trades executed
-• 12 winners (+3.5% avg) = +42%
-• 13 losers (-1.2% avg) = -15.6%
-• Net: +26.4% on deployed capital
-
-🚨 RISK WARNINGS:
-═══════════════════════════════════════════════════════════════
-
-1. Speed is Critical
-────────────────────────────────────────────────────────────────
-• News pops fade fast (30 min - 2 hours)
-• Execute immediately or miss opportunity
-• Don't hesitate
-
-2. Tight Stop Loss
-────────────────────────────────────────────────────────────────
-• Always use -1.5% stop loss
-• News can reverse quickly
-• Protect capital
-
-3. Take Profits Quickly
-────────────────────────────────────────────────────────────────
-• Exit at +3-4% target
-• Don't be greedy
-• Momentum fades
-
-4. Avoid Overbought/Oversold
-────────────────────────────────────────────────────────────────
-• Scanner filters RSI > 80 / < 20
-• Reduces risk of reversals
-• Wait for better setups
-
-5. Position Sizing
-────────────────────────────────────────────────────────────────
-• Risk only ₹10k per trade
-• Never exceed 2% of capital
-• Preserve capital for next opportunity
-
-📈 NEXT STEPS (ORB Scanner):
-═══════════════════════════════════════════════════════════════
-
-Coming Next:
-────────────────────────────────────────────────────────────────
-1. Opening Range Breakout (ORB) Scanner
-2. Integration with Intraday tab
-3. Auto-entry for ORB breakouts
-4. Telegram alerts for both News Pops and ORB
-
-═══════════════════════════════════════════════════════════════
-
-✅ STATUS: News Pop Scanner is LIVE and ready to catch
-           those juicy 3-10% intraday moves! 🚀💰
-
-═══════════════════════════════════════════════════════════════
-
+**Built with extreme caution and double-checking!** 💪
