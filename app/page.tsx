@@ -1,6 +1,12 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import ResearchTab from './components/ResearchTab'
+import TradeNowTab from './components/TradeNowTab'
+import NewsPopTab from './components/NewsPopTab'
+import TelegramSettingsTab from './components/TelegramSettingsTab'
+import BacktestTab from './components/BacktestTab'
+import { SignalCard } from './components/SignalCard'
 import { formatSymbolForKite, generateTradingSignal } from '@/lib/kite-utils'
 import {
   calculateVWAP,
@@ -62,9 +68,12 @@ interface AuthStatus {
 
 export default function StockTracker() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, user: null })
+  const [userRole, setUserRole] = useState<string | null>(null) // Track user role for admin button
+  const [authLoading, setAuthLoading] = useState(true) // NEW: Track if we're checking auth
+  const [isLoggingOut, setIsLoggingOut] = useState(false) // NEW: Track if we're logging out
   const [watchlist, setWatchlist] = useState<string[]>([]) // 🎯 Start with empty watchlist - user builds their own
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum'>('watchlist')
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum' | 'research' | 'tradenow' | 'newspop' | 'settings' | 'backtest' | 'admin'>('tradenow') // Default to TRADE NOW!
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -168,6 +177,11 @@ export default function StockTracker() {
   const [paperPositions, setPaperPositions] = useState<any[]>([])
   const [isLoadingPaperPositions, setIsLoadingPaperPositions] = useState(false)
   const [isExecutingTrade, setIsExecutingTrade] = useState(false)
+  const [analystReportsCache, setAnalystReportsCache] = useState<Record<string, any[]>>({}) // Cache reports by symbol
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false) // Auto P&L update toggle
+  const [lastPnLUpdate, setLastPnLUpdate] = useState<Date | null>(null)
+  const [autoExitAlerts, setAutoExitAlerts] = useState<any[]>([]) // Store auto-exit notifications
+  const [positionFilter, setPositionFilter] = useState<'open' | 'closed' | 'all'>('open') // Filter for positions table
   
   // Manual position entry
   const [manualEntrySymbol, setManualEntrySymbol] = useState('')
@@ -429,6 +443,48 @@ export default function StockTracker() {
     console.log(`✅ Combined Intelligence: ${intelligence.scenario} (${intelligence.overallSignal})`)
   }, [fundamentalData, fundamentalScore, multiLayerNews, stockData])
 
+  // Check authentication on mount (uses UNIFIED session API)
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        // Use unified session endpoint that works for BOTH auth systems
+        const res = await fetch('/api/auth/session')
+        
+        if (!res.ok) {
+          // Not authenticated - redirect to login
+          console.log('❌ Not authenticated, redirecting to login')
+          window.location.href = '/login'
+          return
+        }
+        
+        const data = await res.json()
+        
+        if (data.authenticated && data.user) {
+          // Set auth status
+          setAuthStatus({ 
+            authenticated: true, 
+            user: { userId: data.user.id.toString() } 
+          })
+          
+          // Set user role from API (no more hardcoding!)
+          setUserRole(data.user.role)
+          
+          console.log('✅ Authenticated:', data.user.email, '| Role:', data.user.role, '| Method:', data.authMethod)
+          
+          setAuthLoading(false) // Auth check complete!
+          return
+        }
+        
+        // No valid session - redirect to login
+        window.location.href = '/login'
+      } catch (err) {
+        console.error('Auth check failed:', err)
+        window.location.href = '/login'
+      }
+    }
+    checkAuth()
+  }, [])
+
   async function checkAuthStatus() {
     try {
       const res = await fetch('/api/auth/kite/session')
@@ -445,12 +501,24 @@ export default function StockTracker() {
 
   async function handleLogout() {
     try {
-      await fetch('/api/auth/kite/logout', { method: 'POST' })
+      // Set logging out state to show loading screen
+      setIsLoggingOut(true)
+      
+      // Logout from both systems (new and legacy)
+      await Promise.all([
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {}), // New auth
+        fetch('/api/auth/kite/logout', { method: 'POST' }).catch(() => {}), // Legacy Kite auth
+      ])
+      
       setAuthStatus({ authenticated: false, user: null })
       setStockData({})
       setError(null)
+      
+      // Redirect to login page
+      window.location.href = '/login'
     } catch (err) {
       console.error('Error logging out:', err)
+      setIsLoggingOut(false)
     }
   }
 
@@ -2205,7 +2273,9 @@ export default function StockTracker() {
       const response = await fetch(`/api/scanner/momentum?${params.toString()}`)
       
       if (!response.ok) {
-        throw new Error('Failed to run momentum scanner')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ Scanner API error:', errorData)
+        throw new Error(errorData.error || 'Failed to run momentum scanner')
       }
       
       const result = await response.json()
@@ -2273,6 +2343,52 @@ export default function StockTracker() {
     try {
       console.log(`📝 Executing paper trade: ${signal.symbol} (${signal.positionSize} shares @ ₹${signal.entryPrice})...`)
       
+      // 🚨 RISK CHECK: Calculate total capital used
+      const totalCapitalUsed = paperPositions
+        .filter(p => p.status === 'open')
+        .reduce((sum, p) => sum + (p.capitalRequired || 0), 0)
+      
+      const newTradeCapital = signal.capitalRequired || (signal.positionSize * signal.entryPrice)
+      const totalAfterTrade = totalCapitalUsed + newTradeCapital
+      
+      console.log(`💰 Capital Check:`)
+      console.log(`   Current: ₹${totalCapitalUsed.toLocaleString()}`)
+      console.log(`   New Trade: ₹${newTradeCapital.toLocaleString()}`)
+      console.log(`   Total: ₹${totalAfterTrade.toLocaleString()}`)
+      console.log(`   Limit: ₹${momentumCapital.toLocaleString()}`)
+      
+      // Check if exceeds capital limit
+      if (totalAfterTrade > momentumCapital) {
+        const exceeded = totalAfterTrade - momentumCapital
+        alert(
+          `🚨 RISK LIMIT EXCEEDED!\n\n` +
+          `You have ₹${totalCapitalUsed.toLocaleString()} deployed in ${paperPositions.filter(p => p.status === 'open').length} positions.\n` +
+          `This trade needs ₹${newTradeCapital.toLocaleString()}.\n\n` +
+          `Total would be: ₹${totalAfterTrade.toLocaleString()}\n` +
+          `Your limit: ₹${momentumCapital.toLocaleString()}\n\n` +
+          `❌ Exceeds limit by: ₹${exceeded.toLocaleString()}\n\n` +
+          `💡 Either:\n` +
+          `• Close some positions first\n` +
+          `• Increase your capital limit\n` +
+          `• Skip this trade`
+        )
+        setIsExecutingTrade(false)
+        return
+      }
+      
+      // Check max positions limit
+      const openPositionsCount = paperPositions.filter(p => p.status === 'open').length
+      if (openPositionsCount >= momentumMaxPositions) {
+        alert(
+          `🚨 MAX POSITIONS REACHED!\n\n` +
+          `You have ${openPositionsCount} open positions.\n` +
+          `Your limit: ${momentumMaxPositions} positions\n\n` +
+          `💡 Close a position before opening new ones.`
+        )
+        setIsExecutingTrade(false)
+        return
+      }
+      
       const response = await fetch('/api/positions/paper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2326,6 +2442,128 @@ export default function StockTracker() {
       setIsExecutingTrade(false)
     }
   }
+
+  // 📊 Fetch Analyst Reports for a symbol
+  async function fetchAnalystReports(symbol: string) {
+    // Check cache first
+    if (analystReportsCache[symbol]) {
+      return analystReportsCache[symbol]
+    }
+
+    try {
+      const response = await fetch(`/api/reports/upload?symbol=${symbol}&limit=3`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports')
+      }
+
+      const data = await response.json()
+      const reports = data.reports || []
+
+      // Cache the results
+      setAnalystReportsCache(prev => ({
+        ...prev,
+        [symbol]: reports
+      }))
+
+      return reports
+    } catch (error: any) {
+      console.error(`Error fetching reports for ${symbol}:`, error)
+      return []
+    }
+  }
+
+  // 🔄 Load analyst reports for visible signals
+  useEffect(() => {
+    if (momentumScanResult?.signals && momentumScanResult.signals.length > 0) {
+      // Fetch reports for first 10 signals (to avoid too many API calls)
+      const symbols = momentumScanResult.signals.slice(0, 10).map(s => s.symbol)
+      symbols.forEach(symbol => {
+        if (!analystReportsCache[symbol]) {
+          fetchAnalystReports(symbol)
+        }
+      })
+    }
+  }, [momentumScanResult])
+
+  // 🔄 Auto P&L Update Function
+  async function updateAllPositionsPnL() {
+    if (!authStatus.authenticated) return
+
+    try {
+      console.log('🔄 Updating all positions P&L...')
+      
+      const response = await fetch('/api/positions/paper/update-pnl', {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update P&L')
+      }
+
+      const data = await response.json()
+      
+      console.log(`✅ P&L updated: ${data.updated} positions`)
+      
+      if (data.autoExits && data.autoExits.length > 0) {
+        console.log(`🎯 Auto-exited ${data.autoExits.length} positions:`)
+        data.autoExits.forEach((exit: any) => {
+          console.log(`  ${exit.symbol}: ${exit.reason} @ ₹${exit.exitPrice} | P&L: ₹${exit.pnl.toFixed(2)}`)
+        })
+        
+        // Add to alerts
+        setAutoExitAlerts(prev => [...prev, ...data.autoExits])
+        
+        // Show browser notification if supported
+        if ('Notification' in window && Notification.permission === 'granted') {
+          data.autoExits.forEach((exit: any) => {
+            new Notification(`Position Auto-Exited: ${exit.symbol}`, {
+              body: `${exit.reason}: ₹${exit.pnl.toFixed(2)} (${exit.pnlPercent.toFixed(2)}%)`,
+              icon: exit.pnl >= 0 ? '💰' : '💸'
+            })
+          })
+        }
+      }
+      
+      setLastPnLUpdate(new Date())
+      
+      // Reload positions to show updated data
+      await loadPaperPositions()
+      
+    } catch (error: any) {
+      console.error('❌ Error updating P&L:', error)
+    }
+  }
+
+  // 🔄 Auto-update interval (every 5 minutes when enabled)
+  useEffect(() => {
+    if (!autoUpdateEnabled || !authStatus.authenticated) return
+
+    // Initial update
+    updateAllPositionsPnL()
+
+    // Set up interval (5 minutes = 300000ms)
+    const interval = setInterval(() => {
+      updateAllPositionsPnL()
+    }, 300000) // 5 minutes
+
+    console.log('✅ Auto P&L updates enabled (every 5 min)')
+
+    return () => {
+      clearInterval(interval)
+      console.log('⏹️ Auto P&L updates disabled')
+    }
+  }, [autoUpdateEnabled, authStatus.authenticated])
+
+  // 🔔 Request notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('✅ Notification permission granted')
+        }
+      })
+    }
+  }, [])
 
   // Fetch fundamental data for a stock
   async function fetchFundamentals() {
@@ -2544,14 +2782,47 @@ export default function StockTracker() {
     )
   }
 
+  // 🔒 EARLY RETURN: Show loading while checking auth, don't show "not authenticated" yet
+  if (authLoading || isLoggingOut) {
+    return (
+      <div className="container" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        gap: '20px'
+      }}>
+        <div style={{
+          width: '60px',
+          height: '60px',
+          border: '4px solid rgba(0, 255, 255, 0.2)',
+          borderTop: '4px solid #00ffff',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <h2 style={{ color: '#00ffff', margin: 0 }}>
+          {isLoggingOut ? 'Logging out...' : 'Loading...'}
+        </h2>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    )
+  }
+
   if (!authStatus.authenticated) {
     return (
       <div className="container">
-        <h1>🚀 Indian Stock Tracker - Zerodha Kite</h1>
+        <h1>⚡ Vibe Trades</h1>
         
         <div className="alert warning">
           <strong>🔐 Authentication Required</strong>
-          <p style={{ marginTop: '10px' }}>Please login with your Zerodha account to access live NSE/BSE market data.</p>
+          <p style={{ marginTop: '10px' }}>Catch the vibe, stack the cash 💸</p>
+          <p style={{ marginTop: '5px', fontSize: '0.95em' }}>Login with your Zerodha account to access live NSE/BSE market data.</p>
           <button onClick={handleLogin} style={{ marginTop: '15px' }}>
             Login with Zerodha Kite
           </button>
@@ -2566,10 +2837,10 @@ export default function StockTracker() {
         <div className="card">
           <h3>Features</h3>
           <ul style={{ marginTop: '15px', lineHeight: '1.8' }}>
-            <li>✅ Real-time NSE/BSE stock quotes via Zerodha Kite Connect</li>
-            <li>📊 Advanced technical analysis (RSI, MACD, Bollinger Bands)</li>
+            <li>⚡ Real-time NSE/BSE stock quotes via Zerodha Kite Connect</li>
+            <li>🧠 AI-powered technical analysis (RSI, MACD, Bollinger Bands)</li>
             <li>🎯 Automated trading signals (Buy/Sell/Hold)</li>
-            <li>🔍 Stock screener for top opportunities</li>
+            <li>💎 Master scoring system (Technical + Fundamental + Intelligence)</li>
             <li>📈 Historical data for comprehensive analysis</li>
             <li>⚡ Live market data with no rate limits</li>
           </ul>
@@ -2584,7 +2855,7 @@ export default function StockTracker() {
 
   return (
     <div className="container">
-      <h1>🚀 Indian Stock Tracker - Zerodha Kite</h1>
+      <h1>⚡ Vibe Trades</h1>
 
       <div className={error ? "alert warning" : "alert"}>
         {error ? (
@@ -2655,6 +2926,91 @@ export default function StockTracker() {
               >
                 🚀 Quick Ref
               </a>
+              
+              {/* Utility Buttons */}
+              <button 
+                onClick={() => setActiveTab('settings')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.9em',
+                  background: activeTab === 'settings' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255, 255, 255, 0.1)',
+                  border: activeTab === 'settings' ? '2px solid rgba(102, 126, 234, 0.5)' : '2px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontWeight: activeTab === 'settings' ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  if (activeTab !== 'settings') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeTab !== 'settings') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                ⚙️ Settings
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('backtest')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '0.9em',
+                  background: activeTab === 'backtest' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'rgba(255, 255, 255, 0.1)',
+                  border: activeTab === 'backtest' ? '2px solid rgba(102, 126, 234, 0.5)' : '2px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontWeight: activeTab === 'backtest' ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  if (activeTab !== 'backtest') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (activeTab !== 'backtest') {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                🔬 Backtest
+              </button>
+              
+              {userRole === 'admin' && (
+                <button 
+                  onClick={() => setActiveTab('admin')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.9em',
+                    background: activeTab === 'admin' ? 'linear-gradient(135deg, #F093FB 0%, #F5576C 100%)' : 'rgba(255, 255, 255, 0.1)',
+                    border: activeTab === 'admin' ? '2px solid rgba(240, 147, 251, 0.5)' : '2px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontWeight: activeTab === 'admin' ? 'bold' : 'normal',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (activeTab !== 'admin') {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (activeTab !== 'admin') {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                    }
+                  }}
+                >
+                  👑 Admin
+                </button>
+              )}
+              
               <button onClick={handleLogout} style={{ padding: '6px 12px', fontSize: '0.9em' }}>
                 Logout
               </button>
@@ -2733,10 +3089,36 @@ export default function StockTracker() {
           🌐 Market
         </button>
         <button 
+          className={`tab ${activeTab === 'tradenow' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tradenow')}
+          style={{
+            background: activeTab === 'tradenow' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : undefined,
+            fontWeight: activeTab === 'tradenow' ? 'bold' : undefined
+          }}
+        >
+          🎯 TRADE NOW
+        </button>
+        <button 
+          className={`tab ${activeTab === 'newspop' ? 'active' : ''}`}
+          onClick={() => setActiveTab('newspop')}
+          style={{
+            background: activeTab === 'newspop' ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : undefined,
+            fontWeight: activeTab === 'newspop' ? 'bold' : undefined
+          }}
+        >
+          📰 News Pops
+        </button>
+        <button 
           className={`tab ${activeTab === 'momentum' ? 'active' : ''}`}
           onClick={() => setActiveTab('momentum')}
         >
           💰 Momentum
+        </button>
+        <button 
+          className={`tab ${activeTab === 'research' ? 'active' : ''}`}
+          onClick={() => setActiveTab('research')}
+        >
+          📊 Research
         </button>
       </div>
 
@@ -6844,7 +7226,268 @@ export default function StockTracker() {
                   padding: '20px',
                   marginBottom: '20px'
                 }}>
-                  <h4 style={{ marginBottom: '15px', fontSize: '1.3em' }}>📝 Your Paper Positions</h4>
+                  {/* Auto-Update Controls & Alerts */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '20px',
+                    flexWrap: 'wrap',
+                    gap: '15px'
+                  }}>
+                    <h4 style={{ margin: 0, fontSize: '1.3em' }}>📝 Your Paper Positions</h4>
+                    
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {/* Position Filter */}
+                      <div style={{ display: 'flex', gap: '5px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '8px', padding: '4px' }}>
+                        <button
+                          onClick={() => setPositionFilter('open')}
+                          style={{
+                            padding: '6px 12px',
+                            background: positionFilter === 'open' ? 'rgba(0, 255, 100, 0.3)' : 'transparent',
+                            border: positionFilter === 'open' ? '1px solid rgba(0, 255, 100, 0.5)' : '1px solid transparent',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '0.85em',
+                            fontWeight: positionFilter === 'open' ? 'bold' : 'normal'
+                          }}
+                        >
+                          Open ({paperPositions.filter(p => p.status === 'open').length})
+                        </button>
+                        <button
+                          onClick={() => setPositionFilter('closed')}
+                          style={{
+                            padding: '6px 12px',
+                            background: positionFilter === 'closed' ? 'rgba(100, 100, 100, 0.3)' : 'transparent',
+                            border: positionFilter === 'closed' ? '1px solid rgba(100, 100, 100, 0.5)' : '1px solid transparent',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '0.85em',
+                            fontWeight: positionFilter === 'closed' ? 'bold' : 'normal'
+                          }}
+                        >
+                          Closed ({paperPositions.filter(p => p.status === 'closed').length})
+                        </button>
+                        <button
+                          onClick={() => setPositionFilter('all')}
+                          style={{
+                            padding: '6px 12px',
+                            background: positionFilter === 'all' ? 'rgba(102, 126, 234, 0.3)' : 'transparent',
+                            border: positionFilter === 'all' ? '1px solid rgba(102, 126, 234, 0.5)' : '1px solid transparent',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '0.85em',
+                            fontWeight: positionFilter === 'all' ? 'bold' : 'normal'
+                          }}
+                        >
+                          All ({paperPositions.length})
+                        </button>
+                      </div>
+
+                      {/* Auto-Update Toggle */}
+                      <button
+                        onClick={() => setAutoUpdateEnabled(!autoUpdateEnabled)}
+                        style={{
+                          padding: '10px 20px',
+                          background: autoUpdateEnabled 
+                            ? 'linear-gradient(135deg, #00ff64 0%, #00b894 100%)'
+                            : 'rgba(255, 255, 255, 0.1)',
+                          border: `2px solid ${autoUpdateEnabled ? 'rgba(0, 255, 100, 0.5)' : 'rgba(255, 255, 255, 0.3)'}`,
+                          borderRadius: '8px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          fontSize: '0.9em'
+                        }}
+                      >
+                        {autoUpdateEnabled ? '⚡ Auto-Update ON' : '⏸️ Auto-Update OFF'}
+                      </button>
+
+                      {/* Manual Update Button */}
+                      <button
+                        onClick={() => updateAllPositionsPnL()}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'rgba(102, 126, 234, 0.2)',
+                          border: '2px solid rgba(102, 126, 234, 0.4)',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          fontSize: '0.9em'
+                        }}
+                      >
+                        🔄 Update Now
+                      </button>
+
+                      {/* Last Update Time */}
+                      {lastPnLUpdate && (
+                        <span style={{
+                          fontSize: '0.85em',
+                          opacity: 0.7,
+                          padding: '8px 12px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '6px'
+                        }}>
+                          Last: {lastPnLUpdate.toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* P&L Summary Section */}
+                  {paperPositions.length > 0 && (
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '12px',
+                      padding: '15px 20px',
+                      marginBottom: '15px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '15px'
+                    }}>
+                      {(() => {
+                        const filteredPositions = paperPositions.filter(position => {
+                          if (positionFilter === 'open') return position.status === 'open'
+                          if (positionFilter === 'closed') return position.status === 'closed'
+                          return true
+                        })
+
+                        const totalCapitalUsed = filteredPositions
+                          .filter(p => p.status === 'open')
+                          .reduce((sum, p) => sum + (p.capitalRequired || 0), 0)
+                        
+                        const totalPnL = filteredPositions.reduce((sum, p) => sum + (p.pnl || 0), 0)
+                        const totalPnLPercent = totalCapitalUsed > 0 
+                          ? (totalPnL / totalCapitalUsed) * 100 
+                          : 0
+                        
+                        const winners = filteredPositions.filter(p => (p.pnl || 0) > 0).length
+                        const losers = filteredPositions.filter(p => (p.pnl || 0) < 0).length
+                        const winRate = filteredPositions.length > 0 
+                          ? ((winners / filteredPositions.length) * 100).toFixed(1)
+                          : '0.0'
+
+                        return (
+                          <>
+                            <div>
+                              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '4px' }}>
+                                {positionFilter === 'open' ? 'Capital Deployed' : 'Total P&L'}
+                              </div>
+                              <div style={{ 
+                                fontSize: '1.3em', 
+                                fontWeight: 'bold',
+                                color: positionFilter === 'open' ? '#3B82F6' : (totalPnL >= 0 ? '#10B981' : '#EF4444')
+                              }}>
+                                ₹{(positionFilter === 'open' ? totalCapitalUsed : totalPnL).toLocaleString()}
+                              </div>
+                              {positionFilter === 'open' && (
+                                <div style={{ fontSize: '0.8em', opacity: 0.6, marginTop: '2px' }}>
+                                  of ₹{momentumCapital.toLocaleString()} ({((totalCapitalUsed / momentumCapital) * 100).toFixed(1)}%)
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '4px' }}>Unrealized P&L</div>
+                              <div style={{ 
+                                fontSize: '1.3em', 
+                                fontWeight: 'bold',
+                                color: totalPnL >= 0 ? '#10B981' : '#EF4444'
+                              }}>
+                                {totalPnL >= 0 ? '+' : ''}₹{totalPnL.toLocaleString()}
+                              </div>
+                              <div style={{ 
+                                fontSize: '0.9em', 
+                                color: totalPnL >= 0 ? '#10B981' : '#EF4444',
+                                opacity: 0.8,
+                                marginTop: '2px'
+                              }}>
+                                ({totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%)
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '4px' }}>Positions</div>
+                              <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#A78BFA' }}>
+                                {filteredPositions.length}
+                              </div>
+                              <div style={{ fontSize: '0.8em', opacity: 0.6, marginTop: '2px' }}>
+                                {positionFilter === 'open' && `of ${momentumMaxPositions} max`}
+                                {positionFilter === 'closed' && 'Exited'}
+                                {positionFilter === 'all' && `${paperPositions.filter(p => p.status === 'open').length} open`}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '4px' }}>Win Rate</div>
+                              <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#F59E0B' }}>
+                                {winRate}%
+                              </div>
+                              <div style={{ fontSize: '0.8em', opacity: 0.6, marginTop: '2px' }}>
+                                {winners}W / {losers}L
+                              </div>
+                            </div>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Auto-Exit Alerts */}
+                  {autoExitAlerts.length > 0 && (
+                    <div style={{
+                      marginBottom: '15px',
+                      padding: '15px',
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      border: '2px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                      }}>
+                        <h5 style={{ margin: 0, color: '#FCD34D' }}>🎯 Recent Auto-Exits</h5>
+                        <button
+                          onClick={() => setAutoExitAlerts([])}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '0.8em'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      {autoExitAlerts.slice(-5).reverse().map((exit, i) => (
+                        <div key={i} style={{
+                          padding: '8px',
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          borderRadius: '4px',
+                          marginBottom: '5px',
+                          fontSize: '0.9em'
+                        }}>
+                          <strong>{exit.symbol}</strong>: {exit.reason.replace('_', ' ')} @ ₹{exit.exitPrice.toFixed(2)} 
+                          <span style={{
+                            marginLeft: '10px',
+                            fontWeight: 'bold',
+                            color: exit.pnl >= 0 ? '#00ff64' : '#ff0064'
+                          }}>
+                            {exit.pnl >= 0 ? '+' : ''}₹{exit.pnl.toFixed(2)} ({exit.pnlPercent > 0 ? '+' : ''}{exit.pnlPercent.toFixed(2)}%)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{
@@ -6872,7 +7515,13 @@ export default function StockTracker() {
                         </tr>
                       </thead>
                       <tbody>
-                        {paperPositions.map((position, index) => {
+                        {paperPositions
+                          .filter(position => {
+                            if (positionFilter === 'open') return position.status === 'open'
+                            if (positionFilter === 'closed') return position.status === 'closed'
+                            return true // 'all'
+                          })
+                          .map((position, index) => {
                           const pnl = position.pnl || 0
                           const pnlPercent = position.pnlPercent || 0
                           const isProfitable = pnl >= 0
@@ -7461,6 +8110,61 @@ export default function StockTracker() {
                           </div>
                         )}
                         
+                        {/* Analyst Reports */}
+                        {analystReportsCache[signal.symbol] && analystReportsCache[signal.symbol].length > 0 && (
+                          <div style={{
+                            fontSize: '0.75em',
+                            padding: '8px',
+                            background: 'rgba(102, 126, 234, 0.15)',
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            borderRadius: '6px',
+                            marginBottom: '10px'
+                          }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#A78BFA' }}>
+                              💡 Analyst View
+                            </div>
+                            {analystReportsCache[signal.symbol].slice(0, 1).map((report: any) => (
+                              <div key={report.id}>
+                                {report.structuredData?.rating && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                    <span style={{ opacity: 0.8 }}>Rating:</span>
+                                    <span style={{ 
+                                      fontWeight: 'bold',
+                                      color: report.structuredData.rating === 'BUY' || report.structuredData.rating === 'ACCUMULATE' 
+                                        ? '#00ff64' 
+                                        : report.structuredData.rating === 'SELL' || report.structuredData.rating === 'REDUCE'
+                                          ? '#EF4444'
+                                          : '#FCD34D'
+                                    }}>
+                                      {report.structuredData.rating}
+                                    </span>
+                                  </div>
+                                )}
+                                {report.structuredData?.targetPrice && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                    <span style={{ opacity: 0.8 }}>Target:</span>
+                                    <span style={{ fontWeight: 'bold', color: '#3B82F6' }}>
+                                      ₹{report.structuredData.targetPrice}
+                                      {report.structuredData.upside && (
+                                        <span style={{ 
+                                          fontSize: '0.85em', 
+                                          marginLeft: '4px',
+                                          color: report.structuredData.upside > 0 ? '#00ff64' : '#EF4444'
+                                        }}>
+                                          ({report.structuredData.upside > 0 ? '+' : ''}{report.structuredData.upside.toFixed(1)}%)
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                                <div style={{ fontSize: '0.9em', opacity: 0.7, marginTop: '4px' }}>
+                                  {report.source} • {new Date(report.reportDate).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         {/* Execute Button */}
                         <button
                           onClick={() => executePaperTrade(signal)}
@@ -7527,6 +8231,175 @@ export default function StockTracker() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 🎯 TRADE NOW TAB */}
+      {activeTab === 'tradenow' && (
+        <TradeNowTab
+          capitalAvailable={momentumCapital}
+          capitalDeployed={paperPositions
+            .filter(p => p.status === 'open')
+            .reduce((sum, p) => sum + (p.capitalRequired || 0), 0)
+          }
+          openPositions={paperPositions.filter(p => p.status === 'open').length}
+          maxPositions={momentumMaxPositions}
+          todayPnL={paperPositions
+            .filter(p => p.status === 'open')
+            .reduce((sum, p) => sum + (p.pnl || 0), 0)
+          }
+          onExecuteTrade={async (signal, tradeType) => {
+            try {
+              console.log(`🚀 Executing ${tradeType} trade for ${signal.symbol}`)
+              
+              // Handle different signal types
+              const isMomentum = 'totalScore' in signal
+              const tradePlan = signal.tradePlan
+              
+              // Get target prices based on signal type
+              let target1, target2
+              if (isMomentum) {
+                // MasterScore type has target1 and target2
+                target1 = tradePlan.target1
+                target2 = tradePlan.target2
+              } else {
+                // NewsPop type has quickTarget
+                target1 = (tradePlan as any).quickTarget
+                target2 = (tradePlan as any).quickTarget
+              }
+              
+              // Get reasoning
+              const notes = isMomentum 
+                ? (signal as any).reasoning?.join('; ') || '' 
+                : `News pop detected at ${new Date().toLocaleTimeString()}`
+              
+              // Execute paper trade
+              const response = await fetch('/api/positions/paper', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  symbol: signal.symbol,
+                  exchange: signal.exchange || 'NSE',
+                  positionType: 'LONG',  // Required field!
+                  entryPrice: tradePlan.entry,
+                  quantity: tradePlan.positionSize,
+                  stopLoss: tradePlan.stopLoss,
+                  target1: target1,
+                  target2: target2,
+                  capitalRequired: tradePlan.capitalRequired,
+                  riskAmount: tradePlan.riskAmount,
+                  strategy: tradeType,  // 'MOMENTUM' or 'NEWS_POP'
+                  momentumScore: isMomentum ? signal.totalScore : 0,
+                  confidence: isMomentum ? signal.totalScore : 100,
+                  reasons: isMomentum ? (signal as any).reasoning : [`News pop detected at ${new Date().toLocaleTimeString()}`],
+                  tradeType: tradeType,
+                  notes: notes
+                })
+              })
+              
+              if (response.ok) {
+                const data = await response.json()
+                console.log('✅ Trade executed:', data)
+                alert(`✅ Paper trade executed!\n\n${signal.symbol}\nEntry: ₹${tradePlan.entry}\nSize: ${tradePlan.positionSize} shares`)
+                
+                // Refresh paper positions
+                await loadPaperPositions()
+              } else {
+                const errorData = await response.json()
+                console.error('❌ Trade execution failed:', errorData)
+                alert(`❌ Failed to execute trade: ${errorData.error}`)
+              }
+            } catch (error: any) {
+              console.error('❌ Trade execution error:', error)
+              alert(`❌ Error: ${error.message}`)
+            }
+          }}
+        />
+      )}
+
+      {/* 📰 NEWS POP TAB */}
+      {activeTab === 'newspop' && (
+        <NewsPopTab
+          capitalAvailable={momentumCapital}
+          onExecuteTrade={async (signal, tradeType) => {
+            try {
+              console.log(`🚀 Executing ${tradeType} trade for ${signal.symbol}`)
+              
+              // News Pop signals have full master score data
+              const tradePlan = signal.tradePlan
+              
+              // Execute paper trade
+              const response = await fetch('/api/positions/paper', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  symbol: signal.symbol,
+                  exchange: signal.exchange || 'NSE',
+                  positionType: 'LONG',
+                  entryPrice: tradePlan.entry,
+                  quantity: tradePlan.positionSize,
+                  stopLoss: tradePlan.stopLoss,
+                  target1: tradePlan.target1,
+                  target2: tradePlan.target2,
+                  capitalRequired: tradePlan.capitalRequired,
+                  riskAmount: tradePlan.riskAmount,
+                  strategy: tradeType,
+                  momentumScore: signal.totalScore,
+                  confidence: signal.totalScore,
+                  reasons: signal.reasoning || [`News pop: ${signal.newsSentiment}`],
+                  tradeType: tradeType,
+                  notes: `News pop detected. Sentiment: ${signal.newsSentiment}. Volume spike: ${signal.volumeSpike.toFixed(1)}x`
+                })
+              })
+              
+              if (response.ok) {
+                const data = await response.json()
+                console.log('✅ Trade executed:', data)
+                alert(`✅ Paper trade executed!\n\n${signal.symbol}\nEntry: ₹${tradePlan.entry}\nSize: ${tradePlan.positionSize} shares`)
+                
+                // Refresh paper positions
+                await loadPaperPositions()
+              } else {
+                const errorData = await response.json()
+                console.error('❌ Trade execution failed:', errorData)
+                alert(`❌ Failed to execute trade: ${errorData.error}`)
+              }
+            } catch (error: any) {
+              console.error('❌ Trade execution error:', error)
+              alert(`❌ Error: ${error.message}`)
+            }
+          }}
+        />
+      )}
+
+      {/* 📊 RESEARCH TAB */}
+      {activeTab === 'research' && (
+        <ResearchTab />
+      )}
+
+      {/* ⚙️ SETTINGS TAB */}
+      {activeTab === 'settings' && (
+        <TelegramSettingsTab />
+      )}
+
+      {/* 🔬 BACKTEST TAB */}
+      {activeTab === 'backtest' && (
+        <BacktestTab />
+      )}
+
+      {/* 👑 ADMIN TAB */}
+      {activeTab === 'admin' && (
+        <div style={{ padding: '20px' }}>
+          <iframe 
+            src="/admin" 
+            style={{ 
+              width: '100%', 
+              height: 'calc(100vh - 200px)', 
+              border: 'none',
+              borderRadius: '8px'
+            }}
+            title="Admin Dashboard"
+          />
         </div>
       )}
 
