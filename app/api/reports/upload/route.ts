@@ -5,10 +5,11 @@ import path from 'path'
 import crypto from 'crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { db } from '@/db'
-import { analystReports } from '@/db/schema'
+import { analystReports, users } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { cookies } from 'next/headers'
-import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { addServerLog } from '../logs/route'
 
 // Use dynamic import for pdf-parse to avoid build issues
 let pdfParse: any = null
@@ -31,13 +32,42 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Check authentication
-    const userId = await getAuthenticatedUserId()
+    addServerLog('📥 === NEW UPLOAD REQUEST ===')
+    
+    // 1. Check authentication (with test mode for development)
+    let userId = await getAuthenticatedUserIdCompat()
+    
     if (!userId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Not authenticated'
-      }, { status: 401 })
+      // Test mode: Use a default test user if not authenticated in development
+      if (process.env.NODE_ENV === 'development') {
+        addServerLog('⚠️ Using test mode - creating/finding test user')
+        
+        // Get or create a test user
+        const testUser = await db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.kiteUserId, 'TEST_USER'))
+          .limit(1)
+        
+        if (testUser.length > 0) {
+          userId = testUser[0].id
+          addServerLog(`✅ Using test user ID: ${userId}`)
+        } else {
+          // Create test user
+          const [newUser] = await db.insert(users).values({
+            kiteUserId: 'TEST_USER',
+            kiteAccessToken: 'test_token',
+            email: 'test@example.com',
+          }).returning({ id: users.id })
+          
+          userId = newUser.id
+          addServerLog(`✅ Created test user with ID: ${userId}`)
+        }
+      } else {
+        return NextResponse.json({
+          success: false,
+          error: 'Not authenticated'
+        }, { status: 401 })
+      }
     }
 
     // 2. Get form data
@@ -47,13 +77,14 @@ export async function POST(request: NextRequest) {
     const source = formData.get('source') as string || 'HDFC Securities'
     
     if (!file) {
+      addServerLog('❌ Error: No file uploaded')
       return NextResponse.json({
         success: false,
         error: 'No file uploaded'
       }, { status: 400 })
     }
 
-    console.log(`📄 Processing report: ${file.name} (${file.size} bytes)`)
+    addServerLog(`📄 Processing: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`)
 
     // 3. Save PDF to local storage
     const bytes = await file.arrayBuffer()
@@ -75,21 +106,56 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer)
     const relativePath = `/uploads/reports/${fileName}`
     
-    console.log(`✅ PDF saved: ${relativePath}`)
+    addServerLog(`✅ PDF saved: ${relativePath}`)
 
-    // 4. Extract text from PDF
+    // 4. Extract text from PDF or text file
     let fullText = ''
-    try {
-      const pdf = await getPdfParse()
-      const pdfData = await pdf(buffer)
-      fullText = pdfData.text
-      console.log(`📝 Extracted ${fullText.length} characters from PDF`)
-    } catch (error) {
-      console.error('Error extracting PDF text:', error)
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to extract text from PDF'
-      }, { status: 500 })
+    const isTextFile = file.type === 'text/plain' || file.name.endsWith('.txt')
+    
+    if (isTextFile) {
+      // If it's a text file, just read it directly
+      fullText = buffer.toString('utf-8')
+      addServerLog(`📝 Text file: ${fullText.length} characters`)
+    } else {
+      // For PDFs, try multiple extraction methods
+      
+      // Method 1: Try pdf-parse first (fast but sometimes incomplete)
+      try {
+        const pdf = await getPdfParse()
+        const pdfData = await pdf(buffer)
+        fullText = pdfData.text
+        addServerLog(`📝 pdf-parse: Extracted ${fullText.length} characters`)
+        
+        // If we got very little text, the PDF might have images or complex layout
+        if (fullText.length < 100) {
+          addServerLog('⚠️ Very little text extracted (<100 chars)')
+        }
+      } catch (error: any) {
+        addServerLog(`❌ pdf-parse failed: ${error.message}`)
+      }
+      
+      // Method 2: If Gemini is available and extraction was poor, use Gemini Vision
+      if (genAI && fullText.length < 500) {
+        addServerLog('🤖 Trying Gemini Vision (text < 500 chars)...')
+        try {
+          // Use Gemini to read the PDF as an image
+          const base64Pdf = buffer.toString('base64')
+          const extractedText = await extractTextWithGeminiVision(base64Pdf, buffer)
+          
+          if (extractedText && extractedText.length > fullText.length) {
+            addServerLog(`✅ Gemini Vision: ${extractedText.length} characters`)
+            fullText = extractedText
+          }
+        } catch (error: any) {
+          addServerLog(`❌ Gemini Vision failed: ${error.message}`)
+        }
+      }
+      
+      // If still no good text, create a placeholder
+      if (fullText.length < 50) {
+        fullText = `[PDF text extraction incomplete. File saved for manual review: ${file.name}]`
+        addServerLog('⚠️ Extraction incomplete, using placeholder')
+      }
     }
 
     // 5. Parse report using AI (Gemini) or regex
@@ -104,23 +170,33 @@ export async function POST(request: NextRequest) {
     // Try AI extraction first (if Gemini key is available)
     if (genAI && reportType === 'STOCK_REPORT') {
       try {
-        const parsedData = await parseStockReportWithAI(fullText)
-        structuredData = parsedData.structuredData
-        sentiment = parsedData.sentiment
-        sentimentScore = parsedData.sentimentScore
-        confidenceLevel = parsedData.confidenceLevel
-        summary = parsedData.summary
-        symbol = parsedData.symbol
-        title = parsedData.title || title
-        
-        console.log(`🤖 AI parsed: ${symbol} - ${sentiment}`)
-      } catch (error) {
-        console.error('AI parsing failed, falling back to regex:', error)
+        // If we have text, use it; otherwise, we'll need to handle PDF directly
+        if (fullText && fullText.length > 50) {
+          addServerLog(`🤖 Parsing with Gemini AI (${fullText.length} chars)...`)
+          const parsedData = await parseStockReportWithAI(fullText)
+          structuredData = parsedData.structuredData
+          sentiment = parsedData.sentiment
+          sentimentScore = parsedData.sentimentScore
+          confidenceLevel = parsedData.confidenceLevel
+          summary = parsedData.summary
+          symbol = parsedData.symbol
+          title = parsedData.title || title
+          
+          addServerLog(`✅ AI parsed: ${symbol || 'N/A'} - ${sentiment} - ${structuredData.rating || 'N/A'}`)
+        } else {
+          addServerLog('⚠️ Text too short (<50 chars), skipping AI')
+        }
+      } catch (error: any) {
+        addServerLog(`❌ AI parsing failed: ${error.message}`)
+      }
+    } else {
+      if (!genAI) {
+        addServerLog('⚠️ Gemini API key not configured')
       }
     }
 
     // Fallback: Regex-based parsing for HDFC Securities
-    if (!symbol && source === 'HDFC Securities') {
+    if (!symbol && source === 'HDFC Securities' && fullText && fullText.length > 50) {
       const regexParsed = parseHDFCReport(fullText)
       structuredData = regexParsed.structuredData
       sentiment = regexParsed.sentiment
@@ -128,6 +204,17 @@ export async function POST(request: NextRequest) {
       title = regexParsed.title || title
       
       console.log(`🔍 Regex parsed: ${symbol} - ${sentiment}`)
+    }
+    
+    // If still no data extracted, create placeholder
+    if (!symbol && !structuredData.rating) {
+      console.log('⚠️ Could not extract data, creating placeholder')
+      structuredData = {
+        note: 'PDF saved but extraction failed. Please add data manually or re-upload with text extraction enabled.',
+        fileName: file.name
+      }
+      title = file.name.replace('.pdf', '')
+      summary = `Report uploaded: ${file.name}. Manual review required.`
     }
 
     // 6. Save to database
@@ -180,7 +267,8 @@ async function parseStockReportWithAI(text: string) {
     throw new Error('Gemini API key not configured')
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+  // Use Gemini 2.5 Flash (latest stable model)
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `You are an expert at analyzing Indian stock market analyst reports.
 
@@ -219,8 +307,11 @@ ${text.substring(0, 4000)}
 
 JSON:`;
 
+  addServerLog('🤖 Calling Gemini API...')
   const result = await model.generateContent(prompt)
   const response = result.response.text()
+  
+  addServerLog(`📥 Gemini response received (${response.length} chars)`)
   
   // Extract JSON from response
   let jsonStr = response.trim()
@@ -237,7 +328,44 @@ JSON:`;
     sentiment: parsed.sentiment || 'NEUTRAL',
     sentimentScore: parsed.sentimentScore || 0,
     confidenceLevel: 0.85,
-    summary: `${parsed.rating} rating with target of ₹${parsed.targetPrice} (${parsed.upside}% upside). ${parsed.keyPoints[0] || ''}`
+    summary: `${parsed.rating} rating with target of ₹${parsed.targetPrice} (${parsed.upside}% upside). ${parsed.keyPoints?.[0] || ''}`
+  }
+}
+
+// Extract text from PDF using Gemini Vision API (for image-based PDFs)
+async function extractTextWithGeminiVision(base64Data: string, pdfBuffer: Buffer) {
+  if (!genAI) {
+    throw new Error('Gemini API key not configured')
+  }
+
+  // Use Gemini Pro Vision to read the PDF
+  // Note: This is a simplified approach - in production, you'd convert PDF pages to images first
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  const prompt = `This is text extracted from a financial analyst report PDF. 
+Please extract and return ALL the text content from this document, maintaining the structure and formatting as much as possible.
+Focus on extracting: Company name, stock symbol, rating, target price, current price, key highlights, and analyst recommendations.
+
+Return the complete text:`;
+
+  try {
+    addServerLog('🤖 Trying Gemini Vision for text extraction...')
+    // For now, we'll just use the basic Gemini model
+    // In a full implementation, you'd use gemini-pro-vision with converted PDF pages
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: base64Data.substring(0, 100000), // Limit size
+          mimeType: 'application/pdf'
+        }
+      }
+    ])
+    
+    return result.response.text()
+  } catch (error) {
+    addServerLog('⚠️ Gemini Vision not available or failed, using text-only')
+    return ''
   }
 }
 
@@ -312,12 +440,31 @@ function parseHDFCReport(text: string) {
 // GET endpoint to fetch reports
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    let userId = await getAuthenticatedUserIdCompat()
+    
     if (!userId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Not authenticated'
-      }, { status: 401 })
+      // Test mode: Use test user in development
+      if (process.env.NODE_ENV === 'development') {
+        const testUser = await db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.kiteUserId, 'TEST_USER'))
+          .limit(1)
+        
+        if (testUser.length > 0) {
+          userId = testUser[0].id
+        } else {
+          // No test user found, and we're not authenticated
+          return NextResponse.json({
+            success: false,
+            error: 'Not authenticated'
+          }, { status: 401 })
+        }
+      } else {
+        return NextResponse.json({
+          success: false,
+          error: 'Not authenticated'
+        }, { status: 401 })
+      }
     }
 
     const { searchParams } = new URL(request.url)

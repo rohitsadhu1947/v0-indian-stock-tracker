@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { KiteConnect } from 'kiteconnect';
-import { cookies } from 'next/headers';
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('kite_access_token')?.value;
+    // Get Kite access token (supports both Kite and email users)
+    const accessToken = await getKiteAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
-        { error: 'Not authenticated. Please login first.' },
+        { error: 'Not authenticated. Please ensure admin user has logged in via Kite.' },
         { status: 401 }
       );
     }

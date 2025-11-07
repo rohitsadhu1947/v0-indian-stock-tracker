@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KiteConnect } from 'kiteconnect'
-import { cookies } from 'next/headers'
 import { scanForMomentumSignals, NIFTY_500_SYMBOLS } from '@/lib/momentum-scanner'
-
-const KITE_API_KEY = process.env.KITE_API_KEY!
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 
 /**
  * GET /api/scanner/momentum
@@ -19,15 +17,23 @@ export async function GET(request: NextRequest) {
   try {
     console.log(`🔍 Starting momentum scan at ${new Date().toISOString()}`)
     
-    // 1. Check authentication
-    const cookieStore = cookies()
-    const accessToken = cookieStore.get('kite_access_token')?.value
+    // 1. Check authentication and get Kite token (supports both Kite and email users)
+    const accessToken = await getKiteAccessToken()
     
     if (!accessToken) {
       return NextResponse.json({
         success: false,
-        error: 'Not authenticated'
+        error: 'Not authenticated. Please ensure admin user has logged in via Kite to set master token.'
       }, { status: 401 })
+    }
+    
+    // Get API key
+    const apiKey = getKiteApiKey()
+    if (!apiKey) {
+      return NextResponse.json({
+        success: false,
+        error: 'Kite API key not configured'
+      }, { status: 500 })
     }
     
     // 2. Get query params
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 Starting ${isQuickScan ? 'QUICK' : 'FULL'} momentum scan (capital: ₹${capital.toLocaleString()}, maxPositions: ${maxPositions}, minScore: ${minScore})...`)
     
     // 3. Initialize Kite Connect
-    const kc = new KiteConnect({ api_key: KITE_API_KEY })
+    const kc = new KiteConnect({ api_key: apiKey })
     kc.setAccessToken(accessToken)
     
     // 4. Get instrument tokens for NIFTY 500 stocks + custom stocks
@@ -198,7 +204,8 @@ export async function GET(request: NextRequest) {
       minPrice: 50,
       maxPrice: 5000,
       minVolume: 50000, // Reduced from 100k to 50k
-      maxPositions
+      maxPositions,
+      customStocks // Pass custom stocks to scanner
     })
     
     console.log(`✅ Scan complete: ${scanResult.signalsFound} signals found, sentiment: ${scanResult.marketSentiment}`)

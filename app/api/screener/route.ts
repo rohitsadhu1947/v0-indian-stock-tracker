@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { screenerResults } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { getAuthenticatedUserId } from '@/lib/auth-helpers';
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 
 // GET: Fetch recent screener results for the user
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId();
+    const userId = await getAuthenticatedUserIdCompat();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 // POST: Save new screener results
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId();
+    const userId = await getAuthenticatedUserIdCompat();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 // DELETE: Clear old screener results (older than N days)
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId();
+    const userId = await getAuthenticatedUserIdCompat();
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }

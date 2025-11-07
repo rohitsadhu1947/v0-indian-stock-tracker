@@ -12,12 +12,37 @@ import { relations } from 'drizzle-orm'
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  kiteUserId: text('kite_user_id').unique().notNull(),
-  email: text('email'),
+  
+  // Kite Connect (optional now - only for admin or traders with own Kite)
+  kiteUserId: text('kite_user_id').unique(),
+  
+  // Email/Password Authentication (NEW)
+  email: text('email').unique().notNull(),
+  passwordHash: text('password_hash').notNull(), // bcrypt hashed password
+  
+  // User Info
   name: text('name'),
+  
+  // Role & Status (NEW)
+  role: text('role').notNull().default('viewer'), // 'admin' | 'viewer' | 'trader' | 'custom'
+  status: text('status').notNull().default('active'), // 'active' | 'suspended' | 'pending'
+  
+  // Master Kite Token (NEW - for admin, shared with viewers)
+  masterKiteToken: text('master_kite_token'), // Encrypted token for all viewers to use
+  masterKiteUserId: text('master_kite_user_id'), // Which Kite account is the master
+  
+  // Hierarchy (NEW)
+  createdBy: integer('created_by').references((): any => users.id), // Which admin created this user
+  
+  // Timestamps
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLogin: timestamp('last_login'),
-})
+}, (table) => ({
+  emailIdx: uniqueIndex('users_email_idx').on(table.email),
+  kiteUserIdx: index('users_kite_user_id_idx').on(table.kiteUserId),
+  roleIdx: index('users_role_idx').on(table.role),
+  statusIdx: index('users_status_idx').on(table.status),
+}))
 
 export const sessions = pgTable('sessions', {
   id: serial('id').primaryKey(),
@@ -288,8 +313,51 @@ export const userPreferences = pgTable('user_preferences', {
   defaultPositionSize: integer('default_position_size').default(100),
   riskPercentage: real('risk_percentage').default(2.0),
   preferences: jsonb('preferences'), // Additional settings as JSON
+  
+  // Telegram Alerts Integration
+  telegramEnabled: boolean('telegram_enabled').default(false),
+  telegramBotToken: text('telegram_bot_token'),
+  telegramChatId: text('telegram_chat_id'),
+  telegramAlertPreferences: jsonb('telegram_alert_preferences'), // { newSignals: true, targetHits: true, stopLossHits: true, dailySummary: true, positionUpdates: false }
+  
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
+
+// ============================================
+// USER PERMISSIONS & RBAC (NEW)
+// ============================================
+
+export const userPermissions = pgTable('user_permissions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).unique().notNull(),
+  
+  // Access Control
+  canViewSignals: boolean('can_view_signals').default(true).notNull(),
+  canViewPositions: boolean('can_view_positions').default(false).notNull(), // Can see admin's positions
+  canPaperTrade: boolean('can_paper_trade').default(true).notNull(),
+  canViewResearch: boolean('can_view_research').default(true).notNull(),
+  canRunBacktests: boolean('can_run_backtests').default(false).notNull(),
+  canAddCustomStocks: boolean('can_add_custom_stocks').default(false).notNull(),
+  canViewMarketDashboard: boolean('can_view_market_dashboard').default(true).notNull(),
+  canManageUsers: boolean('can_manage_users').default(false).notNull(), // Admin only
+  
+  // Visible Tabs (JSON array of tab names)
+  visibleTabs: jsonb('visible_tabs').default(['tradenow', 'research']), // ['tradenow', 'research', 'positions', 'backtest', 'market', etc.]
+  
+  // Subscription Tier (for future monetization)
+  subscriptionTier: text('subscription_tier').default('free').notNull(), // 'free' | 'pro' | 'premium'
+  subscriptionExpiresAt: timestamp('subscription_expires_at'),
+  
+  // Limits
+  maxPaperPositions: integer('max_paper_positions').default(10).notNull(),
+  maxBacktestsPerDay: integer('max_backtests_per_day').default(3).notNull(),
+  maxCustomStocks: integer('max_custom_stocks').default(5).notNull(),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: uniqueIndex('user_permissions_user_id_idx').on(table.userId),
+}))
 
 // ============================================
 // RELATIONS (Optional, for Drizzle Queries)
@@ -304,6 +372,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   tradeHistory: many(tradeHistory),
   alerts: many(alerts),
   preferences: one(userPreferences),
+  permissions: one(userPermissions), // NEW
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -362,6 +431,13 @@ export const alertsRelations = relations(alerts, ({ one }) => ({
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
   user: one(users, {
     fields: [userPreferences.userId],
+    references: [users.id],
+  }),
+}))
+
+export const userPermissionsRelations = relations(userPermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [userPermissions.userId],
     references: [users.id],
   }),
 }))

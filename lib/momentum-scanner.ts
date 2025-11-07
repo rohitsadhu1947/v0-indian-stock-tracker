@@ -422,13 +422,15 @@ export async function scanForMomentumSignals(
     maxPrice?: number
     minVolume?: number
     maxPositions?: number
+    customStocks?: string[] // Add custom stocks parameter
   } = {}
 ): Promise<MomentumScanResult> {
   const {
     minPrice = 50,
     maxPrice = 5000,
     minVolume = 100000,
-    maxPositions = 5
+    maxPositions = 5,
+    customStocks = [] // Default to empty array
   } = options
   
   const signals: MomentumSignal[] = []
@@ -446,18 +448,24 @@ export async function scanForMomentumSignals(
   
   for (const stock of stocksData) {
     try {
+      // Check if this is a custom stock (user manually requested)
+      const isCustomStock = customStocks.includes(stock.symbol)
+      
       // Basic filters
       if (stock.current < minPrice || stock.current > maxPrice) {
         filteredByPrice++
-        continue
+        // Skip custom stocks if price is too extreme (< ₹5 or > ₹20,000)
+        if (!isCustomStock || stock.current < 5 || stock.current > 20000) {
+          continue
+        }
       }
       if (stock.volume < minVolume) {
         filteredByVolume++
-        continue
+        if (!isCustomStock) continue // Force analyze custom stocks even with low volume
       }
       if (stock.candles.length < 30) {
         filteredByCandles++
-        continue
+        if (!isCustomStock) continue // Force analyze custom stocks even with limited data
       }
       
       // Calculate technical indicators
@@ -469,14 +477,26 @@ export async function scanForMomentumSignals(
       const atr = calculateATR(stock.candles, 14)
       const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
       
-      // Check for uptrend and momentum
-      if (!isInUptrend(sma5, sma10, sma20, stock.current)) {
-        filteredByUptrend++
-        continue
-      }
-      if (!hasMomentum(closes, 5)) {
-        filteredByMomentum++
-        continue
+      // Check for uptrend and momentum (skip for custom stocks - "Force Analysis")
+      if (!isCustomStock) {
+        if (!isInUptrend(sma5, sma10, sma20, stock.current)) {
+          filteredByUptrend++
+          continue
+        }
+        if (!hasMomentum(closes, 5)) {
+          filteredByMomentum++
+          continue
+        }
+      } else {
+        // Custom stock: Check but don't filter, just track
+        if (!isInUptrend(sma5, sma10, sma20, stock.current)) {
+          filteredByUptrend++
+          console.log(`🔍 Custom stock ${stock.symbol}: Not in uptrend (force analyzing anyway)`)
+        }
+        if (!hasMomentum(closes, 5)) {
+          filteredByMomentum++
+          console.log(`🔍 Custom stock ${stock.symbol}: No momentum detected (force analyzing anyway)`)
+        }
       }
       
       // Calculate momentum score
@@ -493,10 +513,13 @@ export async function scanForMomentumSignals(
       // Determine signal
       const { signal, confidence } = determineSignal(momentumScore, rsi, volumeRatio)
       
-      // Skip low-quality signals
-      if (signal === 'SKIP') {
+      // Skip low-quality signals (but not for custom stocks - always show them)
+      if (signal === 'SKIP' && !isCustomStock) {
         filteredByScore++
         continue
+      } else if (signal === 'SKIP' && isCustomStock) {
+        filteredByScore++
+        console.log(`🔍 Custom stock ${stock.symbol}: Low quality signal (force analyzing anyway)`)
       }
       
       // Calculate levels

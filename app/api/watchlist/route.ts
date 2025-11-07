@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { watchlists } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getCachedWatchlist, setCachedWatchlist, invalidateWatchlistCache } from '@/lib/data-cache'
 
 /**
@@ -16,7 +16,7 @@ import { getCachedWatchlist, setCachedWatchlist, invalidateWatchlistCache } from
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({

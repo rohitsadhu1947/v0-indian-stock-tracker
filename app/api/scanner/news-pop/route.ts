@@ -4,9 +4,10 @@ import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper';
 import { scanForNewsPops, type NewsPopSignal } from '@/lib/news-pop-scanner';
 import { batchCalculateMasterScores, type MasterScore } from '@/lib/master-scorer';
 import { db } from '@/db';
-import { analystReports } from '@/db/schema';
+import { analystReports, userPreferences } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
+import { sendNewsPopAlert, type TelegramConfig } from '@/lib/telegram-alerts';
 
 // Disable caching
 export const dynamic = 'force-dynamic';
@@ -237,6 +238,74 @@ export async function GET(request: NextRequest) {
 
     // Sort by total score (highest first)
     scoredNewsPops.sort((a, b) => b.totalScore - a.totalScore);
+
+    // 12. Send Telegram alerts for high-urgency news pops
+    console.log(`\n📱 Checking Telegram alert preferences...`);
+    
+    // Fetch user preferences for Telegram
+    const preferences = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
+    if (preferences.length > 0 && preferences[0].telegramEnabled) {
+      const telegramConfig: TelegramConfig = {
+        botToken: preferences[0].telegramBotToken || '',
+        chatId: preferences[0].telegramChatId || '',
+        enabled: preferences[0].telegramEnabled
+      };
+
+      console.log(`✅ Telegram alerts enabled. Sending alerts for high-urgency news pops...`);
+
+      // Send alerts only for HIGH urgency pops with good scores (60+)
+      const highUrgencyPops = scoredNewsPops.filter(pop => {
+        // Determine urgency based on volume spike and score
+        const volumeSpike = pop.volumeSpike || 0;
+        const isHighUrgency = volumeSpike >= 3.0 || pop.totalScore >= 75;
+        return isHighUrgency && pop.totalScore >= 60;
+      });
+
+      console.log(`🚨 Found ${highUrgencyPops.length} high-urgency news pops to alert`);
+
+      for (const pop of highUrgencyPops) {
+        try {
+          // Get first news headline as snippet
+          const newsSnippet = pop.news && pop.news.length > 0 
+            ? pop.news[0].title
+            : undefined;
+
+          // Determine urgency
+          const volumeSpike = pop.volumeSpike || 0;
+          const urgency: 'HIGH' | 'MEDIUM' = volumeSpike >= 3.0 || pop.totalScore >= 75 ? 'HIGH' : 'MEDIUM';
+
+          await sendNewsPopAlert(telegramConfig, {
+            symbol: pop.symbol,
+            exchange: pop.exchange || 'NSE',
+            totalScore: pop.totalScore,
+            currentPrice: pop.current,
+            entryPrice: pop.tradePlan.entry,
+            stopLoss: pop.tradePlan.stopLoss,
+            target1: pop.tradePlan.target1,
+            target2: pop.tradePlan.target2,
+            positionSize: pop.tradePlan.positionSize,
+            capitalRequired: pop.tradePlan.capitalRequired,
+            riskAmount: pop.tradePlan.riskAmount,
+            volumeSpike: pop.volumeSpike || 0,
+            changePercent: pop.changePercent || 0,
+            newsSentiment: pop.newsSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL',
+            newsSnippet,
+            urgency
+          });
+
+          console.log(`  ✅ Alert sent for ${pop.symbol}`);
+        } catch (error: any) {
+          console.error(`  ❌ Failed to send alert for ${pop.symbol}:`, error.message);
+        }
+      }
+    } else {
+      console.log(`⚠️ Telegram alerts disabled or not configured`);
+    }
 
     console.log(`\n✅ News Pop scan complete: ${scoredNewsPops.length} signals ready`);
     console.log(`🚨 === NEWS POP SCANNER API COMPLETE ===\n`);

@@ -5,9 +5,9 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Vibe Trades - Catch the vibe, stack the cash 💸',
+  description: 'AI-powered Indian stock trading signals with real-time momentum analysis, fundamental scoring, and intelligent trade recommendations. Trade smarter with Vibe Trades.',
+  generator: 'Vibe Trades',
 }
 
 export default function RootLayout({

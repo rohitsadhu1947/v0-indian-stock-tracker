@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KiteConnect } from 'kiteconnect'
-import { cookies } from 'next/headers'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 
 const KITE_API_KEY = process.env.KITE_API_KEY!
 
@@ -13,15 +13,14 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 DEBUG SCANNER: Starting...')
     
-    // 1. Check authentication
-    const cookieStore = cookies()
-    const accessToken = cookieStore.get('kite_access_token')?.value
+    // 1. Check authentication and get Kite token (supports both Kite and email users)
+    const accessToken = await getKiteAccessToken()
     
     if (!accessToken) {
       console.log('❌ DEBUG: No access token')
       return NextResponse.json({
         success: false,
-        error: 'Not authenticated'
+        error: 'Not authenticated. Please ensure admin user has logged in via Kite.'
       }, { status: 401 })
     }
     

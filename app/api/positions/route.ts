@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { positions } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getCachedPositions, setCachedPositions, invalidatePositionsCache } from '@/lib/data-cache'
 
 /**
@@ -16,7 +16,7 @@ import { getCachedPositions, setCachedPositions, invalidatePositionsCache } from
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({
@@ -227,7 +227,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({

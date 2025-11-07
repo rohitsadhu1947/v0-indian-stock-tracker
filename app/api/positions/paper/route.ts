@@ -4,33 +4,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { paperPositions } from '@/db/schema'
-import { getAuthenticatedUserId } from '@/lib/auth-helpers'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { getDataUserId } from '@/lib/multi-user-auth'
 import { eq, and, desc } from 'drizzle-orm'
 
 // POST - Create new paper position
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    // Use compat function that supports both Kite and email users
+    const userId = await getAuthenticatedUserIdCompat()
     
     console.log('📝 Paper position POST - User ID:', userId)
     
     if (!userId) {
-      // More helpful error
-      const cookieStore = cookies()
-      const kiteUserId = cookieStore.get('kite_user_id')?.value
-      const accessToken = cookieStore.get('kite_access_token')?.value
-      
-      console.log('❌ Auth failed:', { 
-        hasKiteUserId: !!kiteUserId, 
-        hasAccessToken: !!accessToken,
-        kiteUserId 
-      })
+      console.log('❌ Auth failed: No user ID found')
       
       return NextResponse.json({ 
-        error: 'Unauthorized - User not found in database. Please re-login.' 
+        error: 'Unauthorized - Not authenticated. Please login.' 
       }, { status: 401 })
     }
 
@@ -115,12 +107,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Fetch all paper positions for user
+// GET - Fetch all paper positions for user (or another user if admin)
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Support both old and new auth systems
+    let targetUserId: number
+    let isAdmin = false
+    
+    try {
+      // Try new multi-user auth first
+      const { userId, isAdmin: adminFlag } = await getDataUserId(request.url)
+      targetUserId = userId
+      isAdmin = adminFlag
+    } catch {
+      // Fallback to old auth system
+      const userId = await getAuthenticatedUserId()
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      targetUserId = userId
     }
 
     const { searchParams } = new URL(request.url)
@@ -129,7 +134,7 @@ export async function GET(request: NextRequest) {
     let query = db
       .select()
       .from(paperPositions)
-      .where(eq(paperPositions.userId, userId))
+      .where(eq(paperPositions.userId, targetUserId))
       .orderBy(desc(paperPositions.entryTime))
 
     // Filter by status if provided
@@ -139,7 +144,7 @@ export async function GET(request: NextRequest) {
         .from(paperPositions)
         .where(
           and(
-            eq(paperPositions.userId, userId),
+            eq(paperPositions.userId, targetUserId),
             eq(paperPositions.status, status)
           )
         )
@@ -148,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     const positions = await query
 
-    console.log(`📊 Fetched ${positions.length} paper positions (status: ${status || 'all'})`)
+    console.log(`📊 Fetched ${positions.length} paper positions (status: ${status || 'all'})${isAdmin ? ' [ADMIN VIEW]' : ''}`)
 
     return NextResponse.json({
       success: true,
@@ -166,7 +171,8 @@ export async function GET(request: NextRequest) {
 // PATCH - Update paper position (for P&L tracking and exit)
 export async function PATCH(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    // Use compat function that supports both Kite and email users
+    const userId = await getAuthenticatedUserIdCompat()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

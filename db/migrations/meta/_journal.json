@@ -8,6 +8,13 @@
       "when": 1761915988481,
       "tag": "0000_sparkling_sunset_bain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762172203977,
+      "tag": "0001_add_telegram_settings",
+      "breakpoints": true
     }
   ]
 }

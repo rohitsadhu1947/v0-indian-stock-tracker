@@ -35,6 +35,7 @@ export default function NewsPopTab({ capitalAvailable, onExecuteTrade }: NewsPop
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null);
+  const [nextScanTime, setNextScanTime] = useState<Date | null>(null);
   const [autoScan, setAutoScan] = useState(false);
   const [customSymbolInput, setCustomSymbolInput] = useState('');
 
@@ -60,6 +61,12 @@ export default function NewsPopTab({ capitalAvailable, onExecuteTrade }: NewsPop
       if (data.success) {
         setNewsPops(data.newsPops || []);
         setLastScanTime(new Date());
+        
+        // If auto-scan is enabled, calculate next scan time
+        if (autoScan) {
+          const next = new Date(Date.now() + 30 * 60 * 1000);
+          setNextScanTime(next);
+        }
         
         if (data.newsPops.length === 0) {
           console.log('📰 No news pops found');
@@ -207,11 +214,20 @@ export default function NewsPopTab({ capitalAvailable, onExecuteTrade }: NewsPop
           borderRadius: '8px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px'
         }}>
-          <span style={{ color: '#94a3b8' }}>
-            Last scan: {lastScanTime.toLocaleTimeString()}
-          </span>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <span style={{ color: '#94a3b8' }}>
+              ⏱️ Last scan: <strong style={{ color: '#fff' }}>{lastScanTime.toLocaleTimeString()}</strong>
+            </span>
+            {autoScan && nextScanTime && (
+              <span style={{ color: '#94a3b8' }}>
+                🔄 Next scan: <strong style={{ color: '#FCD34D' }}>{nextScanTime.toLocaleTimeString()}</strong>
+              </span>
+            )}
+          </div>
           <span style={{ color: '#FCD34D', fontWeight: 'bold' }}>
             {newsPops.length} news pops found
           </span>

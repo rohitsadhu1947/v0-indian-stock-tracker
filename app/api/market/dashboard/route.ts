@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 import type {
   MarketDashboard,
   MarketIndex,
@@ -26,14 +28,22 @@ export async function GET(request: NextRequest) {
   try {
     console.log('📊 Fetching market dashboard...')
     
-    // Get Kite session from cookies
-    const cookies = request.cookies
-    const accessToken = cookies.get('kite_access_token')?.value
-    const apiKey = process.env.KITE_API_KEY
+    // Check authentication (supports both old and new systems)
+    const userId = await getAuthenticatedUserIdCompat()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+    
+    // Get Kite access token (supports both Kite and email users)
+    const accessToken = await getKiteAccessToken()
+    const apiKey = getKiteApiKey()
     
     if (!accessToken || !apiKey) {
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
+        { success: false, error: 'Kite access token not found. Please ensure admin user has logged in via Kite.' },
         { status: 401 }
       )
     }
