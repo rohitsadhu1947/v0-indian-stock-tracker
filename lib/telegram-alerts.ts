@@ -38,8 +38,11 @@ export type AlertType =
 /**
  * Format number with Indian comma separator
  */
-function formatINR(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+function formatINR(amount: number | undefined): string {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '₹0.00';
+  }
+  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
 /**
@@ -165,8 +168,24 @@ export async function sendNewsPopAlert(
   const sentimentEmoji = newsPop.newsSentiment === 'POSITIVE' ? '📈' : 
                          newsPop.newsSentiment === 'NEGATIVE' ? '📉' : '➡️'
   
-  const riskReward = ((newsPop.target1 - newsPop.entryPrice) / (newsPop.entryPrice - newsPop.stopLoss)).toFixed(2)
-  const priceChangeSign = newsPop.changePercent >= 0 ? '+' : ''
+  // Safe calculations with fallbacks
+  const riskReward = (newsPop.target1 && newsPop.entryPrice && newsPop.stopLoss)
+    ? ((newsPop.target1 - newsPop.entryPrice) / (newsPop.entryPrice - newsPop.stopLoss)).toFixed(2)
+    : 'N/A'
+  const priceChangeSign = (newsPop.changePercent || 0) >= 0 ? '+' : ''
+  const priceChange = (newsPop.changePercent || 0).toFixed(2)
+  const volumeSpikeText = (newsPop.volumeSpike || 0).toFixed(1)
+  
+  // Calculate percentage changes safely
+  const slPercent = (newsPop.stopLoss && newsPop.entryPrice)
+    ? (((newsPop.stopLoss - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)
+    : '0.00'
+  const t1Percent = (newsPop.target1 && newsPop.entryPrice)
+    ? (((newsPop.target1 - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)
+    : '0.00'
+  const t2Percent = (newsPop.target2 && newsPop.entryPrice)
+    ? (((newsPop.target2 - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)
+    : '0.00'
 
   const message = `
 ${urgencyEmoji} <b>NEWS POP ALERT: ${newsPop.symbol}</b>
@@ -177,15 +196,15 @@ ${urgencyEmoji} <b>NEWS POP ALERT: ${newsPop.symbol}</b>
 ${newsPop.newsSnippet || 'Breaking news detected - check app for details'}
 
 <b>📊 MARKET REACTION:</b>
-Price: ${formatINR(newsPop.currentPrice)} (${priceChangeSign}${newsPop.changePercent.toFixed(2)}%)
-Volume Spike: <b>${newsPop.volumeSpike.toFixed(1)}x</b> normal
+Price: ${formatINR(newsPop.currentPrice)} (${priceChangeSign}${priceChange}%)
+Volume Spike: <b>${volumeSpikeText}x</b> normal
 Score: ${newsPop.totalScore}/100
 
 <b>🎯 QUICK TRADE PLAN:</b>
 Entry: ${formatINR(newsPop.entryPrice)}
-Stop Loss: ${formatINR(newsPop.stopLoss)} (${(((newsPop.stopLoss - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)}%)
-Target 1: ${formatINR(newsPop.target1)} (${(((newsPop.target1 - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)}%)
-Target 2: ${formatINR(newsPop.target2)} (${(((newsPop.target2 - newsPop.entryPrice) / newsPop.entryPrice) * 100).toFixed(2)}%)
+Stop Loss: ${formatINR(newsPop.stopLoss)} (${slPercent}%)
+Target 1: ${formatINR(newsPop.target1)} (${t1Percent}%)
+Target 2: ${formatINR(newsPop.target2)} (${t2Percent}%)
 
 <b>Position Size:</b> ${newsPop.positionSize} shares
 <b>Capital:</b> ${formatINR(newsPop.capitalRequired)}

@@ -278,6 +278,12 @@ export async function GET(request: NextRequest) {
 
         for (const pop of highUrgencyPops) {
           try {
+            // Validate required fields
+            if (!pop.tradePlan || !pop.current) {
+              console.error(`  ⚠️ ${pop.symbol}: Missing trade plan or current price, skipping alert`);
+              continue;
+            }
+
             // Get first news headline as snippet
             const newsSnippet = pop.news && pop.news.length > 0 
               ? pop.news[0].title
@@ -309,6 +315,12 @@ export async function GET(request: NextRequest) {
             console.log(`  ✅ Alert sent for ${pop.symbol}`);
           } catch (error: any) {
             console.error(`  ❌ Failed to send alert for ${pop.symbol}:`, error.message);
+            console.error(`  📊 Debug info:`, {
+              hasTradePlan: !!pop.tradePlan,
+              hasCurrent: !!pop.current,
+              tradePlan: pop.tradePlan,
+              current: pop.current
+            });
           }
         }
       }
