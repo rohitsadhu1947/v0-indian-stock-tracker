@@ -140,9 +140,10 @@ export async function GET(request: NextRequest) {
 
             if (!candles || candles.length < 30) continue;
 
-            // Calculate average volume (last 20 days)
-            const recentCandles = candles.slice(-20);
-            const avgVolume = recentCandles.reduce((sum: number, c: any) => sum + (c.volume || 0), 0) / recentCandles.length;
+            // Calculate average volume (same as momentum scanner - all candles)
+            const avgVolume = candles.length > 0
+              ? candles.reduce((sum: number, c: any) => sum + c.volume, 0) / candles.length
+              : quote.volume;
 
             stocksData.push({
               symbol,
