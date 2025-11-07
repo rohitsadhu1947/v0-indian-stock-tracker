@@ -265,12 +265,13 @@ export async function GET(request: NextRequest) {
       } else {
         console.log(`✅ Telegram alerts enabled. Sending alerts for high-urgency news pops...`);
 
-        // Send alerts only for HIGH urgency pops with good scores (60+)
+        // Send alerts for high-urgency pops
+        // Alert if: (volume 3x+ and score 40+) OR (score 75+)
         const highUrgencyPops = scoredNewsPops.filter(pop => {
-          // Determine urgency based on volume spike and score
           const volumeSpike = pop.volumeSpike || 0;
-          const isHighUrgency = volumeSpike >= 3.0 || pop.totalScore >= 75;
-          return isHighUrgency && pop.totalScore >= 60;
+          const hasHighVolume = volumeSpike >= 3.0 && pop.totalScore >= 40; // Volume spike with minimum quality
+          const hasHighScore = pop.totalScore >= 75; // High-conviction setup
+          return hasHighVolume || hasHighScore;
         });
 
         console.log(`🚨 Found ${highUrgencyPops.length} high-urgency news pops to alert`);
