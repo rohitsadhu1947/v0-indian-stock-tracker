@@ -14,6 +14,9 @@ import { db } from '@/db'
 import { users, userPermissions } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()

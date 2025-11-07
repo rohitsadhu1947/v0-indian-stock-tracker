@@ -8,6 +8,9 @@
 import { NextResponse } from 'next/server'
 import { createUser, requireRole } from '@/lib/multi-user-auth'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: Request) {
   try {
     // Only admins can register new users

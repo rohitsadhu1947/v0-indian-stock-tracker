@@ -7,6 +7,9 @@
 import { NextResponse } from 'next/server'
 import { loginWithEmail, loginWithKite } from '@/lib/multi-user-auth'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()

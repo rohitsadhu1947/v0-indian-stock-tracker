@@ -8,6 +8,9 @@ import { NextResponse } from 'next/server'
 import { destroySession } from '@/lib/multi-user-auth'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST() {
   try {
     // Destroy new auth session
