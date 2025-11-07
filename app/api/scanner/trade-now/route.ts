@@ -187,10 +187,11 @@ export async function GET(request: NextRequest) {
       })
     }
     
-    const categorized = categorizeSignals(filtered)
+    // Pass customSymbolsList to categorization so SKIP tier custom stocks appear in Watch
+    const categorized = categorizeSignals(filtered, customSymbolsList)
     
     // ALSO categorize ALL scores (including those below threshold) for debugging
-    const allCategorized = categorizeSignals(masterScores)
+    const allCategorized = categorizeSignals(masterScores, customSymbolsList)
 
     console.log(`✅ High Conviction: ${categorized.highConviction.length}`)
     console.log(`✅ Moderate: ${categorized.moderate.length}`)
