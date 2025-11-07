@@ -228,6 +228,9 @@ export async function GET(request: NextRequest) {
       const newsPop = newsPops.find(np => np.symbol === score.symbol);
       return {
         ...score,
+        // Add fields from newsPop that aren't in masterScores
+        current: newsPop?.current || 0, // Current price
+        changePercent: newsPop?.changePercent || 0, // Price change %
         news: newsPop?.news || [],
         newsSentiment: newsPop?.newsSentiment || 'NEUTRAL',
         newsSentimentScore: newsPop?.newsSentimentScore || 0,
