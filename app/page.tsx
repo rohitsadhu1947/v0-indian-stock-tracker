@@ -1327,15 +1327,21 @@ export default function StockTracker() {
 
   // ========== OPENING RANGE BREAKOUT (ORB) FUNCTIONS ==========
 
-  // Capture Opening Range (9:15-9:30 AM)
+  // Capture Opening Range (9:15-9:30 AM) - FIXED to use real intraday candles
   async function captureOpeningRange() {
     const now = new Date()
     const hours = now.getHours()
     const minutes = now.getMinutes()
     
-    // Check if we're in the opening range window (9:15-9:30)
-    if (hours !== 9 || minutes >= 30) {
-      alert('⚠️ Opening Range can only be captured between 9:15-9:30 AM')
+    // More flexible timing - can capture anytime after 9:30 AM
+    if (hours < 9 || (hours === 9 && minutes < 30)) {
+      alert('⚠️ Opening Range can only be captured after 9:30 AM\n\nWait for at least 15 minutes of trading to accumulate.')
+      return
+    }
+    
+    // After 11 AM, opening range is stale
+    if (hours >= 11) {
+      alert('⚠️ Too late to capture Opening Range\n\nORB is most effective when captured early (9:30-10:30 AM)')
       return
     }
 
@@ -1344,37 +1350,102 @@ export default function StockTracker() {
 
     try {
       const ranges: Record<string, any> = {}
+      let successCount = 0
+      let failCount = 0
       
-      // Fetch 1-min candles for each stock
-      await Promise.all(
-        orbWatchlist.map(async (symbol) => {
-          try {
-            console.log(`📊 Capturing ORB for ${symbol}...`)
-            const data = await fetchStockQuote(symbol)
-            
-            if (data) {
-              // For simplicity, use current price as approximation
-              // In production, you'd fetch actual 1-min candles from 9:15-9:30
-              const range = {
-                high: data.dayHigh,
-                low: data.dayLow,
-                open: data.open,
-                current: data.current,
-                rangeCaptured: true,
-                timestamp: now
-              }
-              
-              ranges[symbol] = range
-              console.log(`✅ ${symbol}: ORB High=₹${range.high.toFixed(2)}, Low=₹${range.low.toFixed(2)}`)
-            }
-          } catch (err) {
-            console.error(`Failed to capture ORB for ${symbol}:`, err)
+      // Market open time (9:15 AM IST)
+      const marketOpen = new Date(now)
+      marketOpen.setHours(9, 15, 0, 0)
+      
+      // Opening range end time (9:30 AM IST) - first 15 minutes
+      const rangeEnd = new Date(now)
+      rangeEnd.setHours(9, 30, 0, 0)
+      
+      console.log(`📊 Capturing Opening Range (9:15-9:30 AM) for ${orbWatchlist.length} stocks...`)
+      
+      // Fetch 5-minute candles for each stock
+      for (const symbol of orbWatchlist) {
+        try {
+          console.log(`  📈 ${symbol}: Fetching 5-min candles...`)
+          const data = await fetchStockQuote(symbol)
+          
+          if (!data) {
+            console.log(`  ❌ ${symbol}: No quote data`)
+            failCount++
+            continue
           }
-        })
-      )
+          
+          // Fetch 5-minute intraday candles
+          const intradayRes = await fetch(
+            `/api/kite/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
+          )
+          
+          if (!intradayRes.ok) {
+            console.log(`  ❌ ${symbol}: Failed to fetch intraday candles`)
+            failCount++
+            continue
+          }
+          
+          const intradayData = await intradayRes.json()
+          const candles = intradayData.data.map((d: any) => ({
+            timestamp: new Date(d.date),
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close,
+            volume: d.volume
+          }))
+          
+          // Filter candles to opening range period (9:15-9:30)
+          const orbCandles = candles.filter((c: any) => 
+            c.timestamp >= marketOpen && c.timestamp <= rangeEnd
+          )
+          
+          if (orbCandles.length === 0) {
+            console.log(`  ⚠️ ${symbol}: No candles in opening range period`)
+            failCount++
+            continue
+          }
+          
+          // Calculate TRUE opening range from actual candles
+          const orbHigh = Math.max(...orbCandles.map((c: any) => c.high))
+          const orbLow = Math.min(...orbCandles.map((c: any) => c.low))
+          const orbOpen = orbCandles[0].open
+          const rangeSize = orbHigh - orbLow
+          const rangePercent = ((rangeSize / orbOpen) * 100).toFixed(2)
+          
+          const range = {
+            high: orbHigh,
+            low: orbLow,
+            open: orbOpen,
+            current: data.current,
+            rangeSize: rangeSize,
+            rangePercent: parseFloat(rangePercent),
+            candleCount: orbCandles.length,
+            rangeCaptured: true,
+            timestamp: now,
+            capturedAt: now.toLocaleTimeString()
+          }
+          
+          ranges[symbol] = range
+          successCount++
+          
+          console.log(`  ✅ ${symbol}: High=₹${orbHigh.toFixed(2)}, Low=₹${orbLow.toFixed(2)}, Range=₹${rangeSize.toFixed(2)} (${rangePercent}%)`)
+          
+          // Small delay to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error(`  ❌ ${symbol}: Error -`, err)
+          failCount++
+        }
+      }
       
       setOrbRanges(ranges)
-      alert(`✅ Opening Range captured for ${Object.keys(ranges).length} stocks!\n\nNow monitoring for breakouts...`)
+      
+      const message = `✅ Opening Range Captured!\n\nSuccess: ${successCount} stocks\nFailed: ${failCount} stocks\n\nNow monitoring for breakouts...`
+      alert(message)
+      
+      console.log(`\n✅ ORB Capture Complete: ${successCount} success, ${failCount} failed`)
     } catch (err) {
       console.error('Error capturing opening range:', err)
       alert('❌ Failed to capture opening range. Check console.')
