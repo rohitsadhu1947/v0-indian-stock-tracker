@@ -5,7 +5,7 @@
  * Strategy: Ride sector momentum for higher win rates.
  */
 
-import { SECTOR_MAPPING } from './sector-mapping'
+import { STOCK_SECTOR_MAP, getSectorInfo } from './sector-mapping'
 
 export interface SectorPerformance {
   sector: string
@@ -40,7 +40,8 @@ export function analyzeSectorPerformance(
   const sectorGroups: Record<string, typeof stockData[string][]> = {}
   
   for (const [symbol, data] of Object.entries(stockData)) {
-    const sector = SECTOR_MAPPING[symbol as keyof typeof SECTOR_MAPPING] || 'OTHER'
+    const sectorInfo = getSectorInfo(symbol)
+    const sector = sectorInfo?.sector || 'OTHER'
     
     if (!sectorGroups[sector]) {
       sectorGroups[sector] = []
@@ -110,16 +111,20 @@ export function findHotSectorStocks(
   
   // Filter momentum signals for stocks in hot sectors
   const hotSectorSignals = allMomentumSignals.filter(signal => {
-    const sector = SECTOR_MAPPING[signal.symbol as keyof typeof SECTOR_MAPPING]
-    return sector && hotSectorNames.has(sector)
+    const sectorInfo = getSectorInfo(signal.symbol)
+    return sectorInfo && hotSectorNames.has(sectorInfo.sector)
   })
   
   // Add sector info to signals
-  return hotSectorSignals.map(signal => ({
-    ...signal,
-    sector: SECTOR_MAPPING[signal.symbol as keyof typeof SECTOR_MAPPING] || 'OTHER',
-    sectorMomentum: sectorPerformance.find(s => s.sector === SECTOR_MAPPING[signal.symbol as keyof typeof SECTOR_MAPPING])?.momentum || 'NEUTRAL'
-  }))
+  return hotSectorSignals.map(signal => {
+    const sectorInfo = getSectorInfo(signal.symbol)
+    const sector = sectorInfo?.sector || 'OTHER'
+    return {
+      ...signal,
+      sector,
+      sectorMomentum: sectorPerformance.find(s => s.sector === sector)?.momentum || 'NEUTRAL'
+    }
+  })
 }
 
 /**
