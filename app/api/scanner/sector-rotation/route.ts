@@ -10,6 +10,7 @@ import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getKiteAccessToken } from '@/lib/auth-helpers'
 import { analyzeSectorPerformance, findHotSectorStocks } from '@/lib/sector-rotation'
 import { STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
+import { fetchStockQuote } from '@/lib/kite-utils'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,32 +50,16 @@ export async function GET(request: NextRequest) {
       await Promise.all(
         batch.map(async (symbol) => {
           try {
-            // Fetch quote from Kite
-            const quoteRes = await fetch(
-              `/api/kite/quote?symbol=${symbol}&exchange=NSE`,
-              {
-                headers: {
-                  cookie: request.headers.get('cookie') || ''
-                }
-              }
-            )
+            // Fetch quote directly from Kite using utility function
+            const quote = await fetchStockQuote(symbol, accessToken)
             
-            if (!quoteRes.ok) {
-              failCount++
-              return
-            }
-            
-            const quoteData = await quoteRes.json()
-            
-            if (quoteData.success && quoteData.data) {
-              const quote = quoteData.data
-              
+            if (quote) {
               stockData[symbol] = {
                 symbol,
-                price: quote.last_price || quote.current,
-                change: quote.change_percent || quote.changePercent,
+                price: quote.current,
+                change: quote.changePercent,
                 volume: quote.volume || 0,
-                avgVolume: quote.average_traded_volume || quote.avgVolume || 1
+                avgVolume: quote.avgVolume || 1
               }
               
               successCount++
