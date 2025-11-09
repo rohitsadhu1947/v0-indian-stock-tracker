@@ -7,8 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getKiteAccessToken } from '@/lib/kite-token-helper'
-import { getKiteApiKey } from '@/lib/auth-helpers'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 import { KiteConnect } from 'kiteconnect'
 import { analyzeSectorPerformance, findHotSectorStocks } from '@/lib/sector-rotation'
 import { STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
