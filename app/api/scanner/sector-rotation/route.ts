@@ -1,11 +1,15 @@
 /**
  * Sector Heat Map API
  * Returns sector performance and hot sector stocks
+ * 
+ * INDEPENDENT DATA SOURCE: Fetches fresh data directly from Kite
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { getKiteAccessToken } from '@/lib/auth-helpers'
 import { analyzeSectorPerformance, findHotSectorStocks } from '@/lib/sector-rotation'
+import { STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,35 +22,95 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get market data (we'll fetch this from momentum scanner or cache)
-    const momentumRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ||'http://localhost:3000'}/api/scanner/momentum?limit=200`, {
-      headers: {
-        cookie: request.headers.get('cookie') || ''
-      }
-    })
+    // Get Kite access token
+    const accessToken = await getKiteAccessToken()
     
-    if (!momentumRes.ok) {
-      throw new Error('Failed to fetch momentum data')
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Kite access token not available' }, { status: 401 })
     }
+
+    console.log('🔍 Fetching sector data independently...')
+
+    // Get all symbols from STOCK_SECTOR_MAP (these are the stocks we can analyze)
+    const allSymbols = Object.keys(STOCK_SECTOR_MAP)
     
-    const momentumData = await momentumRes.json()
-    const signals = momentumData.signals || []
+    console.log(`📊 Analyzing ${allSymbols.length} stocks across sectors...`)
     
-    // Build stock data map for sector analysis
+    // Fetch quotes for all stocks (in batches to avoid rate limits)
+    const batchSize = 50
     const stockData: Record<string, any> = {}
+    let successCount = 0
+    let failCount = 0
     
-    for (const signal of signals) {
-      stockData[signal.symbol] = {
-        symbol: signal.symbol,
-        price: signal.current,
-        change: signal.changePercent,
-        volume: signal.volume || 0,
-        avgVolume: signal.avgVolume || 1
+    for (let i = 0; i < allSymbols.length; i += batchSize) {
+      const batch = allSymbols.slice(i, i + batchSize)
+      
+      // Fetch quotes for this batch
+      await Promise.all(
+        batch.map(async (symbol) => {
+          try {
+            // Fetch quote from Kite
+            const quoteRes = await fetch(
+              `/api/kite/quote?symbol=${symbol}&exchange=NSE`,
+              {
+                headers: {
+                  cookie: request.headers.get('cookie') || ''
+                }
+              }
+            )
+            
+            if (!quoteRes.ok) {
+              failCount++
+              return
+            }
+            
+            const quoteData = await quoteRes.json()
+            
+            if (quoteData.success && quoteData.data) {
+              const quote = quoteData.data
+              
+              stockData[symbol] = {
+                symbol,
+                price: quote.last_price || quote.current,
+                change: quote.change_percent || quote.changePercent,
+                volume: quote.volume || 0,
+                avgVolume: quote.average_traded_volume || quote.avgVolume || 1
+              }
+              
+              successCount++
+            } else {
+              failCount++
+            }
+          } catch (err) {
+            console.error(`❌ Failed to fetch ${symbol}:`, err)
+            failCount++
+          }
+        })
+      )
+      
+      // Small delay between batches to avoid rate limits
+      if (i + batchSize < allSymbols.length) {
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
     }
+    
+    console.log(`✅ Fetched ${successCount} stocks, ${failCount} failed`)
     
     // Analyze sector performance
     const sectorPerformance = analyzeSectorPerformance(stockData)
+    
+    // For hot sector stocks, we need momentum signals
+    // Let's create basic signals from the stock data
+    const signals = Object.values(stockData).map(stock => ({
+      symbol: stock.symbol,
+      current: stock.price,
+      changePercent: stock.change,
+      volume: stock.volume,
+      avgVolume: stock.avgVolume,
+      volumeRatio: stock.volume / stock.avgVolume,
+      // Add basic scoring
+      totalScore: calculateBasicScore(stock)
+    }))
     
     // Find hot sector stocks
     const hotSectorStocks = findHotSectorStocks(sectorPerformance, signals)
@@ -64,7 +128,8 @@ export async function GET(request: NextRequest) {
       hotSectors,
       hotSectorStocks,
       totalSectors: sectorPerformance.length,
-      totalStocksAnalyzed: signals.length
+      totalStocksAnalyzed: successCount,
+      dataSource: 'kite_independent'
     })
   } catch (error: any) {
     console.error('❌ Sector heat map error:', error)
@@ -73,5 +138,30 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * Calculate a basic score for sector stocks
+ * (This is simpler than master scorer, just for sector analysis)
+ */
+function calculateBasicScore(stock: any): number {
+  let score = 50 // Base score
+  
+  // Price change contribution (max 30 points)
+  const change = stock.change || 0
+  if (change > 0) {
+    score += Math.min(change * 5, 30) // Positive change adds up to 30 points
+  } else {
+    score += Math.max(change * 5, -30) // Negative change removes up to 30 points
+  }
+  
+  // Volume contribution (max 20 points)
+  const volumeRatio = stock.volume / stock.avgVolume
+  if (volumeRatio > 1) {
+    score += Math.min((volumeRatio - 1) * 10, 20)
+  }
+  
+  // Clamp score between 0-100
+  return Math.max(0, Math.min(100, score))
 }
 
