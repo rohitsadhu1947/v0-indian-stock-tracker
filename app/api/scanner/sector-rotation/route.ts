@@ -126,9 +126,39 @@ export async function GET(request: NextRequest) {
       
       console.log(`🎯 Running master scorer for ${hotSectorSymbols.length} hot sector stocks...`)
       
+      // Convert stockData to MomentumSignal format that master scorer expects
+      const momentumSignals = hotSectorSymbols.map(symbol => {
+        const data = stockData[symbol]
+        return {
+          symbol,
+          exchange: 'NSE',
+          current: data.price,
+          changePercent: data.change,
+          volume: data.volume,
+          avgVolume: data.avgVolume,
+          // Add required momentum signal fields with defaults
+          momentumScore: 50, // Will be recalculated by master scorer
+          high: data.price,
+          low: data.price,
+          open: data.price,
+          close: data.price,
+          vwap: data.price,
+          avgPrice: data.price,
+          instrumentToken: 0, // Not needed for master scorer
+          ohlc: {
+            open: data.price,
+            high: data.price,
+            low: data.price,
+            close: data.price
+          }
+        }
+      })
+      
+      console.log(`📊 Converted ${momentumSignals.length} symbols to MomentumSignal format`)
+      
       // Import and run master scorer
       const { batchCalculateMasterScores } = await import('@/lib/master-scorer')
-      const masterScores = await batchCalculateMasterScores(hotSectorSymbols, accessToken)
+      const masterScores = await batchCalculateMasterScores(momentumSignals, {}, 300000) // empty analyst reports, 3L capital
       
       console.log(`📊 Master scores received: ${masterScores.length} stocks`)
       console.log(`📊 Score distribution:`)
