@@ -318,7 +318,7 @@ export const userPreferences = pgTable('user_preferences', {
   telegramEnabled: boolean('telegram_enabled').default(false),
   telegramBotToken: text('telegram_bot_token'),
   telegramChatId: text('telegram_chat_id'),
-  telegramAlertPreferences: jsonb('telegram_alert_preferences'), // { newSignals: true, targetHits: true, stopLossHits: true, dailySummary: true, positionUpdates: false }
+  telegramAlertPreferences: jsonb('telegram_alert_preferences'), // { newSignals: true, newsPops: true, orbBreakouts: true, targetHits: true, stopLossHits: true, dailySummary: true, positionUpdates: false }
   
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

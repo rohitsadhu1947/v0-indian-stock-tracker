@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
           telegramEnabled: false,
           telegramAlertPreferences: {
             newSignals: true,
+            newsPops: true,
+            orbBreakouts: true,
             targetHits: true,
             stopLossHits: true,
             dailySummary: true,
@@ -66,6 +68,8 @@ export async function GET(request: NextRequest) {
         chatId: prefs[0].telegramChatId || '',
         alertPreferences: prefs[0].telegramAlertPreferences || {
           newSignals: true,
+          newsPops: true,
+          orbBreakouts: true,
           targetHits: true,
           stopLossHits: true,
           dailySummary: true,

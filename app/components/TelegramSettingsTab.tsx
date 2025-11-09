@@ -16,6 +16,7 @@ export default function TelegramSettingsTab() {
   const [alertPreferences, setAlertPreferences] = useState({
     newSignals: true,
     newsPops: true,
+    orbBreakouts: true,
     targetHits: true,
     stopLossHits: true,
     dailySummary: true,
@@ -364,6 +365,7 @@ export default function TelegramSettingsTab() {
             {Object.entries({
               newSignals: { label: '🔥 New High-Conviction Signals', desc: 'Get notified when new trading opportunities are found' },
               newsPops: { label: '📰 News Pop Alerts', desc: 'Urgent alerts for news-driven price/volume spikes (fast-moving!)' },
+              orbBreakouts: { label: '🎯 ORB Breakout Alerts', desc: 'Opening Range Breakout signals for intraday trading' },
               targetHits: { label: '✅ Target Hits', desc: 'Alert when your positions hit target prices' },
               stopLossHits: { label: '❌ Stop-Loss Hits', desc: 'Alert when positions hit stop-loss (urgent!)' },
               dailySummary: { label: '📊 Daily Summary', desc: 'End-of-day P&L report and statistics' },
