@@ -121,6 +121,11 @@ export default function StockTracker() {
   const [isCapturingORB, setIsCapturingORB] = useState(false)
   const [orbWatchlist, setOrbWatchlist] = useState<string[]>(NIFTY_50_STOCKS) // Now scanning all NIFTY 50!
   
+  // Auto-monitoring states for ORB
+  const [orbAutoMonitoring, setOrbAutoMonitoring] = useState(false)
+  const [orbNextScanTime, setOrbNextScanTime] = useState<Date | null>(null)
+  const [orbScanInterval, setOrbScanInterval] = useState(5) // minutes
+  
   // Trade Watch (Smart Monitor Bucket) states
   const [tradeWatch, setTradeWatch] = useState<any[]>([])
   const [entryAlerts, setEntryAlerts] = useState<any[]>([])
@@ -1456,9 +1461,11 @@ export default function StockTracker() {
   }
 
   // Scan for ORB Breakouts
-  async function scanORBBreakouts() {
+  async function scanORBBreakouts(silent = false) {
     if (Object.keys(orbRanges).length === 0) {
-      alert('⚠️ Please capture Opening Range first (9:15-9:30 AM)')
+      if (!silent) {
+        alert('⚠️ Please capture Opening Range first (9:15-9:30 AM)')
+      }
       return
     }
 
@@ -1554,14 +1561,23 @@ export default function StockTracker() {
       
       setOrbSignals(signals)
       
-      if (signals.length === 0) {
-        alert('📊 No ORB breakouts detected yet. Stocks are still within opening range.')
-            } else {
-        alert(`🚀 Found ${signals.length} ORB Breakout Signal(s)!`)
+      if (!silent) {
+        if (signals.length === 0) {
+          alert('📊 No ORB breakouts detected yet. Stocks are still within opening range.')
+        } else {
+          alert(`🚀 Found ${signals.length} ORB Breakout Signal(s)!`)
+        }
+      } else {
+        // Just log when running in auto-mode
+        if (signals.length > 0) {
+          console.log(`✅ [Auto] Found ${signals.length} ORB breakout(s)!`)
+        }
       }
     } catch (err) {
       console.error('Error scanning ORB breakouts:', err)
-      alert('❌ Failed to scan breakouts. Check console.')
+      if (!silent) {
+        alert('❌ Failed to scan breakouts. Check console.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -1572,8 +1588,102 @@ export default function StockTracker() {
     setOrbRanges({})
     setOrbSignals([])
     setIsCapturingORB(false)
+    setOrbAutoMonitoring(false)
+    setOrbNextScanTime(null)
     alert('✅ ORB data reset. Ready for new trading day!')
   }
+
+  // ========== ORB AUTO-MONITORING ==========
+  
+  // Toggle auto-monitoring
+  function toggleOrbAutoMonitoring() {
+    if (!orbAutoMonitoring) {
+      // Start auto-monitoring
+      setOrbAutoMonitoring(true)
+      console.log('✅ ORB Auto-Monitoring ENABLED')
+      
+      // If no ranges captured yet, capture immediately
+      if (Object.keys(orbRanges).length === 0) {
+        const now = new Date()
+        const hours = now.getHours()
+        const minutes = now.getMinutes()
+        
+        if (hours >= 9 && (hours < 11 || (hours === 11 && minutes === 0))) {
+          if (hours > 9 || minutes >= 30) {
+            console.log('📊 Auto-capturing opening range...')
+            captureOpeningRange()
+          } else {
+            console.log('⏱️  Waiting for 9:30 AM to auto-capture...')
+          }
+        }
+      } else {
+        // Already have ranges, start scanning
+        console.log('📊 Starting auto-scan for ORB breakouts...')
+        scanORBBreakouts(true) // silent = true
+      }
+    } else {
+      // Stop auto-monitoring
+      setOrbAutoMonitoring(false)
+      setOrbNextScanTime(null)
+      console.log('⏸️  ORB Auto-Monitoring DISABLED')
+    }
+  }
+  
+  // Auto-monitoring effect
+  React.useEffect(() => {
+    if (!orbAutoMonitoring) return
+    
+    const now = new Date()
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    
+    // Only run during market hours (9:15 AM - 3:30 PM)
+    if (hours < 9 || hours >= 15 || (hours === 15 && minutes >= 30)) {
+      console.log('⏰ Market closed - stopping ORB auto-monitoring')
+      setOrbAutoMonitoring(false)
+      return
+    }
+    
+    const intervalId = setInterval(async () => {
+      const now = new Date()
+      const hours = now.getHours()
+      const minutes = now.getMinutes()
+      
+      // Check if still in market hours
+      if (hours < 9 || hours >= 15 || (hours === 15 && minutes >= 30)) {
+        console.log('⏰ Market closed - stopping ORB auto-monitoring')
+        setOrbAutoMonitoring(false)
+        clearInterval(intervalId)
+        return
+      }
+      
+      // If no ranges captured and it's after 9:30, capture them
+      if (Object.keys(orbRanges).length === 0 && hours >= 9 && (hours > 9 || minutes >= 30)) {
+        console.log('📊 [Auto] Capturing opening range...')
+        await captureOpeningRange()
+      }
+      
+      // If ranges captured, scan for breakouts
+      if (Object.keys(orbRanges).length > 0) {
+        console.log('🔍 [Auto] Scanning for ORB breakouts...')
+        await scanORBBreakouts(true) // silent = true for auto-mode
+        
+        // Update next scan time
+        const nextScan = new Date()
+        nextScan.setMinutes(nextScan.getMinutes() + orbScanInterval)
+        setOrbNextScanTime(nextScan)
+      }
+    }, orbScanInterval * 60 * 1000) // Convert minutes to milliseconds
+    
+    // Calculate and set initial next scan time
+    const nextScan = new Date()
+    nextScan.setMinutes(nextScan.getMinutes() + orbScanInterval)
+    setOrbNextScanTime(nextScan)
+    
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [orbAutoMonitoring, orbScanInterval, orbRanges])
 
   // ========== TRADE WATCH (SMART MONITOR BUCKET) FUNCTIONS ==========
 
@@ -3976,7 +4086,7 @@ export default function StockTracker() {
                 </button>
 
                 <button 
-                  onClick={scanORBBreakouts}
+                  onClick={() => scanORBBreakouts()}
                   disabled={!isCapturingORB || isLoading}
                   style={{
                     flex: 1,
@@ -3997,7 +4107,59 @@ export default function StockTracker() {
                 >
                   {isLoading ? '⏳ Scanning...' : '🚀 Scan for Breakouts'}
                 </button>
+                
+                {/* AUTO-MONITORING TOGGLE */}
+                <button 
+                  onClick={toggleOrbAutoMonitoring}
+                  disabled={!isCapturingORB}
+                  style={{
+                    flex: 1,
+                    minWidth: '220px',
+                    padding: '14px 20px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    background: !isCapturingORB
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : orbAutoMonitoring
+                        ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    border: !isCapturingORB
+                      ? '1px solid rgba(255, 255, 255, 0.2)'
+                      : orbAutoMonitoring
+                        ? '2px solid #10B981'
+                        : '2px solid #667eea',
+                    color: !isCapturingORB ? 'rgba(255, 255, 255, 0.5)' : '#fff',
+                    borderRadius: '8px',
+                    cursor: !isCapturingORB ? 'not-allowed' : 'pointer',
+                    boxShadow: orbAutoMonitoring && isCapturingORB ? '0 4px 15px rgba(16, 185, 129, 0.4)' : 'none',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {orbAutoMonitoring ? '⏸️ Stop Auto-Scan' : '🤖 Auto-Scan Every 5min'}
+                </button>
               </div>
+              
+              {/* Next Scan Timer */}
+              {orbAutoMonitoring && orbNextScanTime && (
+                <div style={{
+                  marginTop: '15px',
+                  padding: '12px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '0.9em',
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '1.2em' }}>⏰</span>
+                  <span>
+                    <strong>Auto-Monitoring Active</strong> - Next scan at{' '}
+                    {orbNextScanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
 
               {/* ORB Watchlist Info */}
               <div style={{ marginTop: '15px', fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.8)' }}>
