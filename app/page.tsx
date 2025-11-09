@@ -4179,22 +4179,86 @@ export default function StockTracker() {
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                          {/* EXECUTE TRADE - PRIMARY ACTION */}
+                          <button 
+                            onClick={async () => {
+                              // Convert ORB signal to paper trade format
+                              const orbTrade = {
+                                symbol: signal.symbol,
+                                entryPrice: signal.entry_price,
+                                stopLoss: signal.stop_loss,
+                                target: signal.target,
+                                positionSize: Math.floor((momentumCapital * 0.02) / (signal.entry_price - signal.stop_loss)), // 2% risk per trade
+                                strategy: signal.strategy,
+                                signal: signal.signal_type === 'BUY' ? 'BUY' : 'SELL',
+                                score: signal.strength * 20, // Convert 5-point scale to 100-point
+                                riskReward: signal.risk_reward,
+                                metadata: {
+                                  orbHigh: signal.orb_high,
+                                  orbLow: signal.orb_low,
+                                  rangeSize: signal.range_size,
+                                  breakoutType: signal.breakout_type
+                                }
+                              }
+                              
+                              await executePaperTrade(orbTrade)
+                            }}
+                            disabled={isExecutingTrade || !isPaperMode}
+                            style={{ 
+                              flex: 2,
+                              padding: '16px',
+                              fontSize: '1.1em',
+                              fontWeight: 'bold',
+                              background: isPaperMode 
+                                ? (isExecutingTrade ? '#666' : `linear-gradient(135deg, ${signalColor.border} 0%, ${signal.signal_type === 'BUY' ? '#10B981' : '#EF4444'} 100%)`)
+                                : 'rgba(100, 100, 100, 0.3)',
+                              border: isPaperMode ? 'none' : '2px solid #666',
+                              color: '#fff',
+                              borderRadius: '10px',
+                              cursor: isPaperMode ? (isExecutingTrade ? 'wait' : 'pointer') : 'not-allowed',
+                              opacity: (isExecutingTrade || !isPaperMode) ? 0.5 : 1,
+                              boxShadow: isPaperMode && !isExecutingTrade ? `0 4px 15px ${signalColor.border}40` : 'none',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            {isExecutingTrade ? '⏳ Executing...' : `⚡ Execute ${signal.signal_type} Trade`}
+                          </button>
+                          
                           <button 
                             onClick={() => addToTradeWatch(signal.symbol, 'ORB Scanner', signal)}
                             style={{ 
                               flex: 1,
                               padding: '14px',
-                              fontSize: '1em',
+                              fontSize: '0.95em',
                               fontWeight: 'bold',
-                              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                              background: 'rgba(79, 172, 254, 0.15)',
                               border: '2px solid rgba(79, 172, 254, 0.5)',
-                              color: '#000',
+                              color: '#4facfe',
                               borderRadius: '8px',
                               cursor: 'pointer'
                             }}
                           >
-                            👁️ Add to Watch
+                            👁️ Watch
                           </button>
+                        </div>
+                        
+                        {/* Paper Mode Warning */}
+                        {!isPaperMode && (
+                          <div style={{
+                            marginTop: '10px',
+                            padding: '10px',
+                            background: 'rgba(255, 193, 7, 0.1)',
+                            border: '1px solid rgba(255, 193, 7, 0.3)',
+                            borderRadius: '6px',
+                            fontSize: '0.85em',
+                            color: '#FFC107',
+                            textAlign: 'center'
+                          }}>
+                            ⚠️ Enable Paper Mode to execute trades
+                          </div>
+                        )}
+                        
+                        <div style={{ display: 'none', gap: '10px', marginTop: '10px' }}>
                           <button 
                             onClick={() => {
                               setManualEntrySymbol(signal.symbol)
