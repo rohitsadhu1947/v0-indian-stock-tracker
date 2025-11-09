@@ -7,10 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getKiteAccessToken } from '@/lib/auth-helpers'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
+import { KiteConnect } from 'kiteconnect'
 import { analyzeSectorPerformance, findHotSectorStocks } from '@/lib/sector-rotation'
 import { STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
-import { fetchStockQuote } from '@/lib/kite-utils'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -30,12 +30,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Kite access token not available' }, { status: 401 })
     }
 
+    // Get API key
+    const apiKey = getKiteApiKey()
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Kite API key not configured' }, { status: 500 })
+    }
+
     console.log('🔍 Fetching sector data independently...')
+
+    // Initialize Kite Connect
+    const kc = new KiteConnect({ api_key: apiKey })
+    kc.setAccessToken(accessToken)
 
     // Get all symbols from STOCK_SECTOR_MAP (these are the stocks we can analyze)
     const allSymbols = Object.keys(STOCK_SECTOR_MAP)
     
     console.log(`📊 Analyzing ${allSymbols.length} stocks across sectors...`)
+    
+    // Get instrument tokens first
+    const instruments = await kc.getInstruments('NSE')
+    const symbolMap = new Map<string, any>()
+    
+    for (const inst of instruments) {
+      if (inst.instrument_type === 'EQ' && allSymbols.includes(inst.tradingsymbol)) {
+        symbolMap.set(inst.tradingsymbol, inst)
+      }
+    }
+    
+    console.log(`✅ Found ${symbolMap.size} instruments`)
     
     // Fetch quotes for all stocks (in batches to avoid rate limits)
     const batchSize = 50
@@ -43,38 +65,40 @@ export async function GET(request: NextRequest) {
     let successCount = 0
     let failCount = 0
     
-    for (let i = 0; i < allSymbols.length; i += batchSize) {
-      const batch = allSymbols.slice(i, i + batchSize)
+    const symbolsArray = Array.from(symbolMap.keys())
+    
+    for (let i = 0; i < symbolsArray.length; i += batchSize) {
+      const batch = symbolsArray.slice(i, i + batchSize)
       
-      // Fetch quotes for this batch
-      await Promise.all(
-        batch.map(async (symbol) => {
-          try {
-            // Fetch quote directly from Kite using utility function
-            const quote = await fetchStockQuote(symbol, accessToken)
-            
-            if (quote) {
-              stockData[symbol] = {
-                symbol,
-                price: quote.current,
-                change: quote.changePercent,
-                volume: quote.volume || 0,
-                avgVolume: quote.avgVolume || 1
-              }
-              
-              successCount++
-            } else {
-              failCount++
+      try {
+        // Fetch quotes for this batch using Kite's getQuote
+        const exchangeSymbols = batch.map(s => `NSE:${s}`)
+        const quotes = await kc.getQuote(exchangeSymbols)
+        
+        for (const symbol of batch) {
+          const quoteKey = `NSE:${symbol}`
+          const quote = quotes[quoteKey]
+          
+          if (quote) {
+            stockData[symbol] = {
+              symbol,
+              price: quote.last_price,
+              change: ((quote.last_price - quote.ohlc.close) / quote.ohlc.close) * 100,
+              volume: quote.volume,
+              avgVolume: quote.average_price || quote.volume // Fallback if avg not available
             }
-          } catch (err) {
-            console.error(`❌ Failed to fetch ${symbol}:`, err)
+            successCount++
+          } else {
             failCount++
           }
-        })
-      )
+        }
+      } catch (err) {
+        console.error(`❌ Failed to fetch batch:`, err)
+        failCount += batch.length
+      }
       
       // Small delay between batches to avoid rate limits
-      if (i + batchSize < allSymbols.length) {
+      if (i + batchSize < symbolsArray.length) {
         await new Promise(resolve => setTimeout(resolve, 200))
       }
     }
