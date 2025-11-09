@@ -108,28 +108,70 @@ export async function GET(request: NextRequest) {
     // Analyze sector performance
     const sectorPerformance = analyzeSectorPerformance(stockData)
     
-    // For hot sector stocks, we need momentum signals
-    // Let's create basic signals from the stock data
-    const signals = Object.values(stockData).map(stock => ({
-      symbol: stock.symbol,
-      current: stock.price,
-      changePercent: stock.change,
-      volume: stock.volume,
-      avgVolume: stock.avgVolume,
-      volumeRatio: stock.volume / stock.avgVolume,
-      // Add basic scoring
-      totalScore: calculateBasicScore(stock)
-    }))
-    
-    // Find hot sector stocks
-    const hotSectorStocks = findHotSectorStocks(sectorPerformance, signals)
-    
-    // Get top hot sectors (momentum = HOT or WARM)
+    // Get hot sectors first
     const hotSectors = sectorPerformance.filter(s => s.momentum === 'HOT' || s.momentum === 'WARM')
     
     console.log(`📊 Sector Analysis: ${sectorPerformance.length} sectors analyzed`)
     console.log(`🔥 Hot sectors: ${hotSectors.length}`)
-    console.log(`📈 Hot sector stocks: ${hotSectorStocks.length}`)
+    
+    // For hot sector stocks, run FULL MASTER SCORER (not basic score)
+    let hotSectorStocks: any[] = []
+    
+    if (hotSectors.length > 0) {
+      const hotSectorNames = new Set(hotSectors.map(s => s.sector))
+      const hotSectorSymbols = Object.keys(stockData).filter(symbol => {
+        const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(symbol)
+        return sectorInfo && hotSectorNames.has(sectorInfo.sector)
+      })
+      
+      console.log(`🎯 Running master scorer for ${hotSectorSymbols.length} hot sector stocks...`)
+      
+      // Import and run master scorer
+      const { batchCalculateMasterScores } = await import('@/lib/master-scorer')
+      const masterScores = await batchCalculateMasterScores(hotSectorSymbols, accessToken)
+      
+      // Filter for stocks with decent scores (>= 50) and add sector info
+      hotSectorStocks = masterScores
+        .filter(score => score.totalScore >= 50) // Only show stocks with decent potential
+        .map(score => {
+          const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(score.symbol)
+          const sector = sectorInfo?.sector || 'OTHER'
+          const sectorMomentum = sectorPerformance.find(s => s.sector === sector)?.momentum || 'NEUTRAL'
+          
+          return {
+            ...score,
+            sector,
+            sectorMomentum,
+            // Add fields needed for trade execution
+            entryPrice: score.tradePlan?.entry,
+            stopLoss: score.tradePlan?.stopLoss,
+            target1: score.tradePlan?.target1,
+            target2: score.tradePlan?.target2,
+            positionSize: score.tradePlan?.positionSize,
+            capitalRequired: score.tradePlan?.capitalRequired,
+            riskAmount: score.tradePlan?.riskAmount,
+            riskReward: score.tradePlan?.riskReward,
+            // Add signal data for paper trade
+            momentumScore: score.technicalScore,
+            confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
+            rsi: score.technicalIndicators?.rsi,
+            volumeRatio: score.volumeRatio,
+            reasons: [
+              `Sector ${sector} is ${sectorMomentum}`,
+              `Total Score: ${score.totalScore}/100`,
+              `Technical: ${score.technicalScore}/40`,
+              `Fundamental: ${score.fundamentalScore}/30`,
+              `Intelligence: ${score.intelligenceScore}/30`
+            ],
+            warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : [],
+            currentPrice: score.currentPrice,
+            changePercent: score.priceChange
+          }
+        })
+        .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score
+      
+      console.log(`📈 Hot sector stocks with scores >= 50: ${hotSectorStocks.length}`)
+    }
     
     return NextResponse.json({
       success: true,
@@ -147,30 +189,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-/**
- * Calculate a basic score for sector stocks
- * (This is simpler than master scorer, just for sector analysis)
- */
-function calculateBasicScore(stock: any): number {
-  let score = 50 // Base score
-  
-  // Price change contribution (max 30 points)
-  const change = stock.change || 0
-  if (change > 0) {
-    score += Math.min(change * 5, 30) // Positive change adds up to 30 points
-  } else {
-    score += Math.max(change * 5, -30) // Negative change removes up to 30 points
-  }
-  
-  // Volume contribution (max 20 points)
-  const volumeRatio = stock.volume / stock.avgVolume
-  if (volumeRatio > 1) {
-    score += Math.min((volumeRatio - 1) * 10, 20)
-  }
-  
-  // Clamp score between 0-100
-  return Math.max(0, Math.min(100, score))
 }
 
