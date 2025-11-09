@@ -254,6 +254,13 @@ export async function GET(request: NextRequest) {
       
       console.log(`📊 Converted ${momentumSignals.length} symbols to MomentumSignal format (with historical data)`)
       
+      // LOG MOMENTUM SCORES BEFORE PASSING TO MASTER SCORER
+      console.log(`📊 Momentum scores calculated:`)
+      momentumSignals.forEach(sig => {
+        console.log(`  ${sig.symbol}: momentumScore=${sig.momentumScore}, RSI=${sig.rsi?.toFixed(1)}, signal=${sig.signal}`)
+      })
+      
+      
       if (momentumSignals.length === 0) {
         console.log(`⚠️ No stocks with sufficient historical data, skipping master scorer`)
         return NextResponse.json({
