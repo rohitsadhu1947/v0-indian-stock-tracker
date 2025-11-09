@@ -28,6 +28,7 @@ export interface AlertPreferences {
 export type AlertType = 
   | 'NEW_SIGNAL'
   | 'NEWS_POP'
+  | 'ORB_BREAKOUT'
   | 'TARGET_HIT'
   | 'STOP_LOSS_HIT'
   | 'POSITION_UPDATE'
@@ -211,6 +212,78 @@ Target 2: ${formatINR(newsPop.target2)} (${t2Percent}%)
 <b>Risk:Reward:</b> 1:${riskReward}
 
 <i>⚡ News-driven moves are FAST. Act quickly or skip!</i>
+
+<i>⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</i>
+`.trim()
+
+  return sendTelegramMessage(config.botToken, config.chatId, message)
+}
+
+/**
+ * Alert: ORB (Opening Range Breakout) detected
+ */
+export async function sendOrbBreakoutAlert(
+  config: TelegramConfig,
+  breakout: {
+    symbol: string
+    exchange: string
+    breakoutType: 'ABOVE HIGH' | 'BELOW LOW'
+    signalType: 'BUY' | 'SELL'
+    orbHigh: number
+    orbLow: number
+    rangeSize: number
+    rangePercent: number
+    currentPrice: number
+    entryPrice: number
+    stopLoss: number
+    target: number
+    positionSize: number
+    capitalRequired: number
+    riskAmount: number
+    strength: number
+    volumeConfirmed: boolean
+  }
+): Promise<boolean> {
+  if (!config.enabled || !config.botToken || !config.chatId) {
+    return false
+  }
+
+  const emoji = breakout.breakoutType === 'ABOVE HIGH' ? '🚀' : '📉'
+  const directionText = breakout.breakoutType === 'ABOVE HIGH' ? 'BULLISH' : 'BEARISH'
+  const volumeEmoji = breakout.volumeConfirmed ? '🔥' : '📊'
+  
+  const slPercent = (((breakout.stopLoss - breakout.entryPrice) / breakout.entryPrice) * 100).toFixed(2)
+  const targetPercent = (((breakout.target - breakout.entryPrice) / breakout.entryPrice) * 100).toFixed(2)
+  const riskReward = ((Math.abs(breakout.target - breakout.entryPrice)) / (Math.abs(breakout.entryPrice - breakout.stopLoss))).toFixed(2)
+
+  const message = `
+${emoji} <b>ORB BREAKOUT: ${breakout.symbol}</b>
+
+<b>🎯 ${directionText} BREAKOUT CONFIRMED!</b>
+
+<b>📏 Opening Range (9:15-9:30 AM):</b>
+High: ${formatINR(breakout.orbHigh)}
+Low: ${formatINR(breakout.orbLow)}
+Range: ${formatINR(breakout.rangeSize)} (${breakout.rangePercent}%)
+
+<b>⚡ BREAKOUT DETAILS:</b>
+Type: ${breakout.breakoutType}
+Current Price: ${formatINR(breakout.currentPrice)}
+Strength: ${'⭐'.repeat(breakout.strength)}/5
+Volume: ${volumeEmoji} ${breakout.volumeConfirmed ? 'STRONG' : 'Moderate'}
+
+<b>📊 TRADE PLAN:</b>
+Signal: <b>${breakout.signalType}</b>
+Entry: ${formatINR(breakout.entryPrice)}
+Stop Loss: ${formatINR(breakout.stopLoss)} (${slPercent}%)
+Target: ${formatINR(breakout.target)} (${targetPercent}%)
+
+<b>Position Size:</b> ${breakout.positionSize} shares
+<b>Capital Required:</b> ${formatINR(breakout.capitalRequired)}
+<b>Max Risk:</b> ${formatINR(breakout.riskAmount)}
+<b>Risk:Reward:</b> 1:${riskReward}
+
+<i>💡 ORB breakouts have high success rate in first hour of trading!</i>
 
 <i>⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</i>
 `.trim()

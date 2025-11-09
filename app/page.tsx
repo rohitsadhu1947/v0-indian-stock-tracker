@@ -1561,6 +1561,64 @@ export default function StockTracker() {
       
       setOrbSignals(signals)
       
+      // Send Telegram alerts for new breakouts (only for high-strength signals)
+      if (signals.length > 0 && !silent) {
+        try {
+          // Fetch Telegram config
+          const configRes = await fetch('/api/telegram/settings')
+          if (configRes.ok) {
+            const config = await configRes.json()
+            
+            // Filter for high-strength ORB breakouts (4-5 stars)
+            const highStrengthBreakouts = signals.filter(s => s.strength >= 4)
+            
+            if (highStrengthBreakouts.length > 0) {
+              console.log(`📱 Sending Telegram alerts for ${highStrengthBreakouts.length} high-strength ORB breakouts...`)
+              
+              // Import dynamically to avoid circular dependencies
+              const { sendOrbBreakoutAlert } = await import('@/lib/telegram-alerts')
+              
+              for (const signal of highStrengthBreakouts) {
+                // Calculate position size and risk
+                const positionSize = Math.floor((momentumCapital * 0.02) / (signal.entry_price - signal.stop_loss))
+                const capitalRequired = positionSize * signal.entry_price
+                const riskAmount = positionSize * (signal.entry_price - signal.stop_loss)
+                
+                // Get ORB range info
+                const range = orbRanges[signal.symbol]
+                
+                await sendOrbBreakoutAlert(config, {
+                  symbol: signal.symbol,
+                  exchange: 'NSE',
+                  breakoutType: signal.breakout_type,
+                  signalType: signal.signal_type,
+                  orbHigh: signal.orb_high,
+                  orbLow: signal.orb_low,
+                  rangeSize: signal.range_size,
+                  rangePercent: ((signal.range_size / range.open) * 100),
+                  currentPrice: signal.current_price,
+                  entryPrice: signal.entry_price,
+                  stopLoss: signal.stop_loss,
+                  target: signal.target,
+                  positionSize,
+                  capitalRequired,
+                  riskAmount,
+                  strength: signal.strength,
+                  volumeConfirmed: signal.strength === 5
+                })
+                
+                console.log(`✅ Telegram alert sent for ${signal.symbol}`)
+                
+                // Small delay between alerts
+                await new Promise(resolve => setTimeout(resolve, 500))
+              }
+            }
+          }
+        } catch (err) {
+          console.error('❌ Failed to send ORB Telegram alerts:', err)
+        }
+      }
+      
       if (!silent) {
         if (signals.length === 0) {
           alert('📊 No ORB breakouts detected yet. Stocks are still within opening range.')
