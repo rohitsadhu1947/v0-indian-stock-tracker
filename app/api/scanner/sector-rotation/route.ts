@@ -125,36 +125,90 @@ export async function GET(request: NextRequest) {
       })
       
       console.log(`🎯 Running master scorer for ${hotSectorSymbols.length} hot sector stocks...`)
+      console.log(`⏳ Fetching historical data (this will take 30-60 seconds)...`)
       
-      // Convert stockData to MomentumSignal format that master scorer expects
-      const momentumSignals = hotSectorSymbols.map(symbol => {
-        const data = stockData[symbol]
-        return {
-          symbol,
-          exchange: 'NSE',
-          current: data.price,
-          changePercent: data.change,
-          volume: data.volume,
-          avgVolume: data.avgVolume,
-          // Add required momentum signal fields with defaults
-          momentumScore: 50, // Will be recalculated by master scorer
-          high: data.price,
-          low: data.price,
-          open: data.price,
-          close: data.price,
-          vwap: data.price,
-          avgPrice: data.price,
-          instrumentToken: 0, // Not needed for master scorer
-          ohlc: {
-            open: data.price,
+      // Fetch historical candles for each stock (REQUIRED for proper technical analysis)
+      const historicalDataMap = new Map<string, any[]>()
+      
+      for (const symbol of hotSectorSymbols) {
+        try {
+          const toDate = new Date()
+          const fromDate = new Date()
+          fromDate.setDate(fromDate.getDate() - 60) // 60 days of data
+          
+          const candles = await kc.getHistoricalData(
+            symbolMap.get(symbol).instrument_token,
+            'day',
+            fromDate.toISOString().split('T')[0],
+            toDate.toISOString().split('T')[0]
+          )
+          
+          historicalDataMap.set(symbol, candles || [])
+          console.log(`  ✓ ${symbol}: ${candles?.length || 0} candles`)
+        } catch (error) {
+          console.error(`  ✗ ${symbol}: Failed to fetch historical data`)
+          historicalDataMap.set(symbol, [])
+        }
+      }
+      
+      console.log(`📊 Historical data fetched for ${historicalDataMap.size} stocks`)
+      
+      // Convert stockData to MomentumSignal format with FULL historical data
+      const momentumSignals = hotSectorSymbols
+        .filter(symbol => {
+          const candles = historicalDataMap.get(symbol) || []
+          if (candles.length < 30) {
+            console.log(`  ⚠️ Skipping ${symbol}: Only ${candles.length} candles (need 30+)`)
+            return false
+          }
+          return true
+        })
+        .map(symbol => {
+          const data = stockData[symbol]
+          const candles = historicalDataMap.get(symbol) || []
+          
+          return {
+            symbol,
+            exchange: 'NSE',
+            current: data.price,
+            changePercent: data.change,
+            volume: data.volume,
+            avgVolume: data.avgVolume,
+            candles,  // ← CRITICAL: Historical candles for RSI/MACD/SMA
+            // Add required momentum signal fields
+            instrumentToken: symbolMap.get(symbol)?.instrument_token || 0,
+            change: (data.price * data.change) / 100,
+            volumeRatio: data.volume / data.avgVolume,
             high: data.price,
             low: data.price,
-            close: data.price
+            open: data.price,
+            close: data.price,
+            vwap: data.price,
+            avgPrice: data.price,
+            ohlc: {
+              open: data.price,
+              high: data.price,
+              low: data.price,
+              close: data.price
+            }
           }
-        }
-      })
+        })
       
-      console.log(`📊 Converted ${momentumSignals.length} symbols to MomentumSignal format`)
+      console.log(`📊 Converted ${momentumSignals.length} symbols to MomentumSignal format (with historical data)`)
+      
+      if (momentumSignals.length === 0) {
+        console.log(`⚠️ No stocks with sufficient historical data, skipping master scorer`)
+        return NextResponse.json({
+          success: true,
+          sectorPerformance,
+          hotSectors,
+          hotSectorStocks: [],
+          totalSectors: sectorPerformance.length,
+          totalStocksAnalyzed: successCount,
+          dataSource: 'kite_independent',
+          warning: 'No stocks with sufficient historical data for analysis'
+        })
+      }
       
       // Import and run master scorer
       const { batchCalculateMasterScores } = await import('@/lib/master-scorer')
@@ -180,6 +234,10 @@ export async function GET(request: NextRequest) {
             ...score,
             sector,
             sectorMomentum,
+            // Add fields needed for UI display (from original stockData)
+            currentPrice: stockData[score.symbol]?.price,
+            changePercent: stockData[score.symbol]?.change,
+            volumeRatio: stockData[score.symbol] ? stockData[score.symbol].volume / stockData[score.symbol].avgVolume : undefined,
             // Add fields needed for trade execution
             entryPrice: score.tradePlan?.entry,
             stopLoss: score.tradePlan?.stopLoss,
@@ -190,20 +248,17 @@ export async function GET(request: NextRequest) {
             riskAmount: score.tradePlan?.riskAmount,
             riskReward: score.tradePlan?.riskReward,
             // Add signal data for paper trade
-            momentumScore: score.technicalScore,
+            momentumScore: score.technical?.score || 0,
             confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
-            rsi: score.technicalIndicators?.rsi,
-            volumeRatio: score.volumeRatio,
+            rsi: score.technical?.breakdown?.momentum || undefined,
             reasons: [
               `Sector ${sector} is ${sectorMomentum}`,
               `Total Score: ${score.totalScore}/100`,
-              `Technical: ${score.technicalScore}/40`,
-              `Fundamental: ${score.fundamentalScore}/30`,
-              `Intelligence: ${score.intelligenceScore}/30`
+              `Technical: ${score.technical?.score || 0}/40`,
+              `Fundamental: ${score.fundamental?.score || 0}/30`,
+              `Intelligence: ${score.intelligence?.score || 0}/30`
             ],
-            warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : [],
-            currentPrice: score.currentPrice,
-            changePercent: score.priceChange
+            warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : []
           }
         })
         .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score
@@ -225,6 +280,10 @@ export async function GET(request: NextRequest) {
               ...score,
               sector,
               sectorMomentum,
+              // Add fields needed for UI display (from original stockData)
+              currentPrice: stockData[score.symbol]?.price,
+              changePercent: stockData[score.symbol]?.change,
+              volumeRatio: stockData[score.symbol] ? stockData[score.symbol].volume / stockData[score.symbol].avgVolume : undefined,
               entryPrice: score.tradePlan?.entry,
               stopLoss: score.tradePlan?.stopLoss,
               target1: score.tradePlan?.target1,
@@ -233,20 +292,17 @@ export async function GET(request: NextRequest) {
               capitalRequired: score.tradePlan?.capitalRequired,
               riskAmount: score.tradePlan?.riskAmount,
               riskReward: score.tradePlan?.riskReward,
-              momentumScore: score.technicalScore,
+              momentumScore: score.technical?.score || 0,
               confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
-              rsi: score.technicalIndicators?.rsi,
-              volumeRatio: score.volumeRatio,
+              rsi: score.technical?.breakdown?.momentum || undefined,
               reasons: [
                 `Sector ${sector} is ${sectorMomentum}`,
                 `Total Score: ${score.totalScore}/100`,
-                `Technical: ${score.technicalScore}/40`,
-                `Fundamental: ${score.fundamentalScore}/30`,
-                `Intelligence: ${score.intelligenceScore}/30`
+                `Technical: ${score.technical?.score || 0}/40`,
+                `Fundamental: ${score.fundamental?.score || 0}/30`,
+                `Intelligence: ${score.intelligence?.score || 0}/30`
               ],
-              warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : [],
-              currentPrice: score.currentPrice,
-              changePercent: score.priceChange
+              warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : []
             }
           })
         console.log(`📈 Showing top ${hotSectorStocks.length} stocks (best available)`)
