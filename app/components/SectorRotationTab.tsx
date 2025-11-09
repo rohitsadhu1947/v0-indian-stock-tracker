@@ -57,23 +57,35 @@ export default function SectorRotationTab({
       setIsLoading(true)
       setError(null)
       
+      console.log('🔍 Fetching sector data...')
       const response = await fetch('/api/scanner/sector-rotation')
       
+      console.log('📡 Response status:', response.status, response.statusText)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch sector data')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ API Error:', errorData)
+        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}: ${response.statusText}`)
       }
       
       const data = await response.json()
+      
+      console.log('📊 Received data:', {
+        totalSectors: data.totalSectors,
+        hotSectors: data.hotSectors?.length,
+        hotStocks: data.hotSectorStocks?.length,
+        dataSource: data.dataSource
+      })
       
       setSectorPerformance(data.sectorPerformance || [])
       setHotSectors(data.hotSectors || [])
       setHotSectorStocks(data.hotSectorStocks || [])
       setLastUpdate(new Date())
       
-      console.log(`✅ Sector data loaded: ${data.totalSectors} sectors, ${data.hotSectorStocks.length} hot stocks`)
+      console.log(`✅ Sector data loaded: ${data.totalSectors} sectors, ${data.hotSectorStocks?.length || 0} hot stocks`)
     } catch (err: any) {
       console.error('❌ Error fetching sector data:', err)
-      setError(err.message)
+      setError(err.message || 'Unknown error occurred')
     } finally {
       setIsLoading(false)
     }
