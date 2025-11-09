@@ -154,6 +154,9 @@ export async function GET(request: NextRequest) {
       console.log(`📊 Historical data fetched for ${historicalDataMap.size} stocks`)
       
       // Convert stockData to MomentumSignal format with FULL historical data
+      // Import helper functions for technical calculations
+      const { calculateSMA, calculateRSI, calculateATR } = await import('@/lib/momentum-scanner')
+      
       const momentumSignals = hotSectorSymbols
         .filter(symbol => {
           const candles = historicalDataMap.get(symbol) || []
@@ -167,6 +170,41 @@ export async function GET(request: NextRequest) {
           const data = stockData[symbol]
           const candles = historicalDataMap.get(symbol) || []
           
+          // Calculate technical indicators from candles
+          const closePrices = candles.map((c: any) => c.close)
+          const sma5 = calculateSMA(closePrices, 5)
+          const sma10 = calculateSMA(closePrices, 10)
+          const sma20 = calculateSMA(closePrices, 20)
+          const rsi = calculateRSI(closePrices, 14)
+          const atr = calculateATR(candles, 14)
+          
+          // Calculate momentum score (0-100)
+          let momentumScore = 0
+          
+          // Price vs SMA (30 points)
+          if (data.price > sma5) momentumScore += 10
+          if (data.price > sma10) momentumScore += 10
+          if (data.price > sma20) momentumScore += 10
+          
+          // RSI (30 points)
+          if (rsi >= 50 && rsi <= 70) momentumScore += 30 // Strong zone
+          else if (rsi >= 40 && rsi < 50) momentumScore += 15 // Moderate
+          else if (rsi > 70) momentumScore += 10 // Overbought but strong
+          
+          // Volume (20 points)
+          const volumeRatio = data.volume / data.avgVolume
+          if (volumeRatio > 2) momentumScore += 20
+          else if (volumeRatio > 1.5) momentumScore += 15
+          else if (volumeRatio > 1) momentumScore += 10
+          
+          // Price change (20 points)
+          if (data.change > 3) momentumScore += 20
+          else if (data.change > 2) momentumScore += 15
+          else if (data.change > 1) momentumScore += 10
+          else if (data.change > 0) momentumScore += 5
+          
+          console.log(`  ${symbol}: momentumScore=${momentumScore}, RSI=${rsi.toFixed(1)}, Price vs SMA20: ${data.price > sma20 ? 'above' : 'below'}`)
+          
           return {
             symbol,
             exchange: 'NSE',
@@ -178,7 +216,7 @@ export async function GET(request: NextRequest) {
             // Add required momentum signal fields
             instrumentToken: symbolMap.get(symbol)?.instrument_token || 0,
             change: (data.price * data.change) / 100,
-            volumeRatio: data.volume / data.avgVolume,
+            volumeRatio,
             high: data.price,
             low: data.price,
             open: data.price,
@@ -190,7 +228,27 @@ export async function GET(request: NextRequest) {
               high: data.price,
               low: data.price,
               close: data.price
-            }
+            },
+            // Technical indicators (REQUIRED for MomentumSignal)
+            sma5,
+            sma10,
+            sma20,
+            rsi,
+            atr,
+            momentumScore,  // ← THIS WAS MISSING!
+            signal: (momentumScore >= 70 ? 'STRONG_BUY' : momentumScore >= 60 ? 'BUY' : 'WATCH') as 'STRONG_BUY' | 'BUY' | 'WATCH' | 'SKIP',
+            confidence: momentumScore,
+            entryPrice: data.price,
+            stopLoss: data.price * 0.975,
+            target1: data.price * 1.04,
+            target2: data.price * 1.08,
+            positionSize: 0,  // Will be calculated by master scorer
+            capitalRequired: 0,
+            riskAmount: 0,
+            reasons: [],
+            warnings: [],
+            timeframe: '1-3 days',
+            sector: require('@/lib/sector-mapping').getSectorInfo(symbol)?.sector || 'OTHER'
           }
         })
       
