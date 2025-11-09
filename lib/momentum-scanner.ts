@@ -77,7 +77,7 @@ export interface MomentumScanResult {
 /**
  * Calculate Simple Moving Average
  */
-function calculateSMA(prices: number[], period: number): number {
+export function calculateSMA(prices: number[], period: number): number {
   if (prices.length < period) return prices[prices.length - 1]
   const slice = prices.slice(-period)
   return slice.reduce((sum, p) => sum + p, 0) / period
@@ -86,7 +86,7 @@ function calculateSMA(prices: number[], period: number): number {
 /**
  * Calculate RSI
  */
-function calculateRSI(prices: number[], period: number = 14): number {
+export function calculateRSI(prices: number[], period: number = 14): number {
   if (prices.length < period + 1) return 50
   
   let gains = 0
@@ -109,7 +109,7 @@ function calculateRSI(prices: number[], period: number = 14): number {
 /**
  * Calculate ATR (Average True Range)
  */
-function calculateATR(candles: any[], period: number = 14): number {
+export function calculateATR(candles: any[], period: number = 14): number {
   if (candles.length < period) return 0
   
   const trueRanges = []
