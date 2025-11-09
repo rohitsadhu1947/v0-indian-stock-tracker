@@ -130,9 +130,17 @@ export async function GET(request: NextRequest) {
       const { batchCalculateMasterScores } = await import('@/lib/master-scorer')
       const masterScores = await batchCalculateMasterScores(hotSectorSymbols, accessToken)
       
-      // Filter for stocks with decent scores (>= 50) and add sector info
+      console.log(`📊 Master scores received: ${masterScores.length} stocks`)
+      console.log(`📊 Score distribution:`)
+      console.log(`   >= 70: ${masterScores.filter(s => s.totalScore >= 70).length}`)
+      console.log(`   >= 60: ${masterScores.filter(s => s.totalScore >= 60).length}`)
+      console.log(`   >= 50: ${masterScores.filter(s => s.totalScore >= 50).length}`)
+      console.log(`   >= 40: ${masterScores.filter(s => s.totalScore >= 40).length}`)
+      console.log(`   < 40: ${masterScores.filter(s => s.totalScore < 40).length}`)
+      
+      // Filter for stocks with decent scores (>= 40, lowered from 50)
       hotSectorStocks = masterScores
-        .filter(score => score.totalScore >= 50) // Only show stocks with decent potential
+        .filter(score => score.totalScore >= 40) // Lowered threshold from 50 to 40
         .map(score => {
           const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(score.symbol)
           const sector = sectorInfo?.sector || 'OTHER'
@@ -170,7 +178,49 @@ export async function GET(request: NextRequest) {
         })
         .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score
       
-      console.log(`📈 Hot sector stocks with scores >= 50: ${hotSectorStocks.length}`)
+      console.log(`📈 Hot sector stocks with scores >= 40: ${hotSectorStocks.length}`)
+      
+      // If still no stocks, show top 5 regardless of score
+      if (hotSectorStocks.length === 0 && masterScores.length > 0) {
+        console.log(`⚠️ No stocks >= 40, showing top 5 regardless of score...`)
+        hotSectorStocks = masterScores
+          .sort((a, b) => b.totalScore - a.totalScore)
+          .slice(0, 5)
+          .map(score => {
+            const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(score.symbol)
+            const sector = sectorInfo?.sector || 'OTHER'
+            const sectorMomentum = sectorPerformance.find(s => s.sector === sector)?.momentum || 'NEUTRAL'
+            
+            return {
+              ...score,
+              sector,
+              sectorMomentum,
+              entryPrice: score.tradePlan?.entry,
+              stopLoss: score.tradePlan?.stopLoss,
+              target1: score.tradePlan?.target1,
+              target2: score.tradePlan?.target2,
+              positionSize: score.tradePlan?.positionSize,
+              capitalRequired: score.tradePlan?.capitalRequired,
+              riskAmount: score.tradePlan?.riskAmount,
+              riskReward: score.tradePlan?.riskReward,
+              momentumScore: score.technicalScore,
+              confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
+              rsi: score.technicalIndicators?.rsi,
+              volumeRatio: score.volumeRatio,
+              reasons: [
+                `Sector ${sector} is ${sectorMomentum}`,
+                `Total Score: ${score.totalScore}/100`,
+                `Technical: ${score.technicalScore}/40`,
+                `Fundamental: ${score.fundamentalScore}/30`,
+                `Intelligence: ${score.intelligenceScore}/30`
+              ],
+              warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : [],
+              currentPrice: score.currentPrice,
+              changePercent: score.priceChange
+            }
+          })
+        console.log(`📈 Showing top ${hotSectorStocks.length} stocks (best available)`)
+      }
     }
     
     return NextResponse.json({
