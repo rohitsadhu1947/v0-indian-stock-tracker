@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import ResearchTab from './components/ResearchTab'
 import TradeNowTab from './components/TradeNowTab'
 import NewsPopTab from './components/NewsPopTab'
+import SectorRotationTab from './components/SectorRotationTab'
 import TelegramSettingsTab from './components/TelegramSettingsTab'
 import BacktestTab from './components/BacktestTab'
 import { SignalCard } from './components/SignalCard'
@@ -73,11 +74,13 @@ export default function StockTracker() {
   const [isLoggingOut, setIsLoggingOut] = useState(false) // NEW: Track if we're logging out
   const [watchlist, setWatchlist] = useState<string[]>([]) // 🎯 Start with empty watchlist - user builds their own
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'screener' | 'signals' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum' | 'research' | 'tradenow' | 'newspop' | 'settings' | 'backtest' | 'admin'>('tradenow') // Default to TRADE NOW!
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum' | 'research' | 'tradenow' | 'newspop' | 'sectors' | 'settings' | 'backtest' | 'admin'>('tradenow') // Default to TRADE NOW!
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
   const [exchange, setExchange] = useState('NSE')
+  
+  // Screener states (DEPRECATED - keeping for backwards compatibility, not displayed in UI)
   const [screenerResults, setScreenerResults] = useState<any[]>([])
   const [activeSignals, setActiveSignals] = useState<any[]>([])
   const [customScreenerStocks, setCustomScreenerStocks] = useState<string[]>([])
@@ -732,7 +735,7 @@ export default function StockTracker() {
     }
 
     setIsLoading(true)
-    setActiveTab('screener')
+    // setActiveTab('screener') // DEPRECATED - screener tab removed
             
     const results: any[] = []
             
@@ -3287,18 +3290,6 @@ export default function StockTracker() {
           Watchlist
         </button>
         <button 
-          className={`tab ${activeTab === 'screener' ? 'active' : ''}`}
-          onClick={() => setActiveTab('screener')}
-        >
-          Screener
-        </button>
-        <button 
-          className={`tab ${activeTab === 'signals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('signals')}
-        >
-          Active Signals
-        </button>
-        <button 
           className={`tab ${activeTab === 'intraday' ? 'active' : ''}`}
           onClick={() => setActiveTab('intraday')}
         >
@@ -3354,6 +3345,12 @@ export default function StockTracker() {
           💰 Momentum
         </button>
         <button 
+          className={`tab ${activeTab === 'sectors' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sectors')}
+        >
+          🔥 Sectors
+        </button>
+        <button 
           className={`tab ${activeTab === 'research' ? 'active' : ''}`}
           onClick={() => setActiveTab('research')}
         >
@@ -3404,199 +3401,6 @@ export default function StockTracker() {
               return <StockCard key={symbol} stock={data} analysis={analysis} />
             })}
           </div>
-        </div>
-      )}
-
-      {activeTab === 'screener' && (
-        <div>
-          <div className="strategy-info">
-            <h3>📊 Custom Screener Groups</h3>
-            <p><strong>Momentum Breakout:</strong> Stocks breaking above resistance with high volume</p>
-            <p><strong>Oversold Bounce:</strong> Stocks at RSI &lt; 30 ready for reversal</p>
-            <p><strong>Trend Following:</strong> Stocks in strong uptrend with good momentum</p>
-          </div>
-
-          <div className="controls" style={{ marginBottom: '20px' }}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Select Screener Group:
-              </label>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <select 
-                  value={activeScreenerGroup} 
-                  onChange={(e) => setActiveScreenerGroup(e.target.value)}
-                  style={{ flex: '1', minWidth: '200px' }}
-                >
-                  {Object.keys(screenerGroups).map(group => (
-                    <option key={group} value={group}>
-                      {group} ({screenerGroups[group].length} stocks)
-                    </option>
-                  ))}
-                </select>
-                <button onClick={createNewScreenerGroup}>
-                  ➕ New Group
-                </button>
-                {activeScreenerGroup !== 'Popular Large Caps' && (
-                  <button 
-                    onClick={deleteScreenerGroup}
-                    style={{ background: 'rgba(255, 0, 100, 0.3)', color: '#ff0064' }}
-                  >
-                    🗑️ Delete Group
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Add Stock to {activeScreenerGroup}:
-              </label>
-              <div className="input-group">
-                <input
-                  type="text"
-                  value={screenerInput}
-                  onChange={(e) => setScreenerInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addToScreener()}
-                  placeholder="Enter stock symbol (e.g., ADANIENT)"
-                  style={{ flex: '1' }}
-                />
-                <button onClick={addToScreener}>Add to Screener</button>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Stocks in {activeScreenerGroup}: ({screenerGroups[activeScreenerGroup]?.length || 0})
-              </label>
-              <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '8px',
-                padding: '10px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                minHeight: '50px'
-              }}>
-                {screenerGroups[activeScreenerGroup]?.length > 0 ? (
-                  screenerGroups[activeScreenerGroup].map(symbol => (
-                    <span 
-                      key={symbol}
-                      style={{
-                        padding: '6px 12px',
-                        background: 'rgba(79, 172, 254, 0.2)',
-                        border: '1px solid rgba(79, 172, 254, 0.5)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      {symbol}
-                      <button 
-                        onClick={() => removeFromScreener(symbol)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ff0064',
-                          cursor: 'pointer',
-                          padding: '0',
-                          fontSize: '16px',
-                          lineHeight: '1'
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                    No stocks added. Add stocks above to screen them.
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="screener-results">
-            <h3>Top Opportunities</h3>
-            {isLoading ? (
-              <div className="loading">Screening stocks... Please wait...</div>
-            ) : screenerResults.length === 0 ? (
-              <p>Click "Run Screener" to find trading opportunities</p>
-            ) : (
-              <table className="screener-table">
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Price</th>
-                            <th>Change %</th>
-                            <th>Signal</th>
-                            <th>Reason</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                  {screenerResults.map(stock => {
-                    const changeClass = stock.change >= 0 ? 'positive' : 'negative'
-              const signalClass = stock.signal.includes('BUY') ? 'positive' : 
-                                       stock.signal.includes('SELL') ? 'negative' : 'neutral'
-                    return (
-                      <tr key={stock.symbol}>
-                        <td><strong>{stock.symbol}</strong></td>
-                        <td>₹{stock.price.toFixed(2)}</td>
-                        <td className={changeClass}>{stock.change.toFixed(2)}%</td>
-                        <td className={signalClass}>{stock.signal}</td>
-                        <td style={{ fontSize: '0.9em' }}>{stock.reason}</td>
-                        <td>
-                          <button 
-                            onClick={() => addToWatchlist(stock.symbol)}
-                            style={{ fontSize: '0.9em', padding: '5px 10px' }}
-                          >
-                                Add
-                            </button>
-                        </td>
-                    </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'signals' && (
-        <div className="screener-results">
-          <h3>Active Trading Signals</h3>
-          {activeSignals.length === 0 ? (
-            <p>No active strong signals. Refresh your watchlist or run the screener to find opportunities.</p>
-          ) : (
-            <table className="screener-table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Symbol</th>
-                            <th>Signal</th>
-                            <th>Price</th>
-                            <th>Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                {activeSignals.slice().reverse().map((signal, idx) => {
-                  const signalClass = signal.signal.includes('BUY') ? 'positive' : 'negative'
-                  return (
-                    <tr key={idx}>
-                      <td>{signal.time}</td>
-                      <td><strong>{signal.symbol}</strong></td>
-                      <td className={signalClass}>{signal.signal}</td>
-                      <td>₹{signal.price.toFixed(2)}</td>
-                      <td>{signal.reason}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
         </div>
       )}
 
@@ -8724,6 +8528,15 @@ export default function StockTracker() {
               alert(`❌ Error: ${error.message}`)
             }
           }}
+        />
+      )}
+
+      {/* 🔥 SECTOR ROTATION TAB */}
+      {activeTab === 'sectors' && (
+        <SectorRotationTab
+          onExecuteTrade={executePaperTrade}
+          isPaperMode={isPaperMode}
+          isExecutingTrade={isExecutingTrade}
         />
       )}
 
