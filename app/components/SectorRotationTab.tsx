@@ -339,7 +339,7 @@ export default function SectorRotationTab({
                           fontSize: '0.75em',
                           fontWeight: 'bold'
                         }}>
-                          Score: {stock.totalScore}/100
+                          Score: {stock.totalScore?.toFixed(1) || 'N/A'}/100
                         </span>
                       )}
                     </div>
@@ -360,7 +360,9 @@ export default function SectorRotationTab({
                       </div>
                       <div>
                         <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Volume: </span>
-                        <span style={{ fontWeight: 'bold' }}>{stock.volumeRatio?.toFixed(1)}x</span>
+                        <span style={{ fontWeight: 'bold' }}>
+                          {stock.volumeRatio ? `${stock.volumeRatio.toFixed(1)}x` : 'N/A'}
+                        </span>
                       </div>
                     </div>
                   </div>

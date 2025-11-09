@@ -67,11 +67,14 @@ export function analyzeSectorPerformance(
     
     // Determine momentum
     let momentum: 'HOT' | 'WARM' | 'NEUTRAL' | 'COLD'
-    if (avgChange >= 2 && positiveCount / stocks.length >= 0.7) {
+    const positiveRatio = positiveCount / stocks.length
+    
+    if (avgChange >= 2 && positiveRatio >= 0.7) {
       momentum = 'HOT'
-    } else if (avgChange >= 1 && positiveCount / stocks.length >= 0.6) {
+    } else if (avgChange >= 1 && positiveRatio >= 0.6) {
       momentum = 'WARM'
-    } else if (avgChange <= -1 && positiveCount / stocks.length <= 0.4) {
+    } else if (avgChange < 0 || positiveRatio < 0.5) {
+      // Negative avg change OR less than 50% stocks positive = COLD
       momentum = 'COLD'
     } else {
       momentum = 'NEUTRAL'
