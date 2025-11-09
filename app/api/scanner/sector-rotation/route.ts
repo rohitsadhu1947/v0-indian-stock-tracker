@@ -215,6 +215,12 @@ export async function GET(request: NextRequest) {
       const masterScores = await batchCalculateMasterScores(momentumSignals, {}, 300000) // empty analyst reports, 3L capital
       
       console.log(`📊 Master scores received: ${masterScores.length} stocks`)
+      
+      // LOG DETAILED SCORES FOR DEBUGGING
+      masterScores.forEach(score => {
+        console.log(`  ${score.symbol}: Total=${score.totalScore}, Tech=${score.technical?.score || 'N/A'}, Fund=${score.fundamental?.score || 'N/A'}, Intel=${score.intelligence?.score || 'N/A'}`)
+      })
+      
       console.log(`📊 Score distribution:`)
       console.log(`   >= 70: ${masterScores.filter(s => s.totalScore >= 70).length}`)
       console.log(`   >= 60: ${masterScores.filter(s => s.totalScore >= 60).length}`)
