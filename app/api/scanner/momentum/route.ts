@@ -126,6 +126,9 @@ export async function GET(request: NextRequest) {
             const inst = symbolMap.get(symbol)
             if (!inst) {
               console.log(`⚠️ ${symbol}: No instrument found`)
+              if (customStocks.includes(symbol)) {
+                console.log(`   ❌ CUSTOM STOCK ${symbol} failed at instrument lookup!`)
+              }
               continue
             }
             
@@ -133,6 +136,9 @@ export async function GET(request: NextRequest) {
             const quote = quotes[quoteKey]
             if (!quote) {
               console.log(`⚠️ ${symbol}: No quote data`)
+              if (customStocks.includes(symbol)) {
+                console.log(`   ❌ CUSTOM STOCK ${symbol} failed at quote fetch!`)
+              }
               continue
             }
             
@@ -149,6 +155,9 @@ export async function GET(request: NextRequest) {
             
             if (!candles || candles.length < 30) {
               console.log(`⚠️ ${symbol}: Insufficient candles (${candles?.length || 0})`)
+              if (customStocks.includes(symbol)) {
+                console.log(`   ❌ CUSTOM STOCK ${symbol} failed at historical data! Only ${candles?.length || 0} candles`)
+              }
               continue
             }
             
