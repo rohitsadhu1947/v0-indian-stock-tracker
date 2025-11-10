@@ -178,20 +178,44 @@ export async function GET(request: NextRequest) {
               ? candles.reduce((sum: number, c: any) => sum + c.volume, 0) / candles.length
               : quote.volume
             
-            // For SWING TRADING: Use yesterday's volume (last completed candle)
-            // NOT today's intraday volume which builds throughout the day
-            // This gives accurate volume comparison for multi-day setups
-            const currentVolume = candles.length > 0 
-              ? candles[candles.length - 1].volume  // Yesterday's full day volume
-              : quote.volume  // Fallback to quote if no candles
+            // DEBUG: Show last 10 days of volume to understand the pattern
+            if (customStocks.includes(symbol)) {
+              console.log(`\n📊 Last 10 days volume for ${symbol}:`)
+              const last10 = candles.slice(-10)
+              last10.forEach((c: any, i: number) => {
+                const date = new Date(c.date).toLocaleDateString('en-IN')
+                console.log(`   ${date}: ${c.volume.toLocaleString()} (${(c.volume / avgVolume * 100).toFixed(0)}% of avg)`)
+              })
+            }
             
-            // DEBUG: Show volume comparison for first few stocks
-            if (successCount < 3) {
+            // For SWING TRADING: Find the last TRADING day (not weekend/holiday)
+            // Look back through candles to find a day with significant volume
+            let lastTradingVolume = quote.volume // Fallback
+            let lastTradingDate = 'today'
+            
+            if (candles.length > 0) {
+              // Look back up to 5 days to find last proper trading day
+              for (let i = candles.length - 1; i >= Math.max(0, candles.length - 5); i--) {
+                const candle = candles[i]
+                // Consider it a trading day if volume > 10% of average
+                // (filters out holidays/weekends with zero/minimal volume)
+                if (candle.volume > avgVolume * 0.1) {
+                  lastTradingVolume = candle.volume
+                  lastTradingDate = new Date(candle.date).toLocaleDateString('en-IN')
+                  break
+                }
+              }
+            }
+            
+            const currentVolume = lastTradingVolume
+            
+            // DEBUG for custom stocks
+            if (customStocks.includes(symbol)) {
               console.log(`\n🔍 VOLUME DEBUG for ${symbol}:`)
               console.log(`   Today's intraday volume: ${quote.volume.toLocaleString()}`)
-              console.log(`   Yesterday's full volume: ${candles.length > 0 ? candles[candles.length - 1].volume.toLocaleString() : 'N/A'}`)
-              console.log(`   Using for analysis: ${currentVolume.toLocaleString()} (${candles.length > 0 ? 'YESTERDAY' : 'TODAY'})`)
-              console.log(`   Average volume: ${avgVolume.toLocaleString()}`)
+              console.log(`   Last trading day (${lastTradingDate}): ${lastTradingVolume.toLocaleString()}`)
+              console.log(`   🎯 USING: ${currentVolume.toLocaleString()}`)
+              console.log(`   Average volume (40 days): ${avgVolume.toLocaleString()}`)
               console.log(`   Volume ratio: ${(currentVolume / avgVolume).toFixed(2)}x`)
             }
             
