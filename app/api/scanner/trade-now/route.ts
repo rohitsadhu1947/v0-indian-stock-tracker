@@ -157,13 +157,16 @@ export async function GET(request: NextRequest) {
     if (customSymbols) {
       const customSymbolsList = customSymbols.split(',').map(s => s.trim().toUpperCase())
       console.log(`\n🔍 Checking for custom symbols: ${customSymbolsList.join(', ')}`)
+      console.log(`   Total master scores received: ${masterScores.length}`)
+      console.log(`   Master score symbols: ${masterScores.map(s => s.symbol).slice(0, 10).join(', ')}...`)
       customSymbolsList.forEach(sym => {
         const found = masterScores.find(s => s.symbol === sym)
         if (found) {
           console.log(`  ✅ ${sym} found with score ${found.totalScore}`)
         } else {
           console.log(`  ❌ ${sym} NOT found in master scores!`)
-          console.log(`  Available symbols: ${masterScores.map(s => s.symbol).join(', ')}`)
+          console.log(`  → This means momentum scanner didn't return it`)
+          console.log(`  → Check if symbol is valid or has sufficient data`)
         }
       })
     }
