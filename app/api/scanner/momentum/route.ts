@@ -64,8 +64,16 @@ export async function GET(request: NextRequest) {
     const instruments = await kc.getInstruments('NSE')
     const symbolMap = new Map<string, any>()
     
-    // Combine NIFTY 500 symbols with custom stocks
-    const symbolsToCheck = [...NIFTY_500_SYMBOLS, ...customStocks]
+    // Determine which symbols to check based on custom stocks
+    let symbolsToCheck: string[]
+    if (customStocks.length > 0 && !searchParams.get('universe')) {
+      // Custom stocks ONLY mode (no universe specified)
+      symbolsToCheck = customStocks
+      console.log(`📝 Custom stocks ONLY mode: ${customStocks.join(', ')}`)
+    } else {
+      // Normal mode: Combine NIFTY 500 symbols with custom stocks
+      symbolsToCheck = [...NIFTY_500_SYMBOLS, ...customStocks]
+    }
     
     for (const inst of instruments) {
       if (inst.instrument_type === 'EQ' && symbolsToCheck.includes(inst.tradingsymbol)) {
@@ -73,7 +81,7 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    console.log(`✅ Found ${symbolMap.size} instruments (${customStocks.length > 0 ? `including ${customStocks.length} custom` : 'from NIFTY 500'})`)
+    console.log(`✅ Found ${symbolMap.size} instruments${customStocks.length > 0 ? ` (${customStocks.length} custom requested)` : ' from NIFTY 500'}`)
     
     // 5. Fetch quotes and historical data for all stocks (in batches)
     const stocksData = []

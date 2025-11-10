@@ -69,15 +69,16 @@ export async function GET(request: NextRequest) {
     console.log('\n📈 Step 1: Running momentum scanner...')
     
     // Build URL with custom symbols if provided
-    // If ONLY custom symbols (no universe scan), use quickScan for faster results
     const isCustomOnly = customSymbols && customSymbols.trim().length > 0
     
     let momentumUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/scanner/momentum?capital=${capitalAvailable}&minScore=60&maxSignals=50`
     
     if (isCustomOnly) {
-      // Custom stock only - use quick scan (top 100 + custom)
-      momentumUrl += `&universe=NIFTY_500&quickScan=true&customStocks=${customSymbols}`
-      console.log(`  → Custom stock analysis (with quick universe scan): ${customSymbols}`)
+      // Custom stock ONLY - scan JUST the custom stock(s), no universe scan
+      // This makes debugging easier and saves API calls
+      momentumUrl += `&customStocks=${customSymbols}&minScore=0`
+      console.log(`  → Custom stock ONLY analysis: ${customSymbols}`)
+      console.log(`  → NOT scanning universe to save time and make debugging easier`)
     } else {
       // Full scan
       momentumUrl += `&universe=NIFTY_500`
