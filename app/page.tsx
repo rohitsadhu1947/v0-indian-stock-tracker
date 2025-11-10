@@ -7982,9 +7982,27 @@ export default function StockTracker() {
             
             {/* Custom Stocks Input */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                📝 Custom Stocks <span style={{ opacity: 0.6, fontWeight: 'normal' }}>(Optional)</span>
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ fontWeight: 'bold' }}>
+                  📝 Custom Stocks <span style={{ opacity: 0.6, fontWeight: 'normal' }}>(Optional)</span>
+                </label>
+                {customStocksInput && (
+                  <button
+                    onClick={() => setCustomStocksInput('')}
+                    style={{
+                      padding: '4px 12px',
+                      fontSize: '0.85em',
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '6px',
+                      color: '#EF4444',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={customStocksInput}
@@ -8005,6 +8023,14 @@ export default function StockTracker() {
                 • Separate multiple stocks with commas<br/>
                 • Leave empty to scan only NIFTY 500<br/>
                 • Examples: TATAMOTORS, ADANIENT, PAYTM
+                {customStocksInput && (
+                  <>
+                    <br/>
+                    <span style={{ color: '#FCD34D', fontWeight: 'bold' }}>
+                      ⚠️ Custom stocks are active - Clear to run full scan!
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             
