@@ -2,15 +2,13 @@
  * Sector Heat Map API
  * Returns sector performance and hot sector stocks
  * 
- * INDEPENDENT DATA SOURCE: Fetches fresh data directly from Kite
+ * STRATEGY: Reuse momentum scanner for consistency (NO changes to momentum scanner!)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
-import { KiteConnect } from 'kiteconnect'
-import { analyzeSectorPerformance, findHotSectorStocks } from '@/lib/sector-rotation'
-import { STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
+import { analyzeSectorPerformance } from '@/lib/sector-rotation'
+import { getSectorInfo } from '@/lib/sector-mapping'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,87 +21,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get Kite access token
-    const accessToken = await getKiteAccessToken()
-    
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Kite access token not available' }, { status: 401 })
-    }
+    console.log('🔍 Sector Scanner: Calling momentum scanner...')
 
-    // Get API key
-    const apiKey = getKiteApiKey()
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Kite API key not configured' }, { status: 500 })
-    }
-
-    console.log('🔍 Fetching sector data independently...')
-
-    // Initialize Kite Connect
-    const kc = new KiteConnect({ api_key: apiKey })
-    kc.setAccessToken(accessToken)
-
-    // Get all symbols from STOCK_SECTOR_MAP (these are the stocks we can analyze)
-    const allSymbols = Object.keys(STOCK_SECTOR_MAP)
+    // Call momentum scanner with NIFTY 500 universe
+    // This gives us properly calculated momentum signals with correct volume logic
+    const momentumUrl = new URL('/api/scanner/momentum', request.url)
+    momentumUrl.searchParams.set('capital', '300000')
+    momentumUrl.searchParams.set('maxSignals', '200') // Get many signals for sector analysis
+    momentumUrl.searchParams.set('minScore', '0') // Don't filter yet
+    momentumUrl.searchParams.set('universe', 'nifty500')
     
-    console.log(`📊 Analyzing ${allSymbols.length} stocks across sectors...`)
-    
-    // Get instrument tokens first
-    const instruments = await kc.getInstruments('NSE')
-    const symbolMap = new Map<string, any>()
-    
-    for (const inst of instruments) {
-      if (inst.instrument_type === 'EQ' && allSymbols.includes(inst.tradingsymbol)) {
-        symbolMap.set(inst.tradingsymbol, inst)
+    const momentumResponse = await fetch(momentumUrl.toString(), {
+      headers: {
+        cookie: request.headers.get('cookie') || ''
       }
+    })
+    
+    if (!momentumResponse.ok) {
+      throw new Error('Failed to fetch momentum signals')
     }
     
-    console.log(`✅ Found ${symbolMap.size} instruments`)
+    const momentumData = await momentumResponse.json()
+    const signals = momentumData.signals || []
     
-    // Fetch quotes for all stocks (in batches to avoid rate limits)
-    const batchSize = 50
+    console.log(`✅ Got ${signals.length} momentum signals`)
+    
+    // Convert momentum signals to stockData format for sector analysis
     const stockData: Record<string, any> = {}
-    let successCount = 0
-    let failCount = 0
     
-    const symbolsArray = Array.from(symbolMap.keys())
-    
-    for (let i = 0; i < symbolsArray.length; i += batchSize) {
-      const batch = symbolsArray.slice(i, i + batchSize)
-      
-      try {
-        // Fetch quotes for this batch using Kite's getQuote
-        const exchangeSymbols = batch.map(s => `NSE:${s}`)
-        const quotes = await kc.getQuote(exchangeSymbols)
-        
-        for (const symbol of batch) {
-          const quoteKey = `NSE:${symbol}`
-          const quote = quotes[quoteKey]
-          
-          if (quote) {
-            stockData[symbol] = {
-              symbol,
-              price: quote.last_price,
-              change: ((quote.last_price - quote.ohlc.close) / quote.ohlc.close) * 100,
-              volume: quote.volume,
-              avgVolume: quote.average_price || quote.volume // Fallback if avg not available
-            }
-            successCount++
-          } else {
-            failCount++
-          }
-        }
-      } catch (err) {
-        console.error(`❌ Failed to fetch batch:`, err)
-        failCount += batch.length
-      }
-      
-      // Small delay between batches to avoid rate limits
-      if (i + batchSize < symbolsArray.length) {
-        await new Promise(resolve => setTimeout(resolve, 200))
+    for (const signal of signals) {
+      stockData[signal.symbol] = {
+        symbol: signal.symbol,
+        price: signal.current,
+        change: signal.changePercent,
+        volume: signal.volume,
+        avgVolume: signal.avgVolume
       }
     }
     
-    console.log(`✅ Fetched ${successCount} stocks, ${failCount} failed`)
+    console.log(`📊 Analyzing ${Object.keys(stockData).length} stocks across sectors...`)
     
     // Analyze sector performance
     const sectorPerformance = analyzeSectorPerformance(stockData)
@@ -114,287 +70,114 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Sector Analysis: ${sectorPerformance.length} sectors analyzed`)
     console.log(`🔥 Hot sectors: ${hotSectors.length}`)
     
-    // For hot sector stocks, run FULL MASTER SCORER (not basic score)
+    // Filter momentum signals for hot sector stocks
     let hotSectorStocks: any[] = []
     
     if (hotSectors.length > 0) {
       const hotSectorNames = new Set(hotSectors.map(s => s.sector))
-      const hotSectorSymbols = Object.keys(stockData).filter(symbol => {
-        const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(symbol)
+      
+      // Filter signals by hot sectors
+      const hotSectorSignals = signals.filter((signal: any) => {
+        const sectorInfo = getSectorInfo(signal.symbol)
         return sectorInfo && hotSectorNames.has(sectorInfo.sector)
       })
       
-      console.log(`🎯 Running master scorer for ${hotSectorSymbols.length} hot sector stocks...`)
-      console.log(`⏳ Fetching historical data (this will take 30-60 seconds)...`)
+      console.log(`🎯 Found ${hotSectorSignals.length} signals in hot sectors`)
       
-      // Fetch historical candles for each stock (REQUIRED for proper technical analysis)
-      const historicalDataMap = new Map<string, any[]>()
+      // Now run master scorer on these signals (use Trade Now API for consistency)
+      // This ensures we use the same scoring logic as Trade Now
+      const capital = request.nextUrl.searchParams.get('capital') || '300000'
       
-      for (const symbol of hotSectorSymbols) {
+      // Get master scores by calling Trade Now API with specific symbols
+      const hotSymbols = hotSectorSignals.map((s: any) => s.symbol).slice(0, 50) // Limit to top 50
+      
+      if (hotSymbols.length > 0) {
+        console.log(`📊 Getting master scores for ${hotSymbols.length} hot sector stocks...`)
+        
+        const tradeNowUrl = new URL('/api/scanner/trade-now', request.url)
+        tradeNowUrl.searchParams.set('capital', capital)
+        tradeNowUrl.searchParams.set('customSymbols', hotSymbols.join(','))
+        
         try {
-          const toDate = new Date()
-          const fromDate = new Date()
-          fromDate.setDate(fromDate.getDate() - 60) // 60 days of data
-          
-          const candles = await kc.getHistoricalData(
-            symbolMap.get(symbol).instrument_token,
-            'day',
-            fromDate.toISOString().split('T')[0],
-            toDate.toISOString().split('T')[0]
-          )
-          
-          historicalDataMap.set(symbol, candles || [])
-          console.log(`  ✓ ${symbol}: ${candles?.length || 0} candles`)
-        } catch (error) {
-          console.error(`  ✗ ${symbol}: Failed to fetch historical data`)
-          historicalDataMap.set(symbol, [])
-        }
-      }
-      
-      console.log(`📊 Historical data fetched for ${historicalDataMap.size} stocks`)
-      
-      // Convert stockData to MomentumSignal format with FULL historical data
-      // Import helper functions for technical calculations
-      const { calculateSMA, calculateRSI, calculateATR } = await import('@/lib/momentum-scanner')
-      
-      const momentumSignals = hotSectorSymbols
-        .filter(symbol => {
-          const candles = historicalDataMap.get(symbol) || []
-          if (candles.length < 30) {
-            console.log(`  ⚠️ Skipping ${symbol}: Only ${candles.length} candles (need 30+)`)
-            return false
-          }
-          return true
-        })
-        .map(symbol => {
-          const data = stockData[symbol]
-          const candles = historicalDataMap.get(symbol) || []
-          
-          // Calculate technical indicators from candles
-          const closePrices = candles.map((c: any) => c.close)
-          const sma5 = calculateSMA(closePrices, 5)
-          const sma10 = calculateSMA(closePrices, 10)
-          const sma20 = calculateSMA(closePrices, 20)
-          const rsi = calculateRSI(closePrices, 14)
-          const atr = calculateATR(candles, 14)
-          
-          // Calculate momentum score (0-100)
-          let momentumScore = 0
-          
-          // Price vs SMA (30 points)
-          if (data.price > sma5) momentumScore += 10
-          if (data.price > sma10) momentumScore += 10
-          if (data.price > sma20) momentumScore += 10
-          
-          // RSI (30 points)
-          if (rsi >= 50 && rsi <= 70) momentumScore += 30 // Strong zone
-          else if (rsi >= 40 && rsi < 50) momentumScore += 15 // Moderate
-          else if (rsi > 70) momentumScore += 10 // Overbought but strong
-          
-          // Volume (20 points)
-          const volumeRatio = data.volume / data.avgVolume
-          if (volumeRatio > 2) momentumScore += 20
-          else if (volumeRatio > 1.5) momentumScore += 15
-          else if (volumeRatio > 1) momentumScore += 10
-          
-          // Price change (20 points)
-          if (data.change > 3) momentumScore += 20
-          else if (data.change > 2) momentumScore += 15
-          else if (data.change > 1) momentumScore += 10
-          else if (data.change > 0) momentumScore += 5
-          
-          console.log(`  ${symbol}: momentumScore=${momentumScore}, RSI=${rsi.toFixed(1)}, Price vs SMA20: ${data.price > sma20 ? 'above' : 'below'}`)
-          
-          return {
-            symbol,
-            exchange: 'NSE',
-            current: data.price,
-            changePercent: data.change,
-            volume: data.volume,
-            avgVolume: data.avgVolume,
-            candles,  // ← CRITICAL: Historical candles for RSI/MACD/SMA
-            // Add required momentum signal fields
-            instrumentToken: symbolMap.get(symbol)?.instrument_token || 0,
-            change: (data.price * data.change) / 100,
-            volumeRatio,
-            high: data.price,
-            low: data.price,
-            open: data.price,
-            close: data.price,
-            vwap: data.price,
-            avgPrice: data.price,
-            ohlc: {
-              open: data.price,
-              high: data.price,
-              low: data.price,
-              close: data.price
-            },
-            // Technical indicators (REQUIRED for MomentumSignal)
-            sma5,
-            sma10,
-            sma20,
-            rsi,
-            atr,
-            momentumScore,  // ← THIS WAS MISSING!
-            signal: (momentumScore >= 70 ? 'STRONG_BUY' : momentumScore >= 60 ? 'BUY' : 'WATCH') as 'STRONG_BUY' | 'BUY' | 'WATCH' | 'SKIP',
-            confidence: momentumScore,
-            entryPrice: data.price,
-            stopLoss: data.price * 0.975,
-            target1: data.price * 1.04,
-            target2: data.price * 1.08,
-            positionSize: 0,  // Will be calculated by master scorer
-            capitalRequired: 0,
-            riskAmount: 0,
-            reasons: [],
-            warnings: [],
-            timeframe: '1-3 days',
-            sector: require('@/lib/sector-mapping').getSectorInfo(symbol)?.sector || 'OTHER'
-          }
-        })
-      
-      console.log(`📊 Converted ${momentumSignals.length} symbols to MomentumSignal format (with historical data)`)
-      
-      // LOG MOMENTUM SCORES BEFORE PASSING TO MASTER SCORER
-      console.log(`📊 Momentum scores calculated:`)
-      momentumSignals.forEach(sig => {
-        console.log(`  ${sig.symbol}: momentumScore=${sig.momentumScore}, RSI=${sig.rsi?.toFixed(1)}, signal=${sig.signal}`)
-      })
-      
-      
-      if (momentumSignals.length === 0) {
-        console.log(`⚠️ No stocks with sufficient historical data, skipping master scorer`)
-        return NextResponse.json({
-          success: true,
-          sectorPerformance,
-          hotSectors,
-          hotSectorStocks: [],
-          totalSectors: sectorPerformance.length,
-          totalStocksAnalyzed: successCount,
-          dataSource: 'kite_independent',
-          warning: 'No stocks with sufficient historical data for analysis'
-        })
-      }
-      
-      // Import and run master scorer
-      const { batchCalculateMasterScores } = await import('@/lib/master-scorer')
-      const masterScores = await batchCalculateMasterScores(momentumSignals, {}, 300000) // empty analyst reports, 3L capital
-      
-      console.log(`📊 Master scores received: ${masterScores.length} stocks`)
-      
-      // LOG DETAILED SCORES FOR DEBUGGING
-      masterScores.forEach(score => {
-        console.log(`  ${score.symbol}: Total=${score.totalScore}, Tech=${score.technical?.score || 'N/A'}, Fund=${score.fundamental?.score || 'N/A'}, Intel=${score.intelligence?.score || 'N/A'}`)
-      })
-      
-      console.log(`📊 Score distribution:`)
-      console.log(`   >= 70: ${masterScores.filter(s => s.totalScore >= 70).length}`)
-      console.log(`   >= 60: ${masterScores.filter(s => s.totalScore >= 60).length}`)
-      console.log(`   >= 50: ${masterScores.filter(s => s.totalScore >= 50).length}`)
-      console.log(`   >= 40: ${masterScores.filter(s => s.totalScore >= 40).length}`)
-      console.log(`   < 40: ${masterScores.filter(s => s.totalScore < 40).length}`)
-      
-      // Filter for stocks with decent scores (>= 40, lowered from 50)
-      hotSectorStocks = masterScores
-        .filter(score => score.totalScore >= 40) // Lowered threshold from 50 to 40
-        .map(score => {
-          const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(score.symbol)
-          const sector = sectorInfo?.sector || 'OTHER'
-          const sectorMomentum = sectorPerformance.find(s => s.sector === sector)?.momentum || 'NEUTRAL'
-          
-          return {
-            ...score,
-            sector,
-            sectorMomentum,
-            // Add fields needed for UI display (from original stockData)
-            currentPrice: stockData[score.symbol]?.price,
-            changePercent: stockData[score.symbol]?.change,
-            volumeRatio: stockData[score.symbol] ? stockData[score.symbol].volume / stockData[score.symbol].avgVolume : undefined,
-            // Add fields needed for trade execution
-            entryPrice: score.tradePlan?.entry,
-            stopLoss: score.tradePlan?.stopLoss,
-            target1: score.tradePlan?.target1,
-            target2: score.tradePlan?.target2,
-            positionSize: score.tradePlan?.positionSize,
-            capitalRequired: score.tradePlan?.capitalRequired,
-            riskAmount: score.tradePlan?.riskAmount,
-            riskReward: score.tradePlan?.riskReward,
-            // Add signal data for paper trade
-            momentumScore: score.technical?.score || 0,
-            confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
-            rsi: score.technical?.breakdown?.momentum || undefined,
-            reasons: [
-              `Sector ${sector} is ${sectorMomentum}`,
-              `Total Score: ${score.totalScore}/100`,
-              `Technical: ${score.technical?.score || 0}/40`,
-              `Fundamental: ${score.fundamental?.score || 0}/30`,
-              `Intelligence: ${score.intelligence?.score || 0}/30`
-            ],
-            warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : []
-          }
-        })
-        .sort((a, b) => b.totalScore - a.totalScore) // Sort by total score
-      
-      console.log(`📈 Hot sector stocks with scores >= 40: ${hotSectorStocks.length}`)
-      
-      // If still no stocks, show top 5 regardless of score
-      if (hotSectorStocks.length === 0 && masterScores.length > 0) {
-        console.log(`⚠️ No stocks >= 40, showing top 5 regardless of score...`)
-        hotSectorStocks = masterScores
-          .sort((a, b) => b.totalScore - a.totalScore)
-          .slice(0, 5)
-          .map(score => {
-            const sectorInfo = require('@/lib/sector-mapping').getSectorInfo(score.symbol)
-            const sector = sectorInfo?.sector || 'OTHER'
-            const sectorMomentum = sectorPerformance.find(s => s.sector === sector)?.momentum || 'NEUTRAL'
-            
-            return {
-              ...score,
-              sector,
-              sectorMomentum,
-              // Add fields needed for UI display (from original stockData)
-              currentPrice: stockData[score.symbol]?.price,
-              changePercent: stockData[score.symbol]?.change,
-              volumeRatio: stockData[score.symbol] ? stockData[score.symbol].volume / stockData[score.symbol].avgVolume : undefined,
-              entryPrice: score.tradePlan?.entry,
-              stopLoss: score.tradePlan?.stopLoss,
-              target1: score.tradePlan?.target1,
-              target2: score.tradePlan?.target2,
-              positionSize: score.tradePlan?.positionSize,
-              capitalRequired: score.tradePlan?.capitalRequired,
-              riskAmount: score.tradePlan?.riskAmount,
-              riskReward: score.tradePlan?.riskReward,
-              momentumScore: score.technical?.score || 0,
-              confidence: score.totalScore >= 75 ? 'HIGH' : score.totalScore >= 60 ? 'MEDIUM' : 'LOW',
-              rsi: score.technical?.breakdown?.momentum || undefined,
-              reasons: [
-                `Sector ${sector} is ${sectorMomentum}`,
-                `Total Score: ${score.totalScore}/100`,
-                `Technical: ${score.technical?.score || 0}/40`,
-                `Fundamental: ${score.fundamental?.score || 0}/30`,
-                `Intelligence: ${score.intelligence?.score || 0}/30`
-              ],
-              warnings: score.tradePlan?.signal === 'SHORT' ? ['Consider SHORT position'] : []
+          const tradeNowResponse = await fetch(tradeNowUrl.toString(), {
+            headers: {
+              cookie: request.headers.get('cookie') || ''
             }
           })
-        console.log(`📈 Showing top ${hotSectorStocks.length} stocks (best available)`)
+          
+          if (tradeNowResponse.ok) {
+            const tradeNowData = await tradeNowResponse.json()
+            
+            // Combine all cohorts
+            const allSignals = [
+              ...(tradeNowData.highConviction || []),
+              ...(tradeNowData.moderate || []),
+              ...(tradeNowData.watch || [])
+            ]
+            
+            console.log(`✅ Got ${allSignals.length} master-scored signals`)
+            
+            // Add sector information and filter for decent scores
+            hotSectorStocks = allSignals
+              .filter((s: any) => s.totalScore >= 40) // Only show stocks with some potential
+              .map((signal: any) => {
+                const sectorInfo = getSectorInfo(signal.symbol)
+                return {
+                  ...signal,
+                  sector: sectorInfo?.sector || 'Unknown',
+                  // Ensure all required fields for trade execution
+                  currentPrice: signal.currentPrice || signal.entryPrice,
+                  changePercent: signal.changePercent || 0,
+                  volumeRatio: signal.volumeRatio || 1
+                }
+              })
+              .sort((a: any, b: any) => b.totalScore - a.totalScore)
+              .slice(0, 20) // Top 20 stocks
+            
+            console.log(`✅ Returning ${hotSectorStocks.length} hot sector stocks (score >= 40)`)
+            
+            // If no stocks meet threshold, show top 5 best available
+            if (hotSectorStocks.length === 0 && allSignals.length > 0) {
+              console.log('⚠️ No stocks >= 40, showing top 5 best available')
+              hotSectorStocks = allSignals
+                .map((signal: any) => {
+                  const sectorInfo = getSectorInfo(signal.symbol)
+                  return {
+                    ...signal,
+                    sector: sectorInfo?.sector || 'Unknown',
+                    currentPrice: signal.currentPrice || signal.entryPrice,
+                    changePercent: signal.changePercent || 0,
+                    volumeRatio: signal.volumeRatio || 1
+                  }
+                })
+                .sort((a: any, b: any) => b.totalScore - a.totalScore)
+                .slice(0, 5)
+            }
+          } else {
+            console.error('❌ Trade Now API failed:', await tradeNowResponse.text())
+          }
+        } catch (error: any) {
+          console.error('❌ Error calling Trade Now API:', error.message)
+        }
       }
     }
     
     return NextResponse.json({
       success: true,
       sectorPerformance,
-      hotSectors,
       hotSectorStocks,
       totalSectors: sectorPerformance.length,
-      totalStocksAnalyzed: successCount,
-      dataSource: 'kite_independent'
+      hotSectors: hotSectors.length,
+      hotStocks: hotSectorStocks.length,
+      dataSource: 'momentum_scanner'
     })
+    
   } catch (error: any) {
-    console.error('❌ Sector heat map error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate sector heat map', details: error.message },
-      { status: 500 }
-    )
+    console.error('❌ Sector scanner error:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to generate sector heat map',
+      details: error.message
+    }, { status: 500 })
   }
 }
-
