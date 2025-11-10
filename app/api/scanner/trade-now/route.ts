@@ -71,18 +71,18 @@ export async function GET(request: NextRequest) {
     // Build URL with custom symbols if provided
     const isCustomOnly = customSymbols && customSymbols.trim().length > 0
     
-    let momentumUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/scanner/momentum?capital=${capitalAvailable}&minScore=60&maxSignals=50`
+    let momentumUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/scanner/momentum?capital=${capitalAvailable}&maxSignals=50`
     
     if (isCustomOnly) {
       // Custom stock ONLY - scan JUST the custom stock(s), no universe scan
-      // This makes debugging easier and saves API calls
+      // Use minScore=0 to ensure we get the result even if quality is low
       momentumUrl += `&customStocks=${customSymbols}&minScore=0`
       console.log(`  → Custom stock ONLY analysis: ${customSymbols}`)
-      console.log(`  → NOT scanning universe to save time and make debugging easier`)
+      console.log(`  → Using minScore=0 to force-include custom stock`)
     } else {
-      // Full scan
-      momentumUrl += `&universe=NIFTY_500`
-      console.log(`  → Full universe scan`)
+      // Full scan - use higher minScore threshold
+      momentumUrl += `&universe=NIFTY_500&minScore=60`
+      console.log(`  → Full universe scan with minScore=60`)
     }
     
     const momentumResponse = await fetch(momentumUrl, {
