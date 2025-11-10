@@ -174,9 +174,48 @@ export async function calculateMasterScore(
     fundamental = calculateFundamentalScore(null)
   }
 
-  // 3. Calculate Intelligence Score (30 points)
+  // 3. Calculate Intelligence Score (30 points) with REAL news sentiment
   const analystReportConverted = analystReport ? convertDbReportToAnalystReport(analystReport) : null
-  const intelligence = calculateIntelligenceScore(analystReportConverted, newsSentiment)
+  
+  // Fetch actual news sentiment for the stock
+  let actualNewsSentiment = newsSentiment // Use provided value as fallback
+  
+  try {
+    // Fetch stock-specific news
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const newsResponse = await fetch(`${baseUrl}/api/news/quote?symbol=${signal.symbol}&limit=10`, {
+      next: { revalidate: 300 } // Cache for 5 minutes
+    })
+    
+    if (newsResponse.ok) {
+      const newsData = await newsResponse.json()
+      
+      if (newsData.success && newsData.articles && newsData.articles.length > 0) {
+        // Import sentiment analysis
+        const { analyzeSentiment, calculateAggregateSentiment } = await import('./sentiment-utils')
+        
+        // Analyze each headline
+        const sentiments = newsData.articles.slice(0, 10).map((article: any) => 
+          analyzeSentiment(article.title)
+        )
+        
+        // Calculate aggregate sentiment
+        const aggregate = calculateAggregateSentiment(sentiments)
+        
+        // Convert to -1 to 1 scale for intelligence scorer
+        actualNewsSentiment = aggregate.score
+        
+        console.log(`📰 ${signal.symbol}: Analyzed ${sentiments.length} news articles, sentiment: ${actualNewsSentiment.toFixed(2)}`)
+      } else {
+        console.log(`📰 ${signal.symbol}: No news articles found, using neutral sentiment`)
+      }
+    }
+  } catch (error) {
+    console.log(`⚠️ ${signal.symbol}: Failed to fetch news, using default sentiment`)
+    // Continue with default/provided sentiment
+  }
+  
+  const intelligence = calculateIntelligenceScore(analystReportConverted, actualNewsSentiment)
 
   // 4. Calculate Total Score
   const totalScore = technical.score + fundamental.score + intelligence.score
