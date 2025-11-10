@@ -185,6 +185,16 @@ export async function GET(request: NextRequest) {
               ? candles[candles.length - 1].volume  // Yesterday's full day volume
               : quote.volume  // Fallback to quote if no candles
             
+            // DEBUG: Show volume comparison for first few stocks
+            if (successCount < 3) {
+              console.log(`\n🔍 VOLUME DEBUG for ${symbol}:`)
+              console.log(`   Today's intraday volume: ${quote.volume.toLocaleString()}`)
+              console.log(`   Yesterday's full volume: ${candles.length > 0 ? candles[candles.length - 1].volume.toLocaleString() : 'N/A'}`)
+              console.log(`   Using for analysis: ${currentVolume.toLocaleString()} (${candles.length > 0 ? 'YESTERDAY' : 'TODAY'})`)
+              console.log(`   Average volume: ${avgVolume.toLocaleString()}`)
+              console.log(`   Volume ratio: ${(currentVolume / avgVolume).toFixed(2)}x`)
+            }
+            
             
             stocksData.push({
               symbol,
