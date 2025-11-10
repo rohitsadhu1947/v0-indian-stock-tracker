@@ -85,6 +85,18 @@ export async function GET(request: NextRequest) {
     const customSymbolsFound = symbols.filter(s => customStocks.includes(s))
     const otherSymbols = symbols.filter(s => !customStocks.includes(s))
     
+    // DEBUG: Check if custom stocks were found
+    if (customStocks.length > 0) {
+      console.log(`🔍 Looking for custom stocks: ${customStocks.join(', ')}`)
+      console.log(`   Found in instruments: ${customSymbolsFound.join(', ') || 'NONE'}`)
+      customStocks.forEach(cs => {
+        if (!customSymbolsFound.includes(cs)) {
+          console.log(`   ⚠️ ${cs} NOT found in instruments! Check if symbol is correct or exists on NSE.`)
+        }
+      })
+    }
+    
+    
     if (isQuickScan) {
       // Quick scan: Top 100 stocks + all custom stocks
       const quickScanLimit = 100
