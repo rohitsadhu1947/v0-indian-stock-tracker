@@ -189,23 +189,40 @@ export async function GET(request: NextRequest) {
             }
             
             // For SWING TRADING: Find the last COMPLETED trading day
-            // Skip today (partial data) and weekends/holidays (zero/low volume)
+            // Logic:
+            // - During market hours: Use previous day (today's data is incomplete)
+            // - After market close: Use today (if it's a trading day with good volume)
             let lastTradingVolume = quote.volume // Fallback
             let lastTradingDate = 'today'
             
-            if (candles.length > 1) {
-              const today = new Date()
-              today.setHours(0, 0, 0, 0) // Normalize to start of day
+            if (candles.length > 0) {
+              const now = new Date()
+              const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
+              const istTime = new Date(now.getTime() + istOffset)
+              const istHour = istTime.getUTCHours()
+              const istMinute = istTime.getUTCMinutes()
               
-              // Start from second-to-last candle (skip today's partial data)
+              // Market hours: 9:15 AM to 3:30 PM IST
+              const isMarketHours = (istHour === 9 && istMinute >= 15) || 
+                                    (istHour > 9 && istHour < 15) || 
+                                    (istHour === 15 && istMinute <= 30)
+              
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              
+              // Determine starting index:
+              // - If market is open: Skip today's partial data, start from [length-2]
+              // - If market is closed: Include today's complete data, start from [length-1]
+              const startIndex = isMarketHours ? candles.length - 2 : candles.length - 1
+              
               // Look back up to 10 days to find last completed trading day
-              for (let i = candles.length - 2; i >= Math.max(0, candles.length - 10); i--) {
+              for (let i = startIndex; i >= Math.max(0, candles.length - 10); i--) {
                 const candle = candles[i]
                 const candleDate = new Date(candle.date)
                 candleDate.setHours(0, 0, 0, 0)
                 
-                // Skip if this is today (shouldn't happen, but safety check)
-                if (candleDate.getTime() >= today.getTime()) {
+                // During market hours: Skip today's candle (partial data)
+                if (isMarketHours && candleDate.getTime() >= today.getTime()) {
                   continue
                 }
                 
@@ -223,7 +240,18 @@ export async function GET(request: NextRequest) {
             
             // DEBUG for custom stocks
             if (customStocks.includes(symbol)) {
+              const now = new Date()
+              const istOffset = 5.5 * 60 * 60 * 1000
+              const istTime = new Date(now.getTime() + istOffset)
+              const istHour = istTime.getUTCHours()
+              const istMinute = istTime.getUTCMinutes()
+              const isMarketHours = (istHour === 9 && istMinute >= 15) || 
+                                    (istHour > 9 && istHour < 15) || 
+                                    (istHour === 15 && istMinute <= 30)
+              
               console.log(`\n🔍 VOLUME DEBUG for ${symbol}:`)
+              console.log(`   Current IST time: ${istHour}:${istMinute.toString().padStart(2, '0')}`)
+              console.log(`   Market status: ${isMarketHours ? '🟢 OPEN (using previous day)' : '🔴 CLOSED (using today if available)'}`)
               console.log(`   Today's intraday volume: ${quote.volume.toLocaleString()}`)
               console.log(`   Last trading day (${lastTradingDate}): ${lastTradingVolume.toLocaleString()}`)
               console.log(`   🎯 USING: ${currentVolume.toLocaleString()}`)
