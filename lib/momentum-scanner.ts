@@ -594,7 +594,15 @@ export async function scanForMomentumSignals(
       
       // DEBUG: Log momentum score for custom stocks
       if (isCustomStock) {
+        const now = new Date()
+        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
         console.log(`📊 ${stock.symbol} momentum score: ${momentumScore}/100 (RSI:${rsi.toFixed(1)}, Vol:${volumeRatio.toFixed(2)}x, Change:${stock.changePercent.toFixed(2)}%)`)
+        console.log(`   ⏰ Scan time: ${timeStr} IST`)
+        if (volumeRatio < 0.5) {
+          console.log(`   ⚠️ Volume is ${(volumeRatio * 100).toFixed(0)}% of daily average - low for intraday analysis`)
+          console.log(`   → This is normal early in trading day (9:15-11:00 AM)`)
+          console.log(`   → If it's afternoon, volume is genuinely weak`)
+        }
       }
       
       signals.push(momentumSignal)

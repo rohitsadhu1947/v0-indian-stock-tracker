@@ -110,6 +110,10 @@ export async function GET(request: NextRequest) {
       const quickScanLimit = 100
       symbolsToScan = [...customSymbolsFound, ...otherSymbols.slice(0, quickScanLimit - customSymbolsFound.length)]
       console.log(`⚡ QUICK SCAN: ${symbolsToScan.length} stocks (${customSymbolsFound.length} custom + ${symbolsToScan.length - customSymbolsFound.length} top NIFTY)`)
+    } else if (customSymbolsFound.length > 0 && otherSymbols.length === 0) {
+      // Custom stocks ONLY (no universe)
+      symbolsToScan = customSymbolsFound
+      console.log(`📝 CUSTOM ONLY: ${symbolsToScan.length} stocks (${customSymbolsFound.length} custom requested)`)
     } else {
       // Full scan: All stocks with custom first
       symbolsToScan = [...customSymbolsFound, ...otherSymbols]
