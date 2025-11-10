@@ -173,17 +173,18 @@ export async function GET(request: NextRequest) {
               continue
             }
             
-            // Calculate average volume
+            // Calculate average volume from historical data
             const avgVolume = candles.length > 0
               ? candles.reduce((sum: number, c: any) => sum + c.volume, 0) / candles.length
               : quote.volume
             
-            // Use last candle's volume if current volume is 0 (market closed)
-            const currentVolume = quote.volume > 0 
-              ? quote.volume 
-              : candles.length > 0 
-                ? candles[candles.length - 1].volume 
-                : 0
+            // For SWING TRADING: Use yesterday's volume (last completed candle)
+            // NOT today's intraday volume which builds throughout the day
+            // This gives accurate volume comparison for multi-day setups
+            const currentVolume = candles.length > 0 
+              ? candles[candles.length - 1].volume  // Yesterday's full day volume
+              : quote.volume  // Fallback to quote if no candles
+            
             
             stocksData.push({
               symbol,
