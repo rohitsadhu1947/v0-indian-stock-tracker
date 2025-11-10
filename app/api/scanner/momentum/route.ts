@@ -188,18 +188,30 @@ export async function GET(request: NextRequest) {
               })
             }
             
-            // For SWING TRADING: Find the last TRADING day (not weekend/holiday)
-            // Look back through candles to find a day with significant volume
+            // For SWING TRADING: Find the last COMPLETED trading day
+            // Skip today (partial data) and weekends/holidays (zero/low volume)
             let lastTradingVolume = quote.volume // Fallback
             let lastTradingDate = 'today'
             
-            if (candles.length > 0) {
-              // Look back up to 5 days to find last proper trading day
-              for (let i = candles.length - 1; i >= Math.max(0, candles.length - 5); i--) {
+            if (candles.length > 1) {
+              const today = new Date()
+              today.setHours(0, 0, 0, 0) // Normalize to start of day
+              
+              // Start from second-to-last candle (skip today's partial data)
+              // Look back up to 10 days to find last completed trading day
+              for (let i = candles.length - 2; i >= Math.max(0, candles.length - 10); i--) {
                 const candle = candles[i]
-                // Consider it a trading day if volume > 10% of average
+                const candleDate = new Date(candle.date)
+                candleDate.setHours(0, 0, 0, 0)
+                
+                // Skip if this is today (shouldn't happen, but safety check)
+                if (candleDate.getTime() >= today.getTime()) {
+                  continue
+                }
+                
+                // Consider it a trading day if volume > 50% of average
                 // (filters out holidays/weekends with zero/minimal volume)
-                if (candle.volume > avgVolume * 0.1) {
+                if (candle.volume > avgVolume * 0.5) {
                   lastTradingVolume = candle.volume
                   lastTradingDate = new Date(candle.date).toLocaleDateString('en-IN')
                   break
