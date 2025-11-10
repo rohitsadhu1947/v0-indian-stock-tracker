@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
     
     const momentumData = await momentumResponse.json()
-    const signals = momentumData.signals || []
+    const signals = momentumData.scan?.signals || []
     
     console.log(`✅ Got ${signals.length} momentum signals`)
     
