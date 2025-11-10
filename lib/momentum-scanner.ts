@@ -592,6 +592,11 @@ export async function scanForMomentumSignals(
         sector: stock.sector || 'Unknown'
       }
       
+      // DEBUG: Log momentum score for custom stocks
+      if (isCustomStock) {
+        console.log(`📊 ${stock.symbol} momentum score: ${momentumScore}/100 (RSI:${rsi.toFixed(1)}, Vol:${volumeRatio.toFixed(2)}x, Change:${stock.changePercent.toFixed(2)}%)`)
+      }
+      
       signals.push(momentumSignal)
       
       if (signal === 'STRONG_BUY') strongBuyCount++
