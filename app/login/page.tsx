@@ -86,16 +86,22 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
       <div className="w-full max-w-md">
-        {/* Header with Money Smell Image */}
+        {/* Header with Money Smell Branding */}
         <div className="text-center mb-8">
-          {/* Money Smell Logo */}
+          {/* Money Smell Visual - Using CSS styled box as fallback */}
           <div className="mb-6 flex justify-center">
-            <img 
-              src="/money-smell.jpg" 
-              alt="Do I Smell Money?" 
-              className="w-64 h-auto rounded-lg shadow-2xl border-4 border-yellow-600 hover:scale-105 transition-transform duration-300"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
+            <div className="relative w-80 h-64 bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700 rounded-lg shadow-2xl border-4 border-yellow-600 hover:scale-105 transition-transform duration-300 flex flex-col items-center justify-center p-6">
+              {/* Vintage mustache guy emoji */}
+              <div className="text-8xl mb-4">🧔</div>
+              
+              {/* Main text */}
+              <div className="text-white font-black text-4xl leading-tight tracking-wider mb-3" style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.5)' }}>
+                DO I SMELL<br/>MONEY?
+              </div>
+              
+              {/* Money emoji */}
+              <div className="text-5xl">💵</div>
+            </div>
           </div>
           
           <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-600 mb-3 drop-shadow-lg">
