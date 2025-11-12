@@ -86,12 +86,27 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
+        {/* Header with Money Smell Image */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            ⚡ Vibe Trades
+          {/* Money Smell Logo */}
+          <div className="mb-6 flex justify-center">
+            <img 
+              src="/money-smell.jpg" 
+              alt="Do I Smell Money?" 
+              className="w-64 h-auto rounded-lg shadow-2xl border-4 border-yellow-600 hover:scale-105 transition-transform duration-300"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
+          </div>
+          
+          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-600 mb-3 drop-shadow-lg">
+            DO I SMELL MONEY?
           </h1>
-          <p className="text-gray-400">
+          
+          <h2 className="text-2xl font-semibold text-white mb-2">
+            ⚡ Vibe Trades
+          </h2>
+          
+          <p className="text-gray-400 text-lg">
             Catch the vibe, stack the cash 💸
           </p>
         </div>

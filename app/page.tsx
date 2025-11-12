@@ -3097,7 +3097,7 @@ export default function StockTracker() {
 
   return (
     <div className="container">
-      <h1>⚡ Vibe Trades</h1>
+      <h1>⚡ Vibe Trades <span style={{ fontSize: '0.6em', color: '#FCD34D', fontWeight: 'normal' }}>- Do I Smell Money? 💸</span></h1>
 
       <div className={error ? "alert warning" : "alert"}>
         {error ? (
