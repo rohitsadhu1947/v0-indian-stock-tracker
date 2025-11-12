@@ -309,7 +309,7 @@ export async function batchCalculateMasterScores(
           calculateMasterScore(
             signal,
             analystReports[signal.symbol],
-            0,  // TODO: Add news sentiment
+            undefined,  // Let calculateMasterScore fetch news sentiment
             capitalAvailable
           ),
           new Promise<MasterScore>((_, reject) => 
