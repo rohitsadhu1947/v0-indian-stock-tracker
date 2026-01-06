@@ -26,7 +26,7 @@ const CACHE_DURATION = 30 * 60 * 1000
 
 /**
  * Fetch FII/DII data from NSE
- * Note: NSE may block direct requests, so we have fallback
+ * NSE returns separate records for FII and DII that we need to combine
  */
 async function fetchFIIDIIFromNSE(): Promise<FIIDIIData[]> {
   return new Promise((resolve) => {
@@ -35,11 +35,11 @@ async function fetchFIIDIIFromNSE(): Promise<FIIDIIData[]> {
     const timeout = setTimeout(() => {
       console.log('⚠️ NSE FII/DII request timed out, using fallback')
       resolve([])
-    }, 5000)
+    }, 8000) // Increased timeout
     
     const options = {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json',
         'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://www.nseindia.com/reports/fii-dii'
@@ -53,30 +53,70 @@ async function fetchFIIDIIFromNSE(): Promise<FIIDIIData[]> {
         clearTimeout(timeout)
         try {
           const json = JSON.parse(data)
+          console.log('📊 NSE API raw response:', JSON.stringify(json).slice(0, 500))
+          
           if (Array.isArray(json) && json.length > 0) {
-            const parsed: FIIDIIData[] = json.slice(0, 10).map((item: any) => ({
-              date: item.date || new Date().toISOString().split('T')[0],
-              fiiBuyValue: parseFloat(item.fii_buy_value || item.fiiBuyValue || 0),
-              fiiSellValue: parseFloat(item.fii_sell_value || item.fiiSellValue || 0),
-              fiiNetValue: parseFloat(item.fii_net_value || item.fiiNetValue || 0),
-              diiBuyValue: parseFloat(item.dii_buy_value || item.diiBuyValue || 0),
-              diiSellValue: parseFloat(item.dii_sell_value || item.diiSellValue || 0),
-              diiNetValue: parseFloat(item.dii_net_value || item.diiNetValue || 0),
-              totalNetValue: parseFloat(item.fii_net_value || 0) + parseFloat(item.dii_net_value || 0)
-            }))
+            // NSE returns separate records for FII and DII
+            // Format: [{"category":"DII","date":"06-Jan-2026","buyValue":"17240.41",...}, {"category":"FII/FPI",...}]
+            // We need to combine them by date
+            
+            const dateMap = new Map<string, FIIDIIData>()
+            
+            for (const item of json) {
+              const date = item.date || new Date().toISOString().split('T')[0]
+              const category = (item.category || '').toUpperCase()
+              
+              if (!dateMap.has(date)) {
+                dateMap.set(date, {
+                  date,
+                  fiiBuyValue: 0,
+                  fiiSellValue: 0,
+                  fiiNetValue: 0,
+                  diiBuyValue: 0,
+                  diiSellValue: 0,
+                  diiNetValue: 0,
+                  totalNetValue: 0
+                })
+              }
+              
+              const record = dateMap.get(date)!
+              const buyValue = parseFloat(item.buyValue || item.BuyValue || 0)
+              const sellValue = parseFloat(item.sellValue || item.SellValue || 0)
+              const netValue = parseFloat(item.netValue || item.NetValue || 0)
+              
+              if (category.includes('FII') || category.includes('FPI')) {
+                record.fiiBuyValue = buyValue
+                record.fiiSellValue = sellValue
+                record.fiiNetValue = netValue
+              } else if (category.includes('DII')) {
+                record.diiBuyValue = buyValue
+                record.diiSellValue = sellValue
+                record.diiNetValue = netValue
+              }
+              
+              record.totalNetValue = record.fiiNetValue + record.diiNetValue
+            }
+            
+            const parsed = Array.from(dateMap.values())
+            console.log(`✅ Parsed ${parsed.length} FII/DII records from NSE`)
+            if (parsed.length > 0) {
+              console.log(`   Latest: FII ${parsed[0].fiiNetValue >= 0 ? '+' : ''}${parsed[0].fiiNetValue.toFixed(2)} Cr, DII ${parsed[0].diiNetValue >= 0 ? '+' : ''}${parsed[0].diiNetValue.toFixed(2)} Cr`)
+            }
             resolve(parsed)
           } else {
+            console.log('⚠️ NSE returned empty or invalid data')
             resolve([])
           }
-        } catch (e) {
-          console.log('⚠️ Failed to parse NSE FII/DII data')
+        } catch (e: any) {
+          console.log('⚠️ Failed to parse NSE FII/DII data:', e.message)
           resolve([])
         }
       })
     })
     
-    req.on('error', () => {
+    req.on('error', (err) => {
       clearTimeout(timeout)
+      console.log('⚠️ NSE request error:', err.message)
       resolve([])
     })
   })
@@ -228,9 +268,13 @@ export async function GET(request: NextRequest) {
   try {
     console.log('\n🐋 === SMART MONEY TRACKER API CALLED ===')
     
-    // Check cache
+    // Check for refresh param
+    const searchParams = request.nextUrl.searchParams
+    const forceRefresh = searchParams.get('refresh') === 'true'
+    
+    // Check cache (unless refresh requested)
     const now = Date.now()
-    if (cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
+    if (!forceRefresh && cachedData && (now - cacheTimestamp) < CACHE_DURATION) {
       console.log('✅ Returning cached smart money data')
       return NextResponse.json({
         success: true,
