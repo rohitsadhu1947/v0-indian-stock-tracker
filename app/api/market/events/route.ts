@@ -28,28 +28,22 @@ let cacheTimestamp: number = 0
 const CACHE_DURATION = 60 * 60 * 1000
 
 /**
- * Fetch corporate announcements from BSE
+ * Fetch board meetings / results calendar from NSE
  */
-async function fetchBSEAnnouncements(): Promise<CorporateEvent[]> {
+async function fetchNSEBoardMeetings(): Promise<CorporateEvent[]> {
   return new Promise((resolve) => {
-    const today = new Date()
-    const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
-    
-    const formatDate = (d: Date) => d.toISOString().split('T')[0].split('-').reverse().join('/')
-    
-    // BSE Corporate Announcements API
-    const url = `https://api.bseindia.com/BseIndiaAPI/api/AnnSubCategoryGetData/w?strCat=Board%20Meeting&strPrevDate=${formatDate(today)}&strScrip=&strSearch=P&strToDate=${formatDate(nextMonth)}&strType=C`
+    const url = 'https://www.nseindia.com/api/event-calendar'
     
     const timeout = setTimeout(() => {
-      console.log('⚠️ BSE announcements request timed out')
+      console.log('⚠️ NSE board meetings request timed out')
       resolve([])
-    }, 5000)
+    }, 8000)
     
     const req = https.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         'Accept': 'application/json',
-        'Referer': 'https://www.bseindia.com/'
+        'Referer': 'https://www.nseindia.com/'
       }
     }, (res) => {
       let data = ''
@@ -58,75 +52,109 @@ async function fetchBSEAnnouncements(): Promise<CorporateEvent[]> {
         clearTimeout(timeout)
         try {
           const json = JSON.parse(data)
-          if (json.Table && Array.isArray(json.Table)) {
-            const events: CorporateEvent[] = json.Table.slice(0, 50).map((item: any, i: number) => {
+          if (Array.isArray(json) && json.length > 0) {
+            console.log(`📊 NSE Event Calendar: ${json.length} events found`)
+            
+            const events: CorporateEvent[] = json.slice(0, 100).map((item: any, i: number) => {
               // Determine event type from purpose
-              const purpose = (item.PURPOSE || item.Purpose || '').toLowerCase()
+              const purpose = (item.purpose || item.bm_desc || '').toLowerCase()
               let eventType: CorporateEvent['eventType'] = 'BOARD_MEETING'
+              let impact: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
               
-              if (purpose.includes('dividend')) eventType = 'DIVIDEND'
-              else if (purpose.includes('result') || purpose.includes('earning')) eventType = 'EARNINGS'
-              else if (purpose.includes('split')) eventType = 'SPLIT'
-              else if (purpose.includes('bonus')) eventType = 'BONUS'
-              else if (purpose.includes('agm')) eventType = 'AGM'
-              else if (purpose.includes('egm')) eventType = 'EGM'
-              else if (purpose.includes('buyback')) eventType = 'BUYBACK'
-              else if (purpose.includes('right')) eventType = 'RIGHTS'
+              if (purpose.includes('financial result') || purpose.includes('quarterly') || purpose.includes('results')) {
+                eventType = 'EARNINGS'
+                impact = 'HIGH'
+              } else if (purpose.includes('dividend')) {
+                eventType = 'DIVIDEND'
+                impact = 'HIGH'
+              } else if (purpose.includes('split') || purpose.includes('sub-division')) {
+                eventType = 'SPLIT'
+                impact = 'HIGH'
+              } else if (purpose.includes('bonus')) {
+                eventType = 'BONUS'
+                impact = 'HIGH'
+              } else if (purpose.includes('agm') || purpose.includes('annual general')) {
+                eventType = 'AGM'
+              } else if (purpose.includes('egm') || purpose.includes('extraordinary')) {
+                eventType = 'EGM'
+              } else if (purpose.includes('buyback')) {
+                eventType = 'BUYBACK'
+                impact = 'HIGH'
+              } else if (purpose.includes('right')) {
+                eventType = 'RIGHTS'
+              } else if (purpose.includes('fund raising') || purpose.includes('preferential')) {
+                eventType = 'OTHER'
+                impact = 'LOW'
+              }
               
               return {
-                id: `bse-${item.SCRIP_CD || i}-${Date.now()}`,
-                symbol: item.SCRIP_CD || item.scrip_cd || 'UNKNOWN',
-                companyName: item.SLONGNAME || item.slongname || item.SCRIP_CD || 'Unknown Company',
+                id: `nse-bm-${item.symbol || i}-${item.date || Date.now()}`,
+                symbol: item.symbol || 'UNKNOWN',
+                companyName: item.company || item.symbol || 'Unknown Company',
                 eventType,
-                eventDate: parseIndianDate(item.NEWS_DT || item.Meeting_date || new Date().toISOString()),
+                eventDate: parseIndianDate(item.date),
                 details: {
-                  description: item.PURPOSE || item.Purpose || item.NEWSSUB || 'Corporate announcement'
+                  description: item.bm_desc || item.purpose || 'Board Meeting',
+                  quarter: purpose.includes('q3') ? 'Q3' : purpose.includes('q2') ? 'Q2' : purpose.includes('q1') ? 'Q1' : purpose.includes('q4') ? 'Q4' : undefined
                 },
-                impact: eventType === 'EARNINGS' || eventType === 'DIVIDEND' ? 'HIGH' : 'MEDIUM',
-                source: 'BSE',
+                impact,
+                source: 'NSE',
                 createdAt: new Date(),
                 updatedAt: new Date()
               }
             })
-            resolve(events)
+            
+            // Filter to only include relevant events (skip fund raising, etc.)
+            const relevantEvents = events.filter(e => 
+              e.eventType !== 'OTHER' || e.impact === 'HIGH'
+            )
+            
+            resolve(relevantEvents)
           } else {
             resolve([])
           }
         } catch (e) {
-          console.log('⚠️ Failed to parse BSE announcements')
+          console.log('⚠️ Failed to parse NSE board meetings:', e)
           resolve([])
         }
       })
     })
     
-    req.on('error', () => {
+    req.on('error', (err) => {
       clearTimeout(timeout)
+      console.log('⚠️ NSE board meetings error:', err.message)
       resolve([])
     })
   })
 }
 
 /**
- * Fetch dividend calendar from BSE
+ * Fetch corporate actions (dividends, splits, bonuses) from NSE
  */
-async function fetchBSEDividends(): Promise<CorporateEvent[]> {
+async function fetchNSECorporateActions(): Promise<CorporateEvent[]> {
   return new Promise((resolve) => {
     const today = new Date()
-    const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const nextMonth = new Date(today.getTime() + 45 * 24 * 60 * 60 * 1000)
     
-    const formatDate = (d: Date) => d.toISOString().split('T')[0].split('-').reverse().join('/')
+    const formatNSEDate = (d: Date) => {
+      const day = d.getDate().toString().padStart(2, '0')
+      const month = (d.getMonth() + 1).toString().padStart(2, '0')
+      const year = d.getFullYear()
+      return `${day}-${month}-${year}`
+    }
     
-    const url = `https://api.bseindia.com/BseIndiaAPI/api/DefaultData/w?Atea=&Atea1=&Atea2=&Atea3=&Atea4=&Atea5=&Atea6=&Atea7=&Atea8=&Atea9=&Atea10=&Type=Dividend&flag=0&ddlfromdate=${formatDate(today)}&ddltodate=${formatDate(nextMonth)}`
+    const url = `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${formatNSEDate(today)}&to_date=${formatNSEDate(nextMonth)}`
     
     const timeout = setTimeout(() => {
+      console.log('⚠️ NSE corporate actions request timed out')
       resolve([])
-    }, 5000)
+    }, 8000)
     
     const req = https.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         'Accept': 'application/json',
-        'Referer': 'https://www.bseindia.com/'
+        'Referer': 'https://www.nseindia.com/'
       }
     }, (res) => {
       let data = ''
@@ -135,36 +163,71 @@ async function fetchBSEDividends(): Promise<CorporateEvent[]> {
         clearTimeout(timeout)
         try {
           const json = JSON.parse(data)
-          if (json.Table && Array.isArray(json.Table)) {
-            const events: CorporateEvent[] = json.Table.slice(0, 30).map((item: any, i: number) => ({
-              id: `div-${item.scrip_cd || i}-${Date.now()}`,
-              symbol: item.scrip_cd || 'UNKNOWN',
-              companyName: item.long_name || item.scrip_cd || 'Unknown',
-              eventType: 'DIVIDEND' as const,
-              eventDate: parseIndianDate(item.ex_dt || new Date().toISOString()),
-              details: {
-                dividendAmount: parseFloat(item.Dividend || 0),
-                exDate: parseIndianDate(item.ex_dt),
-                recordDate: parseIndianDate(item.rec_dt),
-                description: `Dividend: ₹${item.Dividend || 'N/A'} per share`
-              },
-              impact: 'MEDIUM' as const,
-              source: 'BSE',
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }))
+          if (Array.isArray(json) && json.length > 0) {
+            console.log(`📊 NSE Corporate Actions: ${json.length} actions found`)
+            
+            // Filter out government securities (GS series)
+            const equityActions = json.filter((item: any) => 
+              item.series === 'EQ' || item.series === 'BE' || item.series === 'SM'
+            )
+            
+            const events: CorporateEvent[] = equityActions.slice(0, 50).map((item: any, i: number) => {
+              const subject = (item.subject || '').toLowerCase()
+              let eventType: CorporateEvent['eventType'] = 'DIVIDEND'
+              let impact: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
+              
+              if (subject.includes('split') || subject.includes('sub-division')) {
+                eventType = 'SPLIT'
+                impact = 'HIGH'
+              } else if (subject.includes('bonus')) {
+                eventType = 'BONUS'
+                impact = 'HIGH'
+              } else if (subject.includes('buyback')) {
+                eventType = 'BUYBACK'
+                impact = 'HIGH'
+              } else if (subject.includes('right')) {
+                eventType = 'RIGHTS'
+                impact = 'MEDIUM'
+              } else if (subject.includes('dividend') || subject.includes('interim') || subject.includes('final')) {
+                eventType = 'DIVIDEND'
+                impact = 'MEDIUM'
+              }
+              
+              return {
+                id: `nse-ca-${item.symbol || i}-${item.exDate || Date.now()}`,
+                symbol: item.symbol || 'UNKNOWN',
+                companyName: item.comp || item.symbol || 'Unknown Company',
+                eventType,
+                eventDate: parseIndianDate(item.exDate),
+                details: {
+                  description: item.subject || 'Corporate Action',
+                  exDate: parseIndianDate(item.exDate),
+                  recordDate: parseIndianDate(item.recDate),
+                  ratio: subject.includes('split') || subject.includes('bonus') 
+                    ? item.subject.match(/\d+[:\-]\d+/)?.[0] 
+                    : undefined
+                },
+                impact,
+                source: 'NSE',
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            })
+            
             resolve(events)
           } else {
             resolve([])
           }
         } catch (e) {
+          console.log('⚠️ Failed to parse NSE corporate actions:', e)
           resolve([])
         }
       })
     })
     
-    req.on('error', () => {
+    req.on('error', (err) => {
       clearTimeout(timeout)
+      console.log('⚠️ NSE corporate actions error:', err.message)
       resolve([])
     })
   })
@@ -245,16 +308,16 @@ export async function GET(request: NextRequest) {
     // Fetch fresh data
     console.log('📊 Fetching corporate events from BSE...')
     
-    const [bseAnnouncements, bseDividends] = await Promise.all([
-      fetchBSEAnnouncements(),
-      fetchBSEDividends()
+    const [nseBoardMeetings, nseCorporateActions] = await Promise.all([
+      fetchNSEBoardMeetings(),
+      fetchNSECorporateActions()
     ])
     
-    console.log(`✅ BSE Announcements: ${bseAnnouncements.length}`)
-    console.log(`✅ BSE Dividends: ${bseDividends.length}`)
+    console.log(`✅ NSE Board Meetings: ${nseBoardMeetings.length}`)
+    console.log(`✅ NSE Corporate Actions: ${nseCorporateActions.length}`)
     
     // Combine all events
-    let allEvents = [...bseAnnouncements, ...bseDividends]
+    let allEvents = [...nseBoardMeetings, ...nseCorporateActions]
     
     // If no real data, use sample data
     if (allEvents.length === 0) {
@@ -315,7 +378,7 @@ export async function GET(request: NextRequest) {
       
       // Metadata
       totalEvents: filteredEvents.length,
-      dataSource: bseAnnouncements.length > 0 || bseDividends.length > 0 ? 'BSE' : 'Sample Data'
+      dataSource: nseBoardMeetings.length > 0 || nseCorporateActions.length > 0 ? 'NSE' : 'Sample Data'
     })
     
   } catch (error: any) {

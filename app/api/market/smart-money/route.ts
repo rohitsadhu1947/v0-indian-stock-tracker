@@ -227,41 +227,13 @@ function generateSampleFIIDIIData(): FIIDIIData[] {
 }
 
 /**
- * Generate sample bulk deals
+ * Note: Bulk deals API requires session cookies that are hard to obtain programmatically
+ * We return empty array and show "unavailable" message to user
+ * TODO: Implement proper session handling or find alternative data source
  */
 function generateSampleBulkDeals(): BulkBlockDeal[] {
-  const stocks = [
-    { symbol: 'TATAPOWER', price: 420 },
-    { symbol: 'ZOMATO', price: 275 },
-    { symbol: 'PAYTM', price: 850 },
-    { symbol: 'ADANIGREEN', price: 1850 },
-    { symbol: 'IRFC', price: 165 },
-    { symbol: 'NHPC', price: 95 },
-    { symbol: 'SUZLON', price: 55 },
-    { symbol: 'IDEA', price: 12 },
-  ]
-  
-  const clients = [
-    'Goldman Sachs',
-    'Morgan Stanley',
-    'HDFC Mutual Fund',
-    'SBI Mutual Fund',
-    'Nomura',
-    'CLSA',
-    'Kotak Mahindra MF',
-    'ICICI Prudential MF'
-  ]
-  
-  return stocks.slice(0, 5).map((stock, i) => ({
-    date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    symbol: stock.symbol,
-    clientName: clients[i % clients.length],
-    dealType: 'BULK' as const,
-    buySell: Math.random() > 0.4 ? 'BUY' as const : 'SELL' as const,
-    quantity: Math.floor(500000 + Math.random() * 2000000),
-    price: stock.price,
-    value: (500000 + Math.random() * 2000000) * stock.price / 10000000 // Crores
-  }))
+  // Return empty - don't show fake data
+  return []
 }
 
 export async function GET(request: NextRequest) {
