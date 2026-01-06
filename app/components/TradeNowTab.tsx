@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react'
 import { SignalCard } from './SignalCard'
 import MarketRegimeCard from './MarketRegimeCard'
+import SmartMoneyCard from './SmartMoneyCard'
 import CorrelationMatrix from './CorrelationMatrix'
 import type { MasterScore } from '@/lib/master-scorer'
 import type { NewsPop } from '@/lib/news-pop-scanner'
@@ -103,8 +104,11 @@ export default function TradeNowTab({
         onToggleAutoRefresh={() => setAutoRefresh(!autoRefresh)}
       />
 
-      {/* 📊 Market Regime Analysis - NEW */}
+      {/* 📊 Market Regime Analysis */}
       <MarketRegimeCard />
+
+      {/* 🐋 Smart Money Tracker - FII/DII Flows */}
+      <SmartMoneyCard />
 
       {/* Capital Dashboard */}
       <CapitalDashboard
