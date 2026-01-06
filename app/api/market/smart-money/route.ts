@@ -244,11 +244,16 @@ export async function GET(request: NextRequest) {
     let fiidiiData = await fetchFIIDIIFromNSE()
     let dataSource = 'NSE'
     
-    // If NSE fails, use sample data
-    if (fiidiiData.length === 0) {
-      console.log('⚠️ Using sample FII/DII data (NSE unavailable)')
+    // Check if data is empty or all zeros (NSE sometimes returns empty data)
+    const hasRealData = fiidiiData.length > 0 && fiidiiData.some(d => 
+      d.fiiNetValue !== 0 || d.diiNetValue !== 0
+    )
+    
+    // If NSE fails or returns all zeros, use sample data
+    if (!hasRealData) {
+      console.log('⚠️ Using sample FII/DII data (NSE returned empty/zero values)')
       fiidiiData = generateSampleFIIDIIData()
-      dataSource = 'Sample (NSE unavailable)'
+      dataSource = 'Sample Data (Live NSE data unavailable - markets may be closed)'
     }
     
     console.log(`✅ Got ${fiidiiData.length} days of FII/DII data`)
