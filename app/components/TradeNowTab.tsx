@@ -7,6 +7,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { SignalCard } from './SignalCard'
+import MarketRegimeCard from './MarketRegimeCard'
+import CorrelationMatrix from './CorrelationMatrix'
 import type { MasterScore } from '@/lib/master-scorer'
 import type { NewsPop } from '@/lib/news-pop-scanner'
 
@@ -101,6 +103,9 @@ export default function TradeNowTab({
         onToggleAutoRefresh={() => setAutoRefresh(!autoRefresh)}
       />
 
+      {/* 📊 Market Regime Analysis - NEW */}
+      <MarketRegimeCard />
+
       {/* Capital Dashboard */}
       <CapitalDashboard
         capitalAvailable={capitalAvailable}
@@ -109,6 +114,32 @@ export default function TradeNowTab({
         maxPositions={maxPositions}
         todayPnL={todayPnL}
       />
+
+      {/* 📊 Correlation Matrix - Portfolio Diversification Analysis */}
+      <details style={{ marginBottom: '20px' }}>
+        <summary style={{
+          cursor: 'pointer',
+          background: 'rgba(139, 92, 246, 0.15)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          borderRadius: '12px',
+          padding: '15px',
+          fontSize: '1.1em',
+          fontWeight: 'bold',
+          color: '#A78BFA',
+          listStyle: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          📊 Correlation Analysis
+          <span style={{ fontSize: '0.8em', fontWeight: 'normal', opacity: 0.7 }}>
+            (Click to expand - Portfolio diversification)
+          </span>
+        </summary>
+        <div style={{ marginTop: '10px' }}>
+          <CorrelationMatrix />
+        </div>
+      </details>
 
       {/* Error Display */}
       {error && (

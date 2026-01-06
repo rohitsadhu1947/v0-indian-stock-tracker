@@ -1,0 +1,196 @@
+/**
+ * Correlation Matrix API
+ * GET /api/market/correlation?symbols=RELIANCE,TCS,INFY,HDFCBANK
+ * 
+ * Calculates correlation matrix for given stocks
+ * Used for portfolio diversification analysis
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { KiteConnect } from 'kiteconnect'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
+import { 
+  calculateCorrelationMatrix, 
+  calculatePortfolioCorrelationScore,
+  type PriceData 
+} from '@/lib/correlation-matrix'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+// Default stocks for correlation analysis (top liquid stocks)
+const DEFAULT_SYMBOLS = [
+  'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
+  'HINDUNILVR', 'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK',
+  'LT', 'AXISBANK', 'MARUTI', 'TITAN', 'SUNPHARMA'
+]
+
+export async function GET(request: NextRequest) {
+  try {
+    console.log('\n📊 === CORRELATION MATRIX API CALLED ===')
+    
+    // Get query parameters
+    const searchParams = request.nextUrl.searchParams
+    const symbolsParam = searchParams.get('symbols')
+    const daysParam = searchParams.get('days') || '30'
+    const portfolioParam = searchParams.get('portfolio')  // For portfolio score
+    
+    // Parse symbols
+    let symbols: string[]
+    if (symbolsParam) {
+      symbols = symbolsParam.split(',').map(s => s.trim().toUpperCase())
+    } else {
+      symbols = DEFAULT_SYMBOLS
+    }
+    
+    const days = parseInt(daysParam)
+    
+    console.log(`📊 Analyzing ${symbols.length} stocks over ${days} days`)
+    console.log(`   Symbols: ${symbols.join(', ')}`)
+    
+    // Get Kite credentials
+    const accessToken = await getKiteAccessToken()
+    const apiKey = getKiteApiKey()
+    
+    if (!accessToken || !apiKey) {
+      console.error('❌ Kite authentication required')
+      return NextResponse.json({
+        success: false,
+        error: 'Kite authentication required. Please login first.'
+      }, { status: 401 })
+    }
+    
+    // Initialize Kite
+    const kc = new KiteConnect({ api_key: apiKey })
+    kc.setAccessToken(accessToken)
+    
+    console.log('✅ Kite initialized')
+    
+    // Get instruments to find instrument tokens
+    const instruments = await kc.getInstruments('NSE')
+    const symbolToToken = new Map<string, number>()
+    
+    for (const inst of instruments) {
+      if (inst.instrument_type === 'EQ' && symbols.includes(inst.tradingsymbol)) {
+        symbolToToken.set(inst.tradingsymbol, inst.instrument_token)
+      }
+    }
+    
+    console.log(`✅ Found ${symbolToToken.size}/${symbols.length} instruments`)
+    
+    // Fetch historical data for each stock
+    const toDate = new Date()
+    const fromDate = new Date()
+    fromDate.setDate(fromDate.getDate() - days - 10)  // Extra buffer for holidays
+    
+    const priceData: PriceData[] = []
+    const errors: string[] = []
+    
+    // Process in batches to avoid rate limits
+    const batchSize = 5
+    const foundSymbols = Array.from(symbolToToken.keys())
+    
+    for (let i = 0; i < foundSymbols.length; i += batchSize) {
+      const batch = foundSymbols.slice(i, i + batchSize)
+      
+      await Promise.all(batch.map(async (symbol) => {
+        try {
+          const token = symbolToToken.get(symbol)!
+          const historical = await kc.getHistoricalData(
+            token,
+            'day',
+            fromDate.toISOString().split('T')[0],
+            toDate.toISOString().split('T')[0]
+          )
+          
+          if (historical.length >= 10) {
+            priceData.push({
+              symbol,
+              prices: historical.map((bar: any) => bar.close),
+              dates: historical.map((bar: any) => new Date(bar.date))
+            })
+          } else {
+            errors.push(`${symbol}: Insufficient data (${historical.length} days)`)
+          }
+        } catch (err: any) {
+          errors.push(`${symbol}: ${err.message}`)
+        }
+      }))
+      
+      // Small delay between batches
+      if (i + batchSize < foundSymbols.length) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+    }
+    
+    console.log(`✅ Fetched data for ${priceData.length} stocks`)
+    if (errors.length > 0) {
+      console.log(`⚠️ Errors: ${errors.join(', ')}`)
+    }
+    
+    if (priceData.length < 2) {
+      return NextResponse.json({
+        success: false,
+        error: 'Need at least 2 stocks with sufficient data for correlation analysis',
+        errors
+      }, { status: 400 })
+    }
+    
+    // Calculate correlation matrix
+    console.log('🔍 Calculating correlation matrix...')
+    const correlationMatrix = calculateCorrelationMatrix(priceData)
+    
+    console.log(`✅ Calculated ${correlationMatrix.pairs.length} correlation pairs`)
+    console.log(`   Highly correlated: ${correlationMatrix.insights.highlyCorrelated.length}`)
+    console.log(`   Negatively correlated: ${correlationMatrix.insights.negativelyCorrrelated.length}`)
+    
+    // Calculate portfolio score if portfolio symbols provided
+    let portfolioScore = null
+    if (portfolioParam) {
+      const portfolioSymbols = portfolioParam.split(',').map(s => s.trim().toUpperCase())
+      portfolioScore = calculatePortfolioCorrelationScore(portfolioSymbols, correlationMatrix)
+      console.log(`📊 Portfolio score: ${portfolioScore.score.toFixed(1)}%`)
+    }
+    
+    return NextResponse.json({
+      success: true,
+      
+      // Symbols analyzed
+      symbols: correlationMatrix.symbols,
+      
+      // Full correlation matrix (for heatmap)
+      matrix: correlationMatrix.matrix,
+      
+      // Top correlation pairs
+      topCorrelations: correlationMatrix.pairs.slice(0, 20),
+      
+      // Insights
+      insights: {
+        highlyCorrelated: correlationMatrix.insights.highlyCorrelated.slice(0, 10),
+        negativelyCorrrelated: correlationMatrix.insights.negativelyCorrrelated.slice(0, 10),
+        diversified: correlationMatrix.insights.diversified.slice(0, 5)
+      },
+      
+      // Clusters
+      clusters: correlationMatrix.clusters,
+      
+      // Portfolio analysis (if requested)
+      portfolioScore,
+      
+      // Metadata
+      dataPoints: correlationMatrix.dataPoints,
+      analyzedAt: correlationMatrix.analyzedAt.toISOString(),
+      
+      // Errors (if any)
+      errors: errors.length > 0 ? errors : undefined
+    })
+    
+  } catch (error: any) {
+    console.error('❌ Correlation matrix error:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to calculate correlation matrix',
+      details: error.message
+    }, { status: 500 })
+  }
+}
