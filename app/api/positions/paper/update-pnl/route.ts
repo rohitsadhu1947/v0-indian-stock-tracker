@@ -92,7 +92,11 @@ export async function POST(request: NextRequest) {
     const formattedSymbols = symbols.map(s => `NSE:${s}`).join(',')
     
     // Fetch live prices from Kite API
-    const priceResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/kite/quote?symbols=${formattedSymbols}`, {
+    // Use request URL to build the correct base URL (handles any port)
+    const requestUrl = new URL(request.url)
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+    
+    const priceResponse = await fetch(`${baseUrl}/api/kite/quote?symbols=${formattedSymbols}`, {
       headers: {
         'Cookie': request.headers.get('cookie') || ''
       }

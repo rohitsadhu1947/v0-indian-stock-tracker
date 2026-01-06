@@ -102,6 +102,11 @@ function calculateTechnicalScore(signal: MomentumSignal): {
 
 /**
  * Generate trade plan with stop-loss and targets
+ * 
+ * DIRECTION LOGIC:
+ * - Current scanner generates BUY signals only (STRONG_BUY, BUY, WATCH, SKIP)
+ * - Future: If we add SHORT signals, include 'SHORT', 'SELL', or 'STRONG_SELL' in signal.signal
+ * - The trade plan will auto-adjust SL/targets based on direction
  */
 function generateTradePlan(
   signal: MomentumSignal,
@@ -110,32 +115,56 @@ function generateTradePlan(
 ): MasterScore['tradePlan'] {
   const entry = signal.current  // Use 'current' field (not 'currentPrice')
   
-  // Determine if this is a BUY or SELL signal
-  const isBuy = !signal.signal || signal.signal === 'BUY' || (signal.changePercent !== undefined && signal.changePercent >= 0)
+  // Determine trade direction
+  // Check if signal explicitly indicates SHORT (future-proof)
+  const signalType = (signal.signal as string)?.toUpperCase() || ''
+  const isShort = signalType.includes('SHORT') || signalType.includes('SELL')
   
-  // Use provided values or calculate defaults based on BUY/SELL direction
-  const stopLoss = signal.stopLoss || (
-    isBuy 
-      ? entry * 0.975   // 2.5% below for BUY
-      : entry * 1.025   // 2.5% above for SELL
-  )
+  // Use provided values from momentum scanner, or calculate defaults
+  let stopLoss = signal.stopLoss
+  let target1 = signal.target1
+  let target2 = signal.target2
   
-  const target1 = signal.target1 || (
-    isBuy
-      ? entry * 1.04    // 4% above for BUY
-      : entry * 0.96    // 4% below for SELL
-  )
-  
-  const target2 = signal.target2 || (
-    isBuy
-      ? entry * 1.08    // 8% above for BUY
-      : entry * 0.92    // 8% below for SELL
-  )
+  if (isShort) {
+    // SHORT/SELL TRADE: We profit when price goes DOWN
+    // Stop loss should be ABOVE entry (we exit if price rises)
+    if (!stopLoss || stopLoss <= entry) {
+      stopLoss = entry * 1.025  // 2.5% above entry
+    }
+    // Targets should be BELOW entry (price falling is profitable)
+    if (!target1 || target1 >= entry) {
+      target1 = entry * 0.985  // 1.5% below
+    }
+    if (!target2 || target2 >= entry) {
+      target2 = entry * 0.975  // 2.5% below
+    }
+    // Ensure target2 < target1 for shorts
+    if (target2 >= target1) {
+      target2 = target1 * 0.99  // 1% below target1
+    }
+  } else {
+    // LONG/BUY TRADE: We profit when price goes UP
+    // Stop loss should be BELOW entry (we exit if price falls)
+    if (!stopLoss || stopLoss >= entry) {
+      stopLoss = entry * 0.975  // 2.5% below entry
+    }
+    // Targets should be ABOVE entry (price rising is profitable)
+    if (!target1 || target1 <= entry) {
+      target1 = entry * 1.015  // 1.5% above
+    }
+    if (!target2 || target2 <= entry) {
+      target2 = entry * 1.025  // 2.5% above
+    }
+    // Ensure target2 > target1 for longs
+    if (target2 <= target1) {
+      target2 = target1 * 1.01  // 1% above target1
+    }
+  }
 
   // Calculate position size based on risk
   const riskPerShare = Math.abs(entry - stopLoss)
   const maxRiskAmount = capitalAvailable * (maxRiskPercent / 100)
-  const positionSize = Math.floor(maxRiskAmount / riskPerShare)
+  const positionSize = riskPerShare > 0 ? Math.floor(maxRiskAmount / riskPerShare) : 0
   
   // Calculate capital required
   const capitalRequired = positionSize * entry
@@ -181,34 +210,39 @@ export async function calculateMasterScore(
   let actualNewsSentiment = newsSentiment // Use provided value as fallback
   
   try {
-    // Fetch stock-specific news
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const newsResponse = await fetch(`${baseUrl}/api/news/quote?symbol=${signal.symbol}&limit=10`, {
+    // Fetch stock-specific news with pre-calculated sentiment
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'
+    const newsResponse = await fetch(`${baseUrl}/api/news/quote?symbol=${signal.symbol}&limit=20`, {
       next: { revalidate: 300 } // Cache for 5 minutes
     })
     
     if (newsResponse.ok) {
       const newsData = await newsResponse.json()
       
-      if (newsData.success && newsData.articles && newsData.articles.length > 0) {
-        // Import sentiment analysis
-        const { analyzeSentiment, calculateAggregateSentiment } = await import('./sentiment-utils')
-        
-        // Analyze each headline
-        const sentiments = newsData.articles.slice(0, 10).map((article: any) => 
-          analyzeSentiment(article.title)
-        )
-        
-        // Calculate aggregate sentiment
-        const aggregate = calculateAggregateSentiment(sentiments)
-        
-        // Convert to -1 to 1 scale for intelligence scorer
-        actualNewsSentiment = aggregate.score
-        
-        console.log(`📰 ${signal.symbol}: Analyzed ${sentiments.length} news articles, sentiment: ${actualNewsSentiment.toFixed(2)}`)
+      // API returns "news" not "articles", and pre-calculates sentiment
+      if (newsData.success && newsData.news && newsData.news.length > 0) {
+        // Use the pre-calculated aggregate sentiment from the API
+        if (newsData.sentiment?.aggregate?.score !== undefined) {
+          actualNewsSentiment = newsData.sentiment.aggregate.score
+          const overall = newsData.sentiment.aggregate.overall || 'NEUTRAL'
+          const posCount = newsData.sentiment.aggregate.positive || 0
+          const negCount = newsData.sentiment.aggregate.negative || 0
+          console.log(`📰 ${signal.symbol}: ${newsData.news.length} news items, sentiment: ${overall} (${posCount}+ ${negCount}-) score: ${actualNewsSentiment.toFixed(2)}`)
+        } else {
+          // Fallback: manually analyze if API didn't include sentiment
+          const { analyzeSentiment, calculateAggregateSentiment } = await import('./sentiment-utils')
+          const sentiments = newsData.news.slice(0, 10).map((article: any) => 
+            analyzeSentiment(article.title)
+          )
+          const aggregate = calculateAggregateSentiment(sentiments)
+          actualNewsSentiment = aggregate.score
+          console.log(`📰 ${signal.symbol}: Analyzed ${sentiments.length} news articles, sentiment: ${actualNewsSentiment.toFixed(2)}`)
+        }
       } else {
-        console.log(`📰 ${signal.symbol}: No news articles found, using neutral sentiment`)
+        console.log(`📰 ${signal.symbol}: No news found, using neutral sentiment`)
       }
+    } else {
+      console.log(`📰 ${signal.symbol}: News API returned ${newsResponse.status}, using neutral sentiment`)
     }
   } catch (error) {
     console.log(`⚠️ ${signal.symbol}: Failed to fetch news, using default sentiment`)
@@ -313,7 +347,7 @@ export async function batchCalculateMasterScores(
             capitalAvailable
           ),
           new Promise<MasterScore>((_, reject) => 
-            setTimeout(() => reject(new Error(`Timeout calculating ${signal.symbol}`)), 10000)
+            setTimeout(() => reject(new Error(`Timeout calculating ${signal.symbol}`)), 20000) // Increased to 20s
           )
         ])
       )

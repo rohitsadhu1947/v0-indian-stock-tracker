@@ -64,7 +64,7 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
           <div>
             <h4 style={{ margin: 0, fontSize: '1.3em' }}>{signal.symbol}</h4>
             <div style={{ fontSize: '0.85em', opacity: 0.7, marginTop: '2px' }}>
-              {signal.fundamental.data.marketCap > 0 && (
+              {signal.fundamental?.data?.marketCap && signal.fundamental.data.marketCap > 0 && (
                 <span>
                   Market Cap: ₹{(signal.fundamental.data.marketCap / 10000000).toFixed(0)} Cr
                 </span>
@@ -311,7 +311,7 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
               <div>
                 <h2 style={{ margin: 0, fontSize: '2em' }}>{signal.symbol}</h2>
                 <div style={{ fontSize: '1.1em', opacity: 0.7, marginTop: '5px' }}>
-                  {signal.exchange} • {signal.fundamental.data.companyName || 'Indian Stock'}
+                  {signal.exchange} • {signal.fundamental?.data?.companyName || 'Indian Stock'}
                 </div>
               </div>
               <button
@@ -394,12 +394,12 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
                   {signal.fundamental.reasoning}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '0.9em' }}>
-                  <div>Market Cap: ₹{(signal.fundamental.data.marketCap / 10000000).toFixed(0)} Cr</div>
-                  <div>P/E: {signal.fundamental.data.pe?.toFixed(2) || 'N/A'}</div>
-                  <div>ROE: {signal.fundamental.data.roe?.toFixed(1) || 'N/A'}%</div>
-                  <div>D/E: {signal.fundamental.data.debtToEquity?.toFixed(2) || 'N/A'}</div>
-                  <div>Sector: {signal.fundamental.data.sector || 'N/A'}</div>
-                  <div>Industry: {signal.fundamental.data.industry || 'N/A'}</div>
+                  <div>Market Cap: ₹{signal.fundamental?.data?.marketCap ? (signal.fundamental.data.marketCap / 10000000).toFixed(0) : 'N/A'} Cr</div>
+                  <div>P/E: {signal.fundamental?.data?.pe?.toFixed(2) || 'N/A'}</div>
+                  <div>ROE: {signal.fundamental?.data?.roe?.toFixed(1) || 'N/A'}%</div>
+                  <div>D/E: {signal.fundamental?.data?.debtToEquity?.toFixed(2) || 'N/A'}</div>
+                  <div>Sector: {signal.fundamental?.data?.sector || 'N/A'}</div>
+                  <div>Industry: {signal.fundamental?.data?.industry || 'N/A'}</div>
                 </div>
               </div>
 
@@ -422,9 +422,9 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
                   ))}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '0.85em', marginTop: '10px' }}>
-                  <div>Analyst: {signal.intelligence.breakdown.analystScore}/15</div>
-                  <div>Target Upside: {signal.intelligence.breakdown.targetUpsideScore}/10</div>
-                  <div>News: {signal.intelligence.breakdown.newsScore}/5</div>
+                  <div>Analyst: {signal.intelligence.breakdown?.analystScore ?? 0}/10</div>
+                  <div>Target Upside: {signal.intelligence.breakdown?.targetUpsideScore ?? 0}/8</div>
+                  <div>News: {signal.intelligence.breakdown?.newsSentimentScore ?? signal.intelligence.breakdown?.newsScore ?? 0}/12</div>
                 </div>
               </div>
             </div>

@@ -18,15 +18,17 @@ export interface AnalystReport {
 export interface IntelligenceScore {
   score: number  // 0-30
   breakdown: {
-    analystScore: number  // 0-15
-    targetUpsideScore: number  // 0-10
-    newsSentimentScore: number  // 0-5
+    analystScore: number  // 0-10 (reduced - can be stale)
+    targetUpsideScore: number  // 0-8
+    newsSentimentScore: number  // 0-12 (increased - real-time data!)
   }
   reasoning: string[]
 }
 
 /**
- * Calculate analyst rating score (0-15 points)
+ * Calculate analyst rating score (0-10 points)
+ * NOTE: Reduced weight since analyst reports can become stale quickly
+ * News sentiment (real-time) now carries more weight
  */
 function calculateAnalystScore(report: AnalystReport | null): { score: number, reason: string } {
   if (!report) {
@@ -35,12 +37,22 @@ function calculateAnalystScore(report: AnalystReport | null): { score: number, r
 
   const daysSinceReport = Math.floor((Date.now() - new Date(report.reportDate).getTime()) / (1000 * 60 * 60 * 24))
   
-  // Recency factor (reports older than 90 days get penalized)
+  // Aggressive recency penalties - market conditions change fast!
   let recencyMultiplier = 1.0
+  let ageLabel = 'Recent'
+  
   if (daysSinceReport > 90) {
-    recencyMultiplier = 0.5  // 50% penalty for old reports
+    recencyMultiplier = 0.25  // 75% penalty for very old reports (was 50%)
+    ageLabel = '⚠️ Stale'
+  } else if (daysSinceReport > 60) {
+    recencyMultiplier = 0.4   // 60% penalty
+    ageLabel = `${daysSinceReport}d old`
   } else if (daysSinceReport > 30) {
-    recencyMultiplier = 0.8  // 20% penalty for 1-3 month old reports
+    recencyMultiplier = 0.6   // 40% penalty (was 20%)
+    ageLabel = `${daysSinceReport}d old`
+  } else if (daysSinceReport > 14) {
+    recencyMultiplier = 0.85  // 15% penalty for 2-4 week old
+    ageLabel = `${daysSinceReport}d old`
   }
 
   let baseScore = 0
@@ -48,19 +60,19 @@ function calculateAnalystScore(report: AnalystReport | null): { score: number, r
 
   switch (report.rating) {
     case 'STRONG_BUY':
-      baseScore = 15
+      baseScore = 10
       ratingText = 'Strong Buy'
       break
     case 'BUY':
-      baseScore = 12
+      baseScore = 8
       ratingText = 'Buy'
       break
     case 'ACCUMULATE':
-      baseScore = 9
+      baseScore = 6
       ratingText = 'Accumulate'
       break
     case 'HOLD':
-      baseScore = 6
+      baseScore = 4
       ratingText = 'Hold'
       break
     case 'SELL':
@@ -71,16 +83,16 @@ function calculateAnalystScore(report: AnalystReport | null): { score: number, r
   }
 
   const finalScore = Math.round(baseScore * recencyMultiplier)
-  const age = daysSinceReport < 30 ? 'Recent' : daysSinceReport < 90 ? `${daysSinceReport}d old` : 'Stale'
   
   return {
     score: finalScore,
-    reason: `${report.source} says ${ratingText} (${age})`
+    reason: `${report.source} says ${ratingText} (${ageLabel})`
   }
 }
 
 /**
- * Calculate target price upside score (0-10 points)
+ * Calculate target price upside score (0-8 points)
+ * NOTE: Slightly reduced since target prices from old reports may be outdated
  */
 function calculateUpsideScore(report: AnalystReport | null): { score: number, reason: string } {
   if (!report || !report.upside) {
@@ -90,11 +102,11 @@ function calculateUpsideScore(report: AnalystReport | null): { score: number, re
   const upside = report.upside
 
   if (upside >= 15) {
-    return { score: 10, reason: `Strong upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
+    return { score: 8, reason: `Strong upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
   } else if (upside >= 10) {
-    return { score: 8, reason: `Good upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
+    return { score: 6, reason: `Good upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
   } else if (upside >= 5) {
-    return { score: 5, reason: `Moderate upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
+    return { score: 4, reason: `Moderate upside: ${upside.toFixed(1)}% to ₹${report.targetPrice}` }
   } else if (upside >= 0) {
     return { score: 2, reason: `Limited upside: ${upside.toFixed(1)}%` }
   } else {
@@ -103,21 +115,27 @@ function calculateUpsideScore(report: AnalystReport | null): { score: number, re
 }
 
 /**
- * Calculate news sentiment score (0-5 points)
+ * Calculate news sentiment score (0-12 points)
+ * NOTE: Increased weight! News sentiment is REAL-TIME data
+ * Unlike analyst reports which can be months old
  */
 function calculateNewsSentimentScore(sentimentScore: number): { score: number, reason: string } {
   // sentimentScore is expected to be -1 to 1 (from sentiment analysis)
   
   if (sentimentScore >= 0.6) {
-    return { score: 5, reason: 'Very bullish news sentiment' }
+    return { score: 12, reason: '🟢 Very bullish news sentiment' }
   } else if (sentimentScore >= 0.3) {
-    return { score: 4, reason: 'Bullish news sentiment' }
+    return { score: 10, reason: '🟢 Bullish news sentiment' }
+  } else if (sentimentScore >= 0.1) {
+    return { score: 8, reason: '🟡 Slightly bullish news' }
+  } else if (sentimentScore >= -0.1) {
+    return { score: 6, reason: '⚪ Neutral news sentiment' }
   } else if (sentimentScore >= -0.3) {
-    return { score: 3, reason: 'Neutral news sentiment' }
+    return { score: 4, reason: '🟠 Slightly bearish news' }
   } else if (sentimentScore >= -0.6) {
-    return { score: 2, reason: 'Bearish news sentiment' }
+    return { score: 2, reason: '🔴 Bearish news sentiment' }
   } else {
-    return { score: 1, reason: 'Very bearish news sentiment' }
+    return { score: 0, reason: '🔴 Very bearish news sentiment' }
   }
 }
 

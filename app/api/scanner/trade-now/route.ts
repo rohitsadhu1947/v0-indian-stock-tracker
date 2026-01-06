@@ -71,7 +71,11 @@ export async function GET(request: NextRequest) {
     // Build URL with custom symbols if provided
     const isCustomOnly = customSymbols && customSymbols.trim().length > 0
     
-    let momentumUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/scanner/momentum?capital=${capitalAvailable}&maxSignals=50`
+    // Use request URL to build the correct base URL (handles any port)
+    const requestUrl = new URL(request.url)
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+    
+    let momentumUrl = `${baseUrl}/api/scanner/momentum?capital=${capitalAvailable}&maxSignals=50`
     
     if (isCustomOnly) {
       // Custom stock ONLY - scan JUST the custom stock(s), no universe scan

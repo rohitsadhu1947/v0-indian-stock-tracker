@@ -5,6 +5,9 @@
 
 export interface FundamentalData {
   symbol: string
+  companyName?: string
+  sector?: string
+  industry?: string
   marketCap: number
   pe: number | null
   roe: number | null
@@ -95,7 +98,7 @@ export async function getFundamentals(symbol: string): Promise<FundamentalData |
   try {
     // Use the existing /api/fundamentals/quote endpoint
     // This has 3-tier fallback: Yahoo quoteSummary → Yahoo quote → Screener.in
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/fundamentals/quote?symbol=${symbol}&exchange=NSE`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/fundamentals/quote?symbol=${symbol}&exchange=NSE`, {
       // Add timeout to prevent hanging
       signal: AbortSignal.timeout(10000) // 10 second timeout
     })
@@ -172,8 +175,9 @@ function getDummyFallbackData(symbol: string): FundamentalData | null {
 /**
  * Calculate fundamental score based on quality tiers
  * UPDATED: More realistic thresholds for Indian stocks (especially oil/gas/banks)
+ * Handles both field name conventions (pe vs peRatio, etc.)
  */
-export function calculateFundamentalScore(data: FundamentalData | null): FundamentalScore {
+export function calculateFundamentalScore(data: FundamentalData | any | null): FundamentalScore {
   if (!data) {
     return {
       score: 0,
@@ -192,58 +196,84 @@ export function calculateFundamentalScore(data: FundamentalData | null): Fundame
     }
   }
 
-  const { marketCap, pe, roe, debtToEquity } = data
+  // Handle both field naming conventions (pe vs peRatio, etc.)
+  const marketCap = data.marketCap || 0
+  const pe = data.pe ?? data.peRatio ?? null
+  const roe = data.roe ?? null
+  const debtToEquity = data.debtToEquity ?? null
+  
+  // Normalize data for consistent return
+  const normalizedData: FundamentalData = {
+    symbol: data.symbol || '',
+    companyName: data.companyName,
+    sector: data.sector,
+    industry: data.industry,
+    marketCap: marketCap,
+    pe: pe,
+    roe: roe,
+    debtToEquity: debtToEquity,
+    priceToBook: data.priceToBook ?? data.pbRatio ?? null,
+    currentPrice: data.currentPrice || 0,
+    lastUpdated: data.lastUpdated || new Date()
+  }
 
   // Market cap is already in INR (not USD), so convert to Crores directly
   const marketCapCr = marketCap / 10000000 // Convert to Crores (1 Cr = 10 million)
   
+  console.log(`📊 Fundamental scoring for ${data.symbol}: MCap=${marketCapCr.toFixed(0)}Cr, PE=${pe}, ROE=${roe}, D/E=${debtToEquity}`)
+  
   // TIER 1: BLUE CHIP (30 points)
-  // Large cap (>50K Cr), good ROE (>15%), reasonable P/E (5-30), acceptable debt (<5.0)
-  // NOTE: Oil/gas/banks have naturally higher D/E ratios
+  // Large cap (>50K Cr), good ROE (>15%), reasonable P/E (5-30), acceptable debt (<5.0 for non-banks)
+  // NOTE: Banks have naturally higher D/E ratios (allow up to 10)
+  const isBank = (data.sector?.toLowerCase()?.includes('bank') || data.industry?.toLowerCase()?.includes('bank'))
+  const maxDebtForTier1 = isBank ? 10.0 : 5.0
+  
   if (
     marketCapCr > 50000 &&
-    pe !== null && pe > 0 && pe >= 5 && pe <= 30 &&
+    pe !== null && pe > 0 && pe >= 5 && pe <= 35 &&
     roe !== null && roe > 15 &&
-    (debtToEquity === null || debtToEquity < 5.0)
+    (debtToEquity === null || debtToEquity < maxDebtForTier1)
   ) {
     return {
       score: 30,
       tier: 'BLUE_CHIP',
-      data,
+      data: normalizedData,
       reasoning: `Blue Chip: ₹${(marketCapCr/1000).toFixed(0)}K Cr, ROE ${roe.toFixed(1)}%, P/E ${pe.toFixed(1)}, D/E ${debtToEquity?.toFixed(1) || 'N/A'}`
     }
   }
 
   // TIER 2: QUALITY (20 points)
-  // Mid-large cap (>10K Cr), decent ROE (>10%), acceptable P/E (5-40), moderate debt (<10.0)
+  // Mid-large cap (>10K Cr), decent ROE (>10%), acceptable P/E (5-50), moderate debt (<10.0 for non-banks)
+  const maxDebtForTier2 = isBank ? 15.0 : 10.0
+  
   if (
     marketCapCr > 10000 &&
-    pe !== null && pe > 0 && pe >= 5 && pe <= 40 &&
+    pe !== null && pe > 0 && pe >= 5 && pe <= 50 &&
     roe !== null && roe > 10 &&
-    (debtToEquity === null || debtToEquity < 10.0)
+    (debtToEquity === null || debtToEquity < maxDebtForTier2)
   ) {
     return {
       score: 20,
       tier: 'QUALITY',
-      data,
+      data: normalizedData,
       reasoning: `Quality: ₹${(marketCapCr/1000).toFixed(0)}K Cr, ROE ${roe.toFixed(1)}%, P/E ${pe.toFixed(1)}, D/E ${debtToEquity?.toFixed(1) || 'N/A'}`
     }
   }
 
   // TIER 3: SPECULATIVE (10 points)
-  // Decent cap (>1K Cr), some profitability (>5% ROE), or missing ROE but profitable (P/E < 50)
+  // Decent cap (>1K Cr), some profitability (>5% ROE), or missing ROE but profitable (P/E < 100)
   if (
     marketCapCr > 1000 &&
     (
       (roe !== null && roe > 5) ||
-      (pe !== null && pe > 0 && pe < 50)
+      (pe !== null && pe > 0 && pe < 100)
     ) &&
     (debtToEquity === null || debtToEquity < 100.0)
   ) {
     return {
       score: 10,
       tier: 'SPECULATIVE',
-      data,
+      data: normalizedData,
       reasoning: `Speculative: ₹${(marketCapCr/1000).toFixed(0)}K Cr, ROE ${roe?.toFixed(1) || 'N/A'}%, P/E ${pe?.toFixed(1) || 'N/A'}`
     }
   }
@@ -252,7 +282,7 @@ export function calculateFundamentalScore(data: FundamentalData | null): Fundame
   return {
     score: 0,
     tier: 'FAIL',
-    data,
+    data: normalizedData,
     reasoning: `Fails criteria: Market Cap ${(marketCapCr/1000).toFixed(0)}K Cr, ROE ${roe?.toFixed(1) || 'N/A'}%, P/E ${pe?.toFixed(1) || 'N/A'}`
   }
 }
