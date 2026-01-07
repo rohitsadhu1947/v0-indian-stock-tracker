@@ -25,15 +25,18 @@ export async function POST(request: NextRequest) {
     console.log(`🔧 Enhancing ${signals.length} signals with context...`)
     
     // Build context from our APIs (fetch in parallel)
+    // Forward cookies so authenticated APIs work
     const baseUrl = new URL(request.url).origin
+    const cookies = request.headers.get('cookie') || ''
+    const headers = { cookie: cookies }
     
     const [regimeRes, smartMoneyRes, eventsRes, correlationRes] = await Promise.all([
-      fetch(`${baseUrl}/api/market/regime`).catch(() => null),
-      fetch(`${baseUrl}/api/market/smart-money`).catch(() => null),
-      fetch(`${baseUrl}/api/market/events`).catch(() => null),
+      fetch(`${baseUrl}/api/market/regime`, { headers }).catch(() => null),
+      fetch(`${baseUrl}/api/market/smart-money`, { headers }).catch(() => null),
+      fetch(`${baseUrl}/api/market/events`, { headers }).catch(() => null),
       // Only fetch correlation if we have multiple signals
       signals.length > 1 
-        ? fetch(`${baseUrl}/api/market/correlation?symbols=${signals.map((s: any) => s.symbol || s.tradingSymbol).join(',')}`).catch(() => null)
+        ? fetch(`${baseUrl}/api/market/correlation?symbols=${signals.map((s: any) => s.symbol || s.tradingSymbol).join(',')}`, { headers }).catch(() => null)
         : Promise.resolve(null)
     ])
     
@@ -50,10 +53,14 @@ export async function POST(request: NextRequest) {
             positionSizeMultiplier: regimeData.tradingImplications?.positionSizeMultiplier || 1.0
           }
           console.log(`📊 Market Regime: ${regimeData.regime}`)
+        } else if (regimeData.error) {
+          console.log(`⚠️ Regime API error: ${regimeData.error}`)
         }
       } catch (e) {
         console.log('⚠️ Could not parse regime data')
       }
+    } else {
+      console.log(`⚠️ Regime fetch failed: ${regimeRes?.status || 'no response'}`)
     }
     
     // Parse smart money
