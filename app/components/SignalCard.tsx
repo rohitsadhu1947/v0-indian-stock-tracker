@@ -118,27 +118,61 @@ export function SignalCard({ signal, rank, onExecute, accentColor, enhancement }
       {expanded && (
         <div style={{ padding: '20px' }}>
           {/* Context Warnings & Suggestions (from post-processor) */}
-          {enhancement && (enhancement.warnings.length > 0 || enhancement.suggestions.length > 0) && (
+          {enhancement ? (
             <div style={{ 
               marginBottom: '20px',
               padding: '15px',
-              background: enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH' 
-                ? 'rgba(239, 68, 68, 0.1)' 
-                : 'rgba(251, 191, 36, 0.1)',
+              background: enhancement.warnings.length > 0 
+                ? (enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH' 
+                    ? 'rgba(239, 68, 68, 0.1)' 
+                    : 'rgba(251, 191, 36, 0.1)')
+                : 'rgba(16, 185, 129, 0.1)',
               borderRadius: '8px',
-              border: enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH'
-                ? '1px solid rgba(239, 68, 68, 0.3)'
-                : '1px solid rgba(251, 191, 36, 0.3)'
+              border: enhancement.warnings.length > 0
+                ? (enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH'
+                    ? '1px solid rgba(239, 68, 68, 0.3)'
+                    : '1px solid rgba(251, 191, 36, 0.3)')
+                : '1px solid rgba(16, 185, 129, 0.3)'
             }}>
               <h5 style={{ margin: '0 0 12px 0', fontSize: '1em' }}>
                 🔍 Context Analysis
               </h5>
-              <SignalWarnings
-                warnings={enhancement.warnings}
-                suggestions={enhancement.suggestions}
-                riskLevel={enhancement.riskLevel}
-                positionSizeMultiplier={enhancement.positionSizeMultiplier}
-              />
+              {enhancement.warnings.length > 0 || enhancement.suggestions.length > 0 ? (
+                <SignalWarnings
+                  warnings={enhancement.warnings}
+                  suggestions={enhancement.suggestions}
+                  riskLevel={enhancement.riskLevel}
+                  positionSizeMultiplier={enhancement.positionSizeMultiplier}
+                />
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  color: '#10B981',
+                  fontSize: '0.95em'
+                }}>
+                  ✅ <span>All clear - No earnings conflicts, regime favorable, no correlation issues</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ 
+              marginBottom: '20px',
+              padding: '15px',
+              background: 'rgba(107, 114, 128, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(107, 114, 128, 0.3)'
+            }}>
+              <h5 style={{ margin: '0 0 8px 0', fontSize: '1em' }}>
+                🔍 Context Analysis
+              </h5>
+              <div style={{ 
+                color: '#9CA3AF',
+                fontSize: '0.9em'
+              }}>
+                ⏳ Loading market context...
+              </div>
             </div>
           )}
 
