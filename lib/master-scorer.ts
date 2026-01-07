@@ -255,14 +255,12 @@ export async function calculateMasterScore(
   const totalScore = technical.score + fundamental.score + intelligence.score
 
   // 5. Determine Tier
-  // NOTE: Thresholds lowered because fundamental/intelligence APIs 
-  // often fail, leaving only technical score (max 40)
   let tier: MasterScore['tier']
-  if (totalScore >= 70) {
+  if (totalScore >= 75) {
     tier = 'HIGH_CONVICTION'
-  } else if (totalScore >= 55) {
+  } else if (totalScore >= 60) {
     tier = 'MODERATE'
-  } else if (totalScore >= 40) {
+  } else if (totalScore >= 45) {
     tier = 'WATCH'
   } else {
     tier = 'SKIP'
