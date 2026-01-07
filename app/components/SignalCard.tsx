@@ -7,15 +7,18 @@
 
 import React, { useState } from 'react'
 import type { MasterScore } from '@/lib/master-scorer'
+import type { EnhancedSignal } from '@/lib/signal-enhancer'
+import { SignalWarnings } from './SignalWarnings'
 
 interface SignalCardProps {
   signal: MasterScore
   rank: number
   onExecute: (signal: MasterScore) => void
   accentColor: string
+  enhancement?: EnhancedSignal
 }
 
-export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardProps) {
+export function SignalCard({ signal, rank, onExecute, accentColor, enhancement }: SignalCardProps) {
   const [expanded, setExpanded] = useState(rank <= 3)  // Auto-expand top 3
   const [showModal, setShowModal] = useState(false)  // For detailed view modal
   
@@ -91,6 +94,18 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
             }}>
               {tierBadge.emoji} {tierBadge.text}
             </div>
+            {/* Compact warning indicator */}
+            {enhancement && enhancement.warnings.length > 0 && (
+              <div style={{ marginTop: '4px' }}>
+                <SignalWarnings
+                  warnings={enhancement.warnings}
+                  suggestions={enhancement.suggestions}
+                  riskLevel={enhancement.riskLevel}
+                  positionSizeMultiplier={enhancement.positionSizeMultiplier}
+                  compact={true}
+                />
+              </div>
+            )}
           </div>
           
           <div style={{ fontSize: '1.2em', opacity: 0.7 }}>
@@ -102,6 +117,31 @@ export function SignalCard({ signal, rank, onExecute, accentColor }: SignalCardP
       {/* Details - Expandable */}
       {expanded && (
         <div style={{ padding: '20px' }}>
+          {/* Context Warnings & Suggestions (from post-processor) */}
+          {enhancement && (enhancement.warnings.length > 0 || enhancement.suggestions.length > 0) && (
+            <div style={{ 
+              marginBottom: '20px',
+              padding: '15px',
+              background: enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH' 
+                ? 'rgba(239, 68, 68, 0.1)' 
+                : 'rgba(251, 191, 36, 0.1)',
+              borderRadius: '8px',
+              border: enhancement.riskLevel === 'HIGH' || enhancement.riskLevel === 'VERY_HIGH'
+                ? '1px solid rgba(239, 68, 68, 0.3)'
+                : '1px solid rgba(251, 191, 36, 0.3)'
+            }}>
+              <h5 style={{ margin: '0 0 12px 0', fontSize: '1em' }}>
+                🔍 Context Analysis
+              </h5>
+              <SignalWarnings
+                warnings={enhancement.warnings}
+                suggestions={enhancement.suggestions}
+                riskLevel={enhancement.riskLevel}
+                positionSizeMultiplier={enhancement.positionSizeMultiplier}
+              />
+            </div>
+          )}
+
           {/* Why This Trade */}
           <div style={{ marginBottom: '20px' }}>
             <h5 style={{ margin: '0 0 10px 0', fontSize: '1.1em', color: accentColor }}>

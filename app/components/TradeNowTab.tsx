@@ -11,8 +11,10 @@ import MarketRegimeCard from './MarketRegimeCard'
 import SmartMoneyCard from './SmartMoneyCard'
 import EventCalendar from './EventCalendar'
 import CorrelationMatrix from './CorrelationMatrix'
+import { SignalWarnings, SignalsSummary } from './SignalWarnings'
 import type { MasterScore } from '@/lib/master-scorer'
 import type { NewsPop } from '@/lib/news-pop-scanner'
+import type { EnhancedSignal } from '@/lib/signal-enhancer'
 
 interface TradeNowTabProps {
   capitalAvailable: number
@@ -40,6 +42,14 @@ export default function TradeNowTab({
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null)
   const [marketSentiment, setMarketSentiment] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  
+  // Enhancement state (post-processor - does NOT modify scores)
+  const [enhancements, setEnhancements] = useState<Map<string, EnhancedSignal>>(new Map())
+  const [enhancementSummary, setEnhancementSummary] = useState<{
+    totalWarnings: number
+    totalSuggestions: number
+    highRiskCount: number
+  } | null>(null)
 
   // Fetch signals
   const fetchSignals = async () => {
@@ -56,11 +66,21 @@ export default function TradeNowTab({
       const data = await response.json()
       
       if (data.success) {
-        setHighConviction(data.data.highConviction || [])
-        setModerate(data.data.moderate || [])
-        setWatch(data.data.watch || []) // NEW: Watch tier
+        const hc = data.data.highConviction || []
+        const mod = data.data.moderate || []
+        const wat = data.data.watch || []
+        
+        setHighConviction(hc)
+        setModerate(mod)
+        setWatch(wat)
         setNewsPops(data.data.newsPops || [])
         setLastScanTime(new Date())
+        
+        // Enhance signals with context (non-blocking)
+        const allSignals = [...hc, ...mod, ...wat]
+        if (allSignals.length > 0) {
+          enhanceSignalsWithContext(allSignals)
+        }
       } else {
         throw new Error(data.error || 'Unknown error')
       }
@@ -69,6 +89,36 @@ export default function TradeNowTab({
       setError(err.message)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Enhance signals with contextual warnings (non-blocking, doesn't modify scores)
+  const enhanceSignalsWithContext = async (signals: MasterScore[]) => {
+    try {
+      const response = await fetch('/api/scanner/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signals })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.enhancedSignals) {
+          // Build map by symbol for easy lookup
+          const enhMap = new Map<string, EnhancedSignal>()
+          data.enhancedSignals.forEach((e: EnhancedSignal) => {
+            const symbol = e.originalSignal?.symbol || e.originalSignal?.tradingSymbol
+            if (symbol) {
+              enhMap.set(symbol.toUpperCase(), e)
+            }
+          })
+          setEnhancements(enhMap)
+          setEnhancementSummary(data.summary)
+          console.log('✅ Signals enhanced with context:', data.summary)
+        }
+      }
+    } catch (err) {
+      console.log('⚠️ Enhancement fetch failed (non-critical):', err)
     }
   }
 
@@ -194,6 +244,18 @@ export default function TradeNowTab({
         />
       )}
 
+      {/* Enhancement Summary - Shows overall risk context */}
+      {enhancementSummary && (enhancementSummary.totalWarnings > 0 || enhancementSummary.highRiskCount > 0) && (
+        <div style={{ marginBottom: '20px' }}>
+          <SignalsSummary 
+            totalWarnings={enhancementSummary.totalWarnings}
+            totalSuggestions={enhancementSummary.totalSuggestions}
+            highRiskCount={enhancementSummary.highRiskCount}
+            totalSignals={highConviction.length + moderate.length + watch.length}
+          />
+        </div>
+      )}
+
       {/* High Conviction Section */}
       <SignalsSection
         title="🔥 HIGH CONVICTION"
@@ -203,6 +265,7 @@ export default function TradeNowTab({
         accentColor="#10B981"
         isLoading={isLoading}
         emptyMessage="No high conviction signals found. Try lowering filters or scan a broader universe."
+        enhancements={enhancements}
       />
 
       {/* Moderate Section */}
@@ -215,6 +278,7 @@ export default function TradeNowTab({
         isLoading={isLoading}
         emptyMessage="No moderate signals found."
         defaultCollapsed={true}
+        enhancements={enhancements}
       />
 
       {/* Watch Section - NEW! */}
@@ -227,6 +291,7 @@ export default function TradeNowTab({
         isLoading={isLoading}
         emptyMessage="No watch signals found."
         defaultCollapsed={true}
+        enhancements={enhancements}
       />
 
       {/* Custom Stock Input */}
@@ -544,7 +609,7 @@ function NewsAlertsSection({ newsPops, onExecute }: any) {
   )
 }
 
-function SignalsSection({ title, subtitle, signals, onExecute, accentColor, isLoading, emptyMessage, defaultCollapsed = false }: any) {
+function SignalsSection({ title, subtitle, signals, onExecute, accentColor, isLoading, emptyMessage, defaultCollapsed = false, enhancements }: any) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
   
   return (
@@ -602,16 +667,20 @@ function SignalsSection({ title, subtitle, signals, onExecute, accentColor, isLo
               {emptyMessage}
             </div>
           ) : (
-            signals.map((signal: MasterScore, index: number) => (
-              <div key={signal.symbol} style={{ marginBottom: index < signals.length - 1 ? '20px' : 0 }}>
-                <SignalCard
-                  signal={signal}
-                  rank={index + 1}
-                  onExecute={onExecute}
-                  accentColor={accentColor}
-                />
-              </div>
-            ))
+            signals.map((signal: MasterScore, index: number) => {
+              const enhancement = enhancements?.get(signal.symbol?.toUpperCase())
+              return (
+                <div key={signal.symbol} style={{ marginBottom: index < signals.length - 1 ? '20px' : 0 }}>
+                  <SignalCard
+                    signal={signal}
+                    rank={index + 1}
+                    onExecute={onExecute}
+                    accentColor={accentColor}
+                    enhancement={enhancement}
+                  />
+                </div>
+              )
+            })
           )}
         </div>
       )}
