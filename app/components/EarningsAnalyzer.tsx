@@ -223,8 +223,16 @@ export default function EarningsAnalyzer() {
               {/* Trade Plan */}
               {analysis.verdict.tradePlan && (
                 <div style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  background: analysis.verdict.tradePlan.action === 'WAIT' 
+                    ? 'rgba(251, 191, 36, 0.1)' 
+                    : analysis.verdict.tradePlan.action === 'LONG'
+                    ? 'rgba(16, 185, 129, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)',
+                  border: `1px solid ${analysis.verdict.tradePlan.action === 'WAIT' 
+                    ? 'rgba(251, 191, 36, 0.3)' 
+                    : analysis.verdict.tradePlan.action === 'LONG'
+                    ? 'rgba(16, 185, 129, 0.3)'
+                    : 'rgba(239, 68, 68, 0.3)'}`,
                   borderRadius: '12px',
                   padding: '20px'
                 }}>
@@ -232,42 +240,82 @@ export default function EarningsAnalyzer() {
                     🎯 Trade Plan
                     <span style={{
                       padding: '4px 10px',
-                      background: analysis.verdict.tradePlan.action === 'LONG' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+                      background: analysis.verdict.tradePlan.action === 'LONG' 
+                        ? 'rgba(16, 185, 129, 0.3)' 
+                        : analysis.verdict.tradePlan.action === 'SHORT'
+                        ? 'rgba(239, 68, 68, 0.3)'
+                        : 'rgba(251, 191, 36, 0.3)',
                       borderRadius: '4px',
                       fontSize: '0.8em'
                     }}>
                       {analysis.verdict.tradePlan.action}
                     </span>
+                    {analysis.verdict.tradePlan.expectedMove && (
+                      <span style={{
+                        padding: '4px 10px',
+                        background: 'rgba(59, 130, 246, 0.3)',
+                        borderRadius: '4px',
+                        fontSize: '0.8em'
+                      }}>
+                        Expected: {analysis.verdict.tradePlan.expectedMove}
+                      </span>
+                    )}
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                  
+                  {analysis.verdict.tradePlan.action === 'WAIT' ? (
                     <div>
-                      <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Entry Price</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{analysis.verdict.tradePlan.entry}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Stop Loss</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#EF4444' }}>
-                        ₹{analysis.verdict.tradePlan.stopLoss}
+                      <div style={{ fontSize: '1.1em', marginBottom: '12px' }}>
+                        {analysis.verdict.tradePlan.recommendation}
+                      </div>
+                      <div style={{ opacity: 0.8, fontSize: '0.9em' }}>
+                        <strong>Current Price:</strong> ₹{analysis.verdict.tradePlan.currentPrice} |
+                        <strong> Expected Move:</strong> {analysis.verdict.tradePlan.expectedMove}
                       </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 1</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
-                        ₹{analysis.verdict.tradePlan.target1}
+                  ) : (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+                        <div>
+                          <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Entry Price</div>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{analysis.verdict.tradePlan.entry}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Stop Loss</div>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#EF4444' }}>
+                            ₹{analysis.verdict.tradePlan.stopLoss}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 1</div>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
+                            ₹{analysis.verdict.tradePlan.target1}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 2</div>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
+                            ₹{analysis.verdict.tradePlan.target2}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 2</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
-                        ₹{analysis.verdict.tradePlan.target2}
+                      <div style={{ marginTop: '16px', fontSize: '0.9em', opacity: 0.8 }}>
+                        <strong>Position Size:</strong> {analysis.verdict.tradePlan.positionSize} | 
+                        <strong> Risk:Reward:</strong> {analysis.verdict.tradePlan.riskReward} |
+                        <strong> Holding:</strong> {analysis.verdict.tradePlan.holdingPeriod}
                       </div>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '16px', fontSize: '0.9em', opacity: 0.8 }}>
-                    <strong>Position Size:</strong> {analysis.verdict.tradePlan.positionSize} | 
-                    <strong> Risk:Reward:</strong> {analysis.verdict.tradePlan.riskReward} |
-                    <strong> Holding:</strong> {analysis.verdict.tradePlan.holdingPeriod}
-                  </div>
+                      {analysis.verdict.tradePlan.timing && (
+                        <div style={{ 
+                          marginTop: '12px', 
+                          padding: '10px', 
+                          background: 'rgba(0,0,0,0.2)', 
+                          borderRadius: '8px',
+                          fontSize: '0.9em' 
+                        }}>
+                          ⏰ <strong>Timing:</strong> {analysis.verdict.tradePlan.timing}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -502,13 +550,13 @@ export default function EarningsAnalyzer() {
               )}
 
               {/* Options Analysis */}
-              {analysis.options?.available && (
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '12px',
-                  padding: '20px'
-                }}>
-                  <h4 style={{ margin: '0 0 12px 0' }}>📊 Options Data</h4>
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '12px',
+                padding: '20px'
+              }}>
+                <h4 style={{ margin: '0 0 12px 0' }}>📊 Options Data</h4>
+                {analysis.options?.available ? (
                   <div style={{ display: 'flex', gap: '24px', fontSize: '0.9em' }}>
                     <div>
                       <div style={{ opacity: 0.6 }}>Put-Call Ratio</div>
@@ -519,7 +567,7 @@ export default function EarningsAnalyzer() {
                       <div style={{ 
                         fontSize: '1.3em', 
                         fontWeight: 'bold',
-                        color: analysis.options.sentiment.includes('BULLISH') ? '#10B981' : '#EF4444'
+                        color: analysis.options.sentiment?.includes('BULLISH') ? '#10B981' : '#EF4444'
                       }}>
                         {analysis.options.sentiment}
                       </div>
@@ -531,8 +579,23 @@ export default function EarningsAnalyzer() {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div style={{ 
+                    padding: '16px', 
+                    background: 'rgba(251, 191, 36, 0.1)', 
+                    borderRadius: '8px',
+                    fontSize: '0.9em'
+                  }}>
+                    <div style={{ marginBottom: '8px' }}>⚠️ {analysis.options?.message || 'Options data not available'}</div>
+                    {analysis.options?.notInFnO && (
+                      <div style={{ opacity: 0.7, fontSize: '0.9em' }}>
+                        This stock is not in the F&O segment. Only ~200 large-cap stocks on NSE have options trading.
+                        Consider using stock futures or cash positions instead.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

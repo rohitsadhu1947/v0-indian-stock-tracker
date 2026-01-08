@@ -112,53 +112,120 @@ async function fetchFinancials(symbol: string) {
 }
 
 /**
- * Fetch 6 months of price data from Kite
+ * Fetch 6 months of price data from Kite, with fallback to NSE/Google
  */
 async function fetchPriceData(symbol: string, accessToken: string | null, apiKey: string | null) {
-  try {
-    if (!accessToken || !apiKey) {
-      console.log('⚠️ No Kite access token, using limited price data')
-      return null
+  // Try Kite first
+  if (accessToken && apiKey) {
+    try {
+      const kite = new KiteConnect({ api_key: apiKey })
+      kite.setAccessToken(accessToken)
+      
+      // Get instrument token
+      const instruments = await kite.getInstruments('NSE')
+      const instrument = instruments.find((i: any) => i.tradingsymbol === symbol)
+      
+      if (!instrument) {
+        console.log(`⚠️ Instrument not found for ${symbol}`)
+      } else {
+        // Fetch 6 months of daily data
+        const toDate = new Date()
+        const fromDate = new Date()
+        fromDate.setMonth(fromDate.getMonth() - 6)
+        
+        const historicalData = await kite.getHistoricalData(
+          instrument.instrument_token,
+          'day',
+          fromDate,
+          toDate
+        )
+        
+        // Get current quote
+        const quote = await kite.getQuote([`NSE:${symbol}`])
+        const currentPrice = quote[`NSE:${symbol}`]?.last_price
+        
+        console.log(`✅ Got Kite price data for ${symbol}: ₹${currentPrice}`)
+        
+        return {
+          historical: historicalData,
+          currentPrice,
+          instrumentToken: instrument.instrument_token,
+          source: 'kite'
+        }
+      }
+    } catch (error: any) {
+      console.error('Kite price data error:', error.message)
     }
-    
-    const kite = new KiteConnect({ api_key: apiKey })
-    kite.setAccessToken(accessToken)
-    
-    // Get instrument token
-    const instruments = await kite.getInstruments('NSE')
-    const instrument = instruments.find((i: any) => i.tradingsymbol === symbol)
-    
-    if (!instrument) {
-      console.log(`⚠️ Instrument not found for ${symbol}`)
-      return null
-    }
-    
-    // Fetch 6 months of daily data
-    const toDate = new Date()
-    const fromDate = new Date()
-    fromDate.setMonth(fromDate.getMonth() - 6)
-    
-    const historicalData = await kite.getHistoricalData(
-      instrument.instrument_token,
-      'day',
-      fromDate,
-      toDate
-    )
-    
-    // Get current quote
-    const quote = await kite.getQuote([`NSE:${symbol}`])
-    const currentPrice = quote[`NSE:${symbol}`]?.last_price
-    
-    return {
-      historical: historicalData,
-      currentPrice,
-      instrumentToken: instrument.instrument_token
-    }
-    
-  } catch (error: any) {
-    console.error('Price data fetch error:', error.message)
-    return null
   }
+  
+  // Fallback: Try to get current price from Google Finance
+  console.log(`⚠️ Kite not available, trying fallback for ${symbol}`)
+  const fallbackPrice = await fetchFallbackPrice(symbol)
+  
+  if (fallbackPrice) {
+    return {
+      historical: null,
+      currentPrice: fallbackPrice.price,
+      change: fallbackPrice.change,
+      changePercent: fallbackPrice.changePercent,
+      source: 'fallback'
+    }
+  }
+  
+  return null
+}
+
+/**
+ * Fallback price fetcher using NSE India API
+ */
+async function fetchFallbackPrice(symbol: string): Promise<{ price: number, change: number, changePercent: number } | null> {
+  try {
+    // Try NSE India API
+    const response = await fetch(`https://www.nseindia.com/api/quote-equity?symbol=${symbol}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      const price = data.priceInfo?.lastPrice
+      const change = data.priceInfo?.change
+      const changePercent = data.priceInfo?.pChange
+      
+      if (price) {
+        console.log(`✅ NSE fallback price for ${symbol}: ₹${price}`)
+        return { price, change, changePercent }
+      }
+    }
+  } catch (e) {
+    console.log('NSE API fallback failed')
+  }
+  
+  // Try Yahoo Finance as second fallback
+  try {
+    const yahooSymbol = `${symbol}.NS`
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`)
+    
+    if (response.ok) {
+      const data = await response.json()
+      const price = data.chart?.result?.[0]?.meta?.regularMarketPrice
+      const prevClose = data.chart?.result?.[0]?.meta?.previousClose
+      
+      if (price) {
+        const change = price - (prevClose || price)
+        const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0
+        console.log(`✅ Yahoo fallback price for ${symbol}: ₹${price}`)
+        return { price, change, changePercent }
+      }
+    }
+  } catch (e) {
+    console.log('Yahoo API fallback failed')
+  }
+  
+  return null
 }
 
 /**
@@ -219,7 +286,9 @@ async function fetchNews(symbol: string): Promise<any[]> {
  */
 async function fetchOptionsData(symbol: string, accessToken: string | null, apiKey: string | null) {
   try {
-    if (!accessToken || !apiKey) return null
+    if (!accessToken || !apiKey) {
+      return { available: false, reason: 'Kite not connected' }
+    }
     
     const kite = new KiteConnect({ api_key: apiKey })
     kite.setAccessToken(accessToken)
@@ -228,12 +297,15 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     const instruments = await kite.getInstruments('NFO')
     const symbolOptions = instruments.filter((i: any) => 
       i.name === symbol && 
-      i.instrument_type === 'CE' || i.instrument_type === 'PE'
+      (i.instrument_type === 'CE' || i.instrument_type === 'PE')
     )
     
     if (symbolOptions.length === 0) {
-      console.log(`⚠️ No options found for ${symbol}`)
-      return null
+      console.log(`⚠️ No options found for ${symbol} - not in F&O segment`)
+      return { 
+        available: false, 
+        reason: `${symbol} is not in F&O segment. Only ~200 stocks on NSE have options trading.`
+      }
     }
     
     // Get nearest expiry options
@@ -252,8 +324,6 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     // Calculate put-call ratio and IV
     let totalCallOI = 0
     let totalPutOI = 0
-    let avgIV = 0
-    let ivCount = 0
     
     for (const opt of nearestOptions) {
       const quote = quotes[`NFO:${opt.tradingsymbol}`]
@@ -263,24 +333,24 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
         } else {
           totalPutOI += quote.oi || 0
         }
-        // Note: Kite doesn't provide IV directly, would need to calculate
       }
     }
     
     const pcr = totalPutOI > 0 ? totalCallOI / totalPutOI : 0
     
     return {
+      available: true,
       expiry: nearestExpiry,
       putCallRatio: pcr,
       totalCallOI,
       totalPutOI,
-      impliedVolatility: null, // Would need Black-Scholes calculation
+      impliedVolatility: null,
       optionsAvailable: nearestOptions.length
     }
     
   } catch (error: any) {
     console.error('Options data fetch error:', error.message)
-    return null
+    return { available: false, reason: error.message }
   }
 }
 
@@ -353,10 +423,42 @@ function calculateEarningsReactions(financials: any[], priceData: any) {
  * Analyze current price setup
  */
 function analyzePriceSetup(priceData: any) {
+  // Handle fallback price data (current price only, no historical)
+  if (priceData && priceData.source === 'fallback' && priceData.currentPrice) {
+    return {
+      available: true,
+      currentPrice: priceData.currentPrice,
+      change: priceData.change,
+      changePercent: priceData.changePercent,
+      trend: priceData.changePercent > 1 ? 'UPTREND' : priceData.changePercent < -1 ? 'DOWNTREND' : 'SIDEWAYS',
+      momentum: {
+        thirtyDay: null,
+        ninetyDay: null
+      },
+      levels: {
+        resistance90D: null,
+        support90D: null,
+        resistance30D: null,
+        support30D: null,
+        sma20: null,
+        sma50: null
+      },
+      volatility: {
+        avgDailyRange: 3, // Default 3% for small caps
+        distanceFromHigh: null,
+        distanceFromLow: null
+      },
+      setup: 'UNKNOWN',
+      source: 'fallback',
+      note: 'Limited data - login to Kite for full technical analysis'
+    }
+  }
+  
   if (!priceData?.historical || priceData.historical.length < 20) {
     return {
       available: false,
-      message: 'Insufficient price data'
+      currentPrice: priceData?.currentPrice || null,
+      message: 'Insufficient price data for technical analysis'
     }
   }
   
@@ -557,10 +659,11 @@ function analyzeSentiment(news: any[]) {
  * Analyze options data
  */
 function analyzeOptions(optionsData: any) {
-  if (!optionsData) {
+  if (!optionsData || !optionsData.available) {
     return {
       available: false,
-      message: 'Options data not available'
+      message: optionsData?.reason || 'Options data not available',
+      notInFnO: optionsData?.reason?.includes('not in F&O') || false
     }
   }
   
@@ -681,34 +784,67 @@ function generateVerdict(data: {
     confidence = 'HIGH'
   }
   
-  // Calculate trade levels if price data available
+  // Calculate trade levels - use price data if available
   let tradePlan = null
-  if (data.priceSetup.available) {
-    const price = data.priceSetup.currentPrice
-    const volatility = data.priceSetup.volatility?.avgDailyRange || 2
+  let currentPrice = data.priceSetup?.currentPrice
+  
+  // Get expected move from historical reactions or default to 5% for small caps
+  let expectedMove = 5 // default 5% expected move on results
+  if (data.earningsReactions?.available && data.earningsReactions.summary?.avgAbsoluteMove) {
+    expectedMove = data.earningsReactions.summary.avgAbsoluteMove
+  }
+  
+  // Adjust expected move based on financial trend
+  if (data.financialTrend?.trend === 'STRONG_GROWTH') {
+    expectedMove *= 1.2 // 20% more move expected on strong growth
+  } else if (data.financialTrend?.trend === 'DECLINING') {
+    expectedMove *= 1.3 // Declining stocks can have sharper moves
+  }
+  
+  const volatility = data.priceSetup?.volatility?.avgDailyRange || expectedMove / 2
+  
+  if (currentPrice && (recommendation === 'STRONG_BUY' || recommendation === 'BUY')) {
+    const stopLossPercent = Math.max(3, volatility * 1.5)
+    const target1Percent = expectedMove
+    const target2Percent = expectedMove * 1.8
     
-    if (recommendation === 'STRONG_BUY' || recommendation === 'BUY') {
-      tradePlan = {
-        action: 'LONG',
-        entry: price,
-        stopLoss: parseFloat((price * (1 - volatility * 1.5 / 100)).toFixed(2)),
-        target1: parseFloat((price * (1 + volatility * 2 / 100)).toFixed(2)),
-        target2: parseFloat((price * (1 + volatility * 4 / 100)).toFixed(2)),
-        riskReward: '1:2',
-        positionSize: 'Use 3-5% of capital',
-        holdingPeriod: recommendation === 'STRONG_BUY' ? '1-5 days post results' : '1-3 days post results'
-      }
-    } else if (recommendation === 'STRONG_SELL' || recommendation === 'SELL') {
-      tradePlan = {
-        action: 'SHORT',
-        entry: price,
-        stopLoss: parseFloat((price * (1 + volatility * 1.5 / 100)).toFixed(2)),
-        target1: parseFloat((price * (1 - volatility * 2 / 100)).toFixed(2)),
-        target2: parseFloat((price * (1 - volatility * 4 / 100)).toFixed(2)),
-        riskReward: '1:2',
-        positionSize: 'Use 2-3% of capital (higher risk)',
-        holdingPeriod: '1-3 days post results'
-      }
+    tradePlan = {
+      action: 'LONG',
+      entry: parseFloat(currentPrice.toFixed(2)),
+      stopLoss: parseFloat((currentPrice * (1 - stopLossPercent / 100)).toFixed(2)),
+      target1: parseFloat((currentPrice * (1 + target1Percent / 100)).toFixed(2)),
+      target2: parseFloat((currentPrice * (1 + target2Percent / 100)).toFixed(2)),
+      expectedMove: `±${expectedMove.toFixed(1)}%`,
+      riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
+      positionSize: recommendation === 'STRONG_BUY' ? 'Use 4-5% of capital' : 'Use 2-3% of capital',
+      holdingPeriod: recommendation === 'STRONG_BUY' ? '1-5 days post results' : '1-3 days post results',
+      timing: 'Enter before results OR wait for gap and ride momentum'
+    }
+  } else if (currentPrice && (recommendation === 'STRONG_SELL' || recommendation === 'SELL')) {
+    const stopLossPercent = Math.max(4, volatility * 2)
+    const target1Percent = expectedMove
+    const target2Percent = expectedMove * 1.5
+    
+    tradePlan = {
+      action: 'SHORT',
+      entry: parseFloat(currentPrice.toFixed(2)),
+      stopLoss: parseFloat((currentPrice * (1 + stopLossPercent / 100)).toFixed(2)),
+      target1: parseFloat((currentPrice * (1 - target1Percent / 100)).toFixed(2)),
+      target2: parseFloat((currentPrice * (1 - target2Percent / 100)).toFixed(2)),
+      expectedMove: `±${expectedMove.toFixed(1)}%`,
+      riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
+      positionSize: 'Use 2-3% of capital (higher risk for shorts)',
+      holdingPeriod: '1-3 days post results',
+      timing: 'Wait for results, short on bad numbers + gap down'
+    }
+  } else if (currentPrice) {
+    // HOLD recommendation - still show expected move
+    tradePlan = {
+      action: 'WAIT',
+      currentPrice: parseFloat(currentPrice.toFixed(2)),
+      expectedMove: `±${expectedMove.toFixed(1)}%`,
+      recommendation: 'Wait for results before taking position. Risk/reward not favorable pre-earnings.',
+      positionSize: 'None - too risky without clear direction'
     }
   }
   
