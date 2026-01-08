@@ -946,7 +946,6 @@ function generateVerdict(data: {
   const dailyVolatility = data.priceSetup?.volatility?.avgDailyRange || 3
   
   // Expected move on earnings = at least 2x daily volatility, minimum 5%
-  // Historical reactions can inform but use minimum thresholds
   let expectedMove = Math.max(5, dailyVolatility * 2)
   
   // Check historical reactions - but only use if realistic (> 2%)
@@ -961,10 +960,25 @@ function generateVerdict(data: {
     expectedMove *= 1.3 // Declining stocks can have sharper moves
   }
   
+  // 🎯 OPTIONS IMPACT: Adjust expected move based on options sentiment
+  if (data.optionsAnalysis?.available) {
+    const pcr = data.optionsAnalysis.putCallRatio || 0
+    
+    // High PCR (>1.2) = put sellers confident = likely to hold/rise
+    // Low PCR (<0.7) = call heavy = bullish momentum
+    if (pcr > 1.5 || pcr < 0.5) {
+      // Extreme positioning = expect bigger move
+      expectedMove *= 1.15
+    }
+  }
+  
   // Ensure reasonable bounds: 5-15% for earnings
   expectedMove = Math.max(5, Math.min(15, expectedMove))
   
   const volatility = dailyVolatility
+  
+  // Get Max Pain from options (key level where stock tends to gravitate)
+  const maxPain = data.optionsAnalysis?.maxPainStrike || null
   
   if (currentPrice && (recommendation === 'STRONG_BUY' || recommendation === 'BUY')) {
     // Stop loss: 4-5% below entry (reasonable for earnings play)
@@ -974,53 +988,91 @@ function generateVerdict(data: {
     // Target 2: 1.5-2x expected move
     const target2Percent = expectedMove * 1.8
     
+    // Calculate actual prices
+    const stopLossPrice = parseFloat((currentPrice * (1 - stopLossPercent / 100)).toFixed(2))
+    let target1Price = parseFloat((currentPrice * (1 + target1Percent / 100)).toFixed(2))
+    let target2Price = parseFloat((currentPrice * (1 + target2Percent / 100)).toFixed(2))
+    
+    // 🎯 If Max Pain is ABOVE current price, use it as a target level
+    if (maxPain && maxPain > currentPrice) {
+      const maxPainPercent = ((maxPain - currentPrice) / currentPrice) * 100
+      if (maxPainPercent > 2 && maxPainPercent < target1Percent) {
+        // Max Pain is a realistic intermediate target
+        target1Price = maxPain
+      }
+    }
+    
     tradePlan = {
       action: 'LONG',
       entry: parseFloat(currentPrice.toFixed(2)),
-      stopLoss: parseFloat((currentPrice * (1 - stopLossPercent / 100)).toFixed(2)),
-      target1: parseFloat((currentPrice * (1 + target1Percent / 100)).toFixed(2)),
-      target2: parseFloat((currentPrice * (1 + target2Percent / 100)).toFixed(2)),
+      stopLoss: stopLossPrice,
+      target1: target1Price,
+      target2: target2Price,
+      maxPain: maxPain,
       stopLossPercent: `-${stopLossPercent.toFixed(1)}%`,
-      target1Percent: `+${target1Percent.toFixed(1)}%`,
-      target2Percent: `+${target2Percent.toFixed(1)}%`,
+      target1Percent: `+${((target1Price - currentPrice) / currentPrice * 100).toFixed(1)}%`,
+      target2Percent: `+${((target2Price - currentPrice) / currentPrice * 100).toFixed(1)}%`,
       expectedMove: `±${expectedMove.toFixed(1)}%`,
       riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
       positionSize: recommendation === 'STRONG_BUY' ? 'Use 4-5% of capital' : 'Use 2-3% of capital',
       holdingPeriod: recommendation === 'STRONG_BUY' ? '1-5 days post results' : '1-3 days post results',
-      timing: 'Enter before results OR wait for gap and ride momentum'
+      timing: 'Enter before results OR wait for gap and ride momentum',
+      optionsContext: data.optionsAnalysis?.available 
+        ? `PCR: ${data.optionsAnalysis.putCallRatio?.toFixed(2)} (${data.optionsAnalysis.sentiment})` 
+        : null
     }
   } else if (currentPrice && (recommendation === 'STRONG_SELL' || recommendation === 'SELL')) {
     const stopLossPercent = Math.max(5, volatility * 2)
     const target1Percent = expectedMove
     const target2Percent = expectedMove * 1.5
     
+    const stopLossPrice = parseFloat((currentPrice * (1 + stopLossPercent / 100)).toFixed(2))
+    let target1Price = parseFloat((currentPrice * (1 - target1Percent / 100)).toFixed(2))
+    let target2Price = parseFloat((currentPrice * (1 - target2Percent / 100)).toFixed(2))
+    
+    // 🎯 If Max Pain is BELOW current price, use it as a target level
+    if (maxPain && maxPain < currentPrice) {
+      const maxPainPercent = ((currentPrice - maxPain) / currentPrice) * 100
+      if (maxPainPercent > 2 && maxPainPercent < target1Percent) {
+        target1Price = maxPain
+      }
+    }
+    
     tradePlan = {
       action: 'SHORT',
       entry: parseFloat(currentPrice.toFixed(2)),
-      stopLoss: parseFloat((currentPrice * (1 + stopLossPercent / 100)).toFixed(2)),
-      target1: parseFloat((currentPrice * (1 - target1Percent / 100)).toFixed(2)),
-      target2: parseFloat((currentPrice * (1 - target2Percent / 100)).toFixed(2)),
+      stopLoss: stopLossPrice,
+      target1: target1Price,
+      target2: target2Price,
+      maxPain: maxPain,
       stopLossPercent: `+${stopLossPercent.toFixed(1)}%`,
-      target1Percent: `-${target1Percent.toFixed(1)}%`,
-      target2Percent: `-${target2Percent.toFixed(1)}%`,
+      target1Percent: `-${((currentPrice - target1Price) / currentPrice * 100).toFixed(1)}%`,
+      target2Percent: `-${((currentPrice - target2Price) / currentPrice * 100).toFixed(1)}%`,
       expectedMove: `±${expectedMove.toFixed(1)}%`,
       riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
       positionSize: 'Use 2-3% of capital (higher risk for shorts)',
       holdingPeriod: '1-3 days post results',
-      timing: 'Wait for results, short on bad numbers + gap down'
+      timing: 'Wait for results, short on bad numbers + gap down',
+      optionsContext: data.optionsAnalysis?.available 
+        ? `PCR: ${data.optionsAnalysis.putCallRatio?.toFixed(2)} (${data.optionsAnalysis.sentiment})` 
+        : null
     }
   } else if (currentPrice) {
     // HOLD recommendation - still show expected move and potential levels
-    const potentialUp = parseFloat((currentPrice * 1.06).toFixed(2))
-    const potentialDown = parseFloat((currentPrice * 0.94).toFixed(2))
+    const potentialUp = parseFloat((currentPrice * (1 + expectedMove/100)).toFixed(2))
+    const potentialDown = parseFloat((currentPrice * (1 - expectedMove/100)).toFixed(2))
     
     tradePlan = {
       action: 'WAIT',
       currentPrice: parseFloat(currentPrice.toFixed(2)),
       expectedMove: `±${expectedMove.toFixed(1)}%`,
       potentialRange: `₹${potentialDown} - ₹${potentialUp}`,
+      maxPain: maxPain,
       recommendation: 'Wait for results before taking position. Risk/reward not favorable pre-earnings.',
-      positionSize: 'None - too risky without clear direction'
+      positionSize: 'None - too risky without clear direction',
+      optionsContext: data.optionsAnalysis?.available 
+        ? `PCR: ${data.optionsAnalysis.putCallRatio?.toFixed(2)} - watch for direction after results` 
+        : null
     }
   }
   

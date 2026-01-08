@@ -318,15 +318,26 @@ export default function EarningsAnalyzer() {
                         <strong> Risk:Reward:</strong> {analysis.verdict.tradePlan.riskReward} |
                         <strong> Holding:</strong> {analysis.verdict.tradePlan.holdingPeriod}
                       </div>
-                      {analysis.verdict.tradePlan.timing && (
+                      {(analysis.verdict.tradePlan.timing || analysis.verdict.tradePlan.maxPain || analysis.verdict.tradePlan.optionsContext) && (
                         <div style={{ 
                           marginTop: '12px', 
-                          padding: '10px', 
+                          padding: '12px', 
                           background: 'rgba(0,0,0,0.2)', 
                           borderRadius: '8px',
-                          fontSize: '0.9em' 
+                          fontSize: '0.9em',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
                         }}>
-                          ⏰ <strong>Timing:</strong> {analysis.verdict.tradePlan.timing}
+                          {analysis.verdict.tradePlan.timing && (
+                            <div>⏰ <strong>Timing:</strong> {analysis.verdict.tradePlan.timing}</div>
+                          )}
+                          {analysis.verdict.tradePlan.maxPain && (
+                            <div>🎯 <strong>Max Pain:</strong> ₹{analysis.verdict.tradePlan.maxPain} (options expiry magnet)</div>
+                          )}
+                          {analysis.verdict.tradePlan.optionsContext && (
+                            <div>📊 <strong>Options:</strong> {analysis.verdict.tradePlan.optionsContext}</div>
+                          )}
                         </div>
                       )}
                     </>
