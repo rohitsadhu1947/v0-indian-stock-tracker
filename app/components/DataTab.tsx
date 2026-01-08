@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import EventCalendar from './EventCalendar'
 import FinancialsUpload from './FinancialsUpload'
 import FinancialsViewer from './FinancialsViewer'
+import EarningsAnalyzer from './EarningsAnalyzer'
 
 /**
  * Data Tab
@@ -70,7 +71,6 @@ export default function DataTab() {
           onClick={() => setActiveSection('analyzer')}
           icon="🔬"
           label="Earnings Analyzer"
-          badge="Soon"
         />
       </div>
 
@@ -145,47 +145,16 @@ export default function DataTab() {
           <div style={{
             background: 'rgba(0, 0, 0, 0.2)',
             borderRadius: '16px',
-            padding: '40px',
-            textAlign: 'center'
+            padding: '20px',
+            marginBottom: '20px'
           }}>
-            <div style={{ fontSize: '4em', marginBottom: '16px' }}>🔬</div>
-            <h3 style={{ margin: '0 0 12px 0' }}>Earnings Analyzer</h3>
-            <p style={{ margin: '0 0 20px 0', opacity: 0.8 }}>
-              Coming soon! This will analyze stocks before and after earnings:
-            </p>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-              textAlign: 'left',
-              maxWidth: '600px',
-              margin: '0 auto'
-            }}>
-              <FeatureCard 
-                icon="📈"
-                title="Pre-Earnings"
-                items={[
-                  '3-month price trend',
-                  'Historical earnings comparison',
-                  'Analyst expectations',
-                  'Sector performance'
-                ]}
-              />
-              <FeatureCard 
-                icon="📊"
-                title="Post-Earnings"
-                items={[
-                  'Result vs expectations',
-                  'YoY/QoQ growth',
-                  'Beat/Miss analysis',
-                  'Trading signals'
-                ]}
-              />
-            </div>
-            <p style={{ marginTop: '24px', opacity: 0.6, fontSize: '0.9em' }}>
-              Upload financial data first to enable this feature
+            <h3 style={{ margin: '0 0 12px 0' }}>🔬 Pre-Earnings Analyzer</h3>
+            <p style={{ margin: 0, opacity: 0.8, fontSize: '0.9em' }}>
+              Comprehensive analysis before earnings: price setup, financial trends, historical reactions, 
+              news sentiment, and trading verdict with entry/exit levels.
             </p>
           </div>
+          <EarningsAnalyzer />
         </div>
       )}
     </div>
@@ -244,25 +213,3 @@ function SectionButton({
   )
 }
 
-function FeatureCard({ icon, title, items }: { icon: string, title: string, items: string[] }) {
-  return (
-    <div style={{
-      background: 'rgba(0, 0, 0, 0.2)',
-      borderRadius: '12px',
-      padding: '16px'
-    }}>
-      <div style={{ fontSize: '1.5em', marginBottom: '8px' }}>{icon}</div>
-      <h4 style={{ margin: '0 0 8px 0', fontSize: '1em' }}>{title}</h4>
-      <ul style={{ 
-        margin: 0, 
-        paddingLeft: '16px', 
-        fontSize: '0.85em',
-        opacity: 0.8 
-      }}>
-        {items.map((item, i) => (
-          <li key={i} style={{ marginBottom: '4px' }}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  )
-}
