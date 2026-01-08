@@ -233,8 +233,15 @@ export default function FinancialsViewer() {
                     fontSize: '0.9em'
                   }}>
                     <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📊 Analysis:</div>
-                    {stockDetails.analysis.signals.map((signal: string, i: number) => (
-                      <div key={i} style={{ marginBottom: '4px' }}>• {signal}</div>
+                    {stockDetails.analysis.signals.map((signal: { type: string, message: string }, i: number) => (
+                      <div key={i} style={{ 
+                        marginBottom: '4px',
+                        color: signal.type === 'positive' ? '#10B981' : 
+                               signal.type === 'negative' ? '#EF4444' : 
+                               signal.type === 'warning' ? '#F59E0B' : 'inherit'
+                      }}>
+                        {signal.type === 'positive' ? '✅' : signal.type === 'negative' ? '❌' : '⚠️'} {signal.message}
+                      </div>
                     ))}
                   </div>
                 )}
