@@ -11,10 +11,13 @@ interface UploadResult {
 
 export default function FinancialsUpload() {
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadMode, setUploadMode] = useState<'paste' | 'csv'>('paste')
   const [dataType, setDataType] = useState<'quarterly' | 'annual'>('quarterly')
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<any>(null)
+  const [pasteSymbol, setPasteSymbol] = useState('')
+  const [pasteData, setPasteData] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,6 +54,47 @@ export default function FinancialsUpload() {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+    }
+  }
+
+  // Handle paste table upload (easier format)
+  const handlePasteUpload = async () => {
+    if (!pasteSymbol.trim()) {
+      setError('Please enter a stock symbol')
+      return
+    }
+    if (!pasteData.trim()) {
+      setError('Please paste the table data')
+      return
+    }
+
+    setIsUploading(true)
+    setError(null)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/financials/upload-table', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: pasteSymbol.trim(),
+          data: pasteData.trim()
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setResult(data.results)
+        setPasteData('') // Clear after success
+        fetchStatus()
+      } else {
+        setError(data.error || 'Upload failed')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Upload failed')
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -123,86 +167,206 @@ export default function FinancialsUpload() {
         </div>
       )}
 
-      {/* Data Type Selection */}
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ marginRight: '16px', cursor: 'pointer' }}>
-          <input
-            type="radio"
-            name="dataType"
-            value="quarterly"
-            checked={dataType === 'quarterly'}
-            onChange={() => setDataType('quarterly')}
-            style={{ marginRight: '6px' }}
-          />
-          Quarterly Data
-        </label>
-        <label style={{ cursor: 'pointer' }}>
-          <input
-            type="radio"
-            name="dataType"
-            value="annual"
-            checked={dataType === 'annual'}
-            onChange={() => setDataType('annual')}
-            style={{ marginRight: '6px' }}
-          />
-          Annual Data
-        </label>
-      </div>
-
-      {/* Download Template */}
-      <div style={{ marginBottom: '16px' }}>
+      {/* Upload Mode Selection */}
+      <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
         <button
-          onClick={() => downloadTemplate(dataType)}
+          onClick={() => setUploadMode('paste')}
           style={{
-            padding: '8px 16px',
-            background: 'rgba(59, 130, 246, 0.2)',
-            border: '1px solid rgba(59, 130, 246, 0.5)',
+            padding: '10px 20px',
+            background: uploadMode === 'paste' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+            border: uploadMode === 'paste' ? '2px solid rgba(16, 185, 129, 0.5)' : '2px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '8px',
             cursor: 'pointer',
-            fontSize: '0.9em'
+            fontSize: '0.95em',
+            fontWeight: uploadMode === 'paste' ? 'bold' : 'normal'
           }}
         >
-          📥 Download {dataType} template
+          📋 Paste Table (Easy)
+        </button>
+        <button
+          onClick={() => setUploadMode('csv')}
+          style={{
+            padding: '10px 20px',
+            background: uploadMode === 'csv' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+            border: uploadMode === 'csv' ? '2px solid rgba(59, 130, 246, 0.5)' : '2px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.95em',
+            fontWeight: uploadMode === 'csv' ? 'bold' : 'normal'
+          }}
+        >
+          📁 CSV Upload
         </button>
       </div>
 
-      {/* Upload */}
-      <div style={{
-        border: '2px dashed rgba(255, 255, 255, 0.2)',
-        borderRadius: '12px',
-        padding: '24px',
-        textAlign: 'center',
-        marginBottom: '16px'
-      }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleUpload}
-          disabled={isUploading}
-          style={{ display: 'none' }}
-          id="csv-upload"
-        />
-        <label
-          htmlFor="csv-upload"
-          style={{
-            cursor: isUploading ? 'wait' : 'pointer',
-            display: 'block'
-          }}
-        >
-          {isUploading ? (
-            <span>⏳ Uploading...</span>
-          ) : (
-            <>
-              <div style={{ fontSize: '2em', marginBottom: '8px' }}>📁</div>
-              <div>Click to upload {dataType} CSV</div>
-              <div style={{ fontSize: '0.8em', opacity: 0.6, marginTop: '4px' }}>
-                or drag and drop
-              </div>
-            </>
-          )}
-        </label>
-      </div>
+      {/* PASTE MODE - Easier! */}
+      {uploadMode === 'paste' && (
+        <div>
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '0.9em'
+          }}>
+            💡 <strong>Easiest method:</strong> Copy the quarterly table from Screener/Trendlyne and paste it directly!
+          </div>
+
+          {/* Symbol Input */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+              Stock Symbol:
+            </label>
+            <input
+              type="text"
+              value={pasteSymbol}
+              onChange={(e) => setPasteSymbol(e.target.value.toUpperCase())}
+              placeholder="e.g., TCS, RELIANCE, INFY"
+              style={{
+                width: '200px',
+                padding: '10px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                fontSize: '1em'
+              }}
+            />
+          </div>
+
+          {/* Paste Area */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+              Paste Quarterly Data Table:
+            </label>
+            <textarea
+              value={pasteData}
+              onChange={(e) => setPasteData(e.target.value)}
+              placeholder={`Paste the table here. Format:
+Indicator    Sep '25    Jun '25    Mar '25    ...
+Total Rev.   18,919     20,412     18,043     ...
+Operating Profit  6,252  6,261     5,986      ...
+Net Profit   5,179      4,912     19,561     ...
+...`}
+              style={{
+                width: '100%',
+                minHeight: '200px',
+                padding: '12px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                fontSize: '0.9em',
+                fontFamily: 'monospace',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          {/* Upload Button */}
+          <button
+            onClick={handlePasteUpload}
+            disabled={isUploading || !pasteSymbol || !pasteData}
+            style={{
+              padding: '12px 24px',
+              background: isUploading ? 'rgba(107, 114, 128, 0.3)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isUploading ? 'wait' : 'pointer',
+              fontSize: '1em',
+              fontWeight: 'bold',
+              opacity: (!pasteSymbol || !pasteData) ? 0.5 : 1
+            }}
+          >
+            {isUploading ? '⏳ Processing...' : '📤 Upload Data'}
+          </button>
+        </div>
+      )}
+
+      {/* CSV MODE */}
+      {uploadMode === 'csv' && (
+        <div>
+          {/* Data Type Selection */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ marginRight: '16px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="dataType"
+                value="quarterly"
+                checked={dataType === 'quarterly'}
+                onChange={() => setDataType('quarterly')}
+                style={{ marginRight: '6px' }}
+              />
+              Quarterly Data
+            </label>
+            <label style={{ cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="dataType"
+                value="annual"
+                checked={dataType === 'annual'}
+                onChange={() => setDataType('annual')}
+                style={{ marginRight: '6px' }}
+              />
+              Annual Data
+            </label>
+          </div>
+
+          {/* Download Template */}
+          <div style={{ marginBottom: '16px' }}>
+            <button
+              onClick={() => downloadTemplate(dataType)}
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.5)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.9em'
+              }}
+            >
+              📥 Download {dataType} template
+            </button>
+          </div>
+
+          {/* Upload */}
+          <div style={{
+            border: '2px dashed rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            padding: '24px',
+            textAlign: 'center',
+            marginBottom: '16px'
+          }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleUpload}
+              disabled={isUploading}
+              style={{ display: 'none' }}
+              id="csv-upload"
+            />
+            <label
+              htmlFor="csv-upload"
+              style={{
+                cursor: isUploading ? 'wait' : 'pointer',
+                display: 'block'
+              }}
+            >
+              {isUploading ? (
+                <span>⏳ Uploading...</span>
+              ) : (
+                <>
+                  <div style={{ fontSize: '2em', marginBottom: '8px' }}>📁</div>
+                  <div>Click to upload {dataType} CSV</div>
+                  <div style={{ fontSize: '0.8em', opacity: 0.6, marginTop: '4px' }}>
+                    or drag and drop
+                  </div>
+                </>
+              )}
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* Result */}
       {result && (
@@ -253,21 +417,29 @@ export default function FinancialsUpload() {
 
       {/* Instructions */}
       <details style={{ marginTop: '16px', fontSize: '0.9em', opacity: 0.8 }}>
-        <summary style={{ cursor: 'pointer' }}>📋 CSV Format Instructions</summary>
+        <summary style={{ cursor: 'pointer' }}>📋 Format Instructions</summary>
         <div style={{ marginTop: '12px', paddingLeft: '12px' }}>
-          <p><strong>Quarterly CSV columns:</strong></p>
+          <p><strong>📋 Paste Table Format (Recommended):</strong></p>
+          <p style={{ opacity: 0.8, fontSize: '0.9em' }}>
+            Copy the quarterly P&L table directly from Screener.in or Trendlyne. The format should be:
+          </p>
           <code style={{ 
             display: 'block', 
             background: 'rgba(0,0,0,0.3)', 
             padding: '8px', 
             borderRadius: '4px',
             fontSize: '0.85em',
-            overflow: 'auto'
+            overflow: 'auto',
+            whiteSpace: 'pre'
           }}>
-            symbol,quarter,fiscal_year,end_date,revenue,op_expenses,op_profit,depreciation,interest,tax,net_profit,eps
+{`Indicator     Sep '25    Jun '25    Mar '25
+Total Rev.    18,919     20,412     18,043
+Operating Profit  6,252  6,261      5,986
+Net Profit    5,179      4,912      19,561
+EPS Adj.      4.1        3.9        15.6`}
           </code>
           
-          <p style={{ marginTop: '12px' }}><strong>Example row:</strong></p>
+          <p style={{ marginTop: '16px' }}><strong>📁 CSV Format (Alternative):</strong></p>
           <code style={{ 
             display: 'block', 
             background: 'rgba(0,0,0,0.3)', 
@@ -276,14 +448,14 @@ export default function FinancialsUpload() {
             fontSize: '0.85em',
             overflow: 'auto'
           }}>
-            TCS,Q2,FY26,2025-09-30,64259,46334,17925,1234,156,4521,12380,33.8
+            symbol,quarter,fiscal_year,revenue,op_profit,net_profit,eps
           </code>
           
           <p style={{ marginTop: '12px' }}><strong>Notes:</strong></p>
           <ul>
             <li>All monetary values in Crores (₹)</li>
-            <li>quarter: Q1/Q2/Q3/Q4 (Indian FY)</li>
-            <li>fiscal_year: FY26 = Apr 2025 - Mar 2026</li>
+            <li>The system auto-detects quarters from column headers (Sep '25, Jun '25, etc.)</li>
+            <li>Supports commas in numbers (18,919.20)</li>
           </ul>
         </div>
       </details>
