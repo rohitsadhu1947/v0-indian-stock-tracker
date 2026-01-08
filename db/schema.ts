@@ -517,3 +517,126 @@ export const analystReportsRelations = relations(analystReports, ({ one }) => ({
   }),
 }))
 
+// ============================================
+// COMPANY FINANCIALS (for Earnings Analysis)
+// ============================================
+
+/**
+ * Quarterly Financial Data
+ * Stores quarterly P&L for earnings comparison
+ */
+export const quarterlyFinancials = pgTable('quarterly_financials', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').notNull(),
+  
+  // Quarter identification
+  quarter: text('quarter').notNull(), // 'Q1', 'Q2', 'Q3', 'Q4'
+  fiscalYear: text('fiscal_year').notNull(), // 'FY26', 'FY25', etc.
+  endDate: timestamp('end_date').notNull(), // End date of quarter (e.g., Sep 30, 2025)
+  
+  // P&L Items (in Crores)
+  revenue: real('revenue'), // Operating Revenue
+  operatingExpenses: real('operating_expenses'),
+  operatingProfit: real('operating_profit'), // EBITDA-like
+  depreciation: real('depreciation'),
+  interest: real('interest'),
+  tax: real('tax'),
+  netProfit: real('net_profit'), // PAT
+  
+  // Per Share Data
+  eps: real('eps'), // Earnings Per Share
+  
+  // Growth Metrics (calculated)
+  revenueGrowthQoQ: real('revenue_growth_qoq'), // vs previous quarter
+  revenueGrowthYoY: real('revenue_growth_yoy'), // vs same quarter last year
+  profitGrowthQoQ: real('profit_growth_qoq'),
+  profitGrowthYoY: real('profit_growth_yoy'),
+  
+  // Metadata
+  dataSource: text('data_source').default('manual'), // 'manual', 'api', 'scraped'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  symbolQuarterIdx: uniqueIndex('quarterly_fin_symbol_quarter_idx').on(table.symbol, table.fiscalYear, table.quarter),
+  symbolIdx: index('quarterly_fin_symbol_idx').on(table.symbol),
+  endDateIdx: index('quarterly_fin_end_date_idx').on(table.endDate),
+}))
+
+/**
+ * Annual Financial Data
+ * Stores yearly financials for trend analysis
+ */
+export const annualFinancials = pgTable('annual_financials', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').notNull(),
+  
+  // Year identification
+  fiscalYear: text('fiscal_year').notNull(), // 'FY25', 'FY24', etc.
+  endDate: timestamp('end_date').notNull(), // End of fiscal year (e.g., Mar 31, 2025)
+  
+  // P&L Items (in Crores)
+  revenue: real('revenue'),
+  operatingExpenses: real('operating_expenses'),
+  operatingProfit: real('operating_profit'),
+  depreciation: real('depreciation'),
+  interest: real('interest'),
+  tax: real('tax'),
+  netProfit: real('net_profit'),
+  
+  // Per Share Data
+  eps: real('eps'),
+  bookValue: real('book_value'),
+  
+  // Cash Flow (in Crores)
+  cashFromOperations: real('cash_from_operations'),
+  cashFromInvesting: real('cash_from_investing'),
+  cashFromFinancing: real('cash_from_financing'),
+  netCashFlow: real('net_cash_flow'),
+  
+  // Key Ratios (in %)
+  roe: real('roe'), // Return on Equity
+  roce: real('roce'), // Return on Capital Employed
+  operatingMargin: real('operating_margin'),
+  netMargin: real('net_margin'),
+  debtToEquity: real('debt_to_equity'),
+  
+  // Metadata
+  dataSource: text('data_source').default('manual'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  symbolYearIdx: uniqueIndex('annual_fin_symbol_year_idx').on(table.symbol, table.fiscalYear),
+  symbolIdx: index('annual_fin_symbol_idx').on(table.symbol),
+}))
+
+/**
+ * Company Metadata
+ * Basic info for NIFTY 50/500 companies
+ */
+export const companyInfo = pgTable('company_info', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').unique().notNull(),
+  companyName: text('company_name').notNull(),
+  sector: text('sector'),
+  industry: text('industry'),
+  
+  // Index membership
+  isNifty50: boolean('is_nifty_50').default(false),
+  isNifty100: boolean('is_nifty_100').default(false),
+  isNifty500: boolean('is_nifty_500').default(false),
+  
+  // Commodity dependencies (for analysis)
+  commodityDependencies: jsonb('commodity_dependencies'), // ['CRUDE_OIL', 'GOLD', 'STEEL']
+  
+  // Financial data status
+  hasQuarterlyData: boolean('has_quarterly_data').default(false),
+  hasAnnualData: boolean('has_annual_data').default(false),
+  lastQuarterUpdated: text('last_quarter_updated'), // 'Q2FY26'
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  sectorIdx: index('company_info_sector_idx').on(table.sector),
+  nifty50Idx: index('company_info_nifty50_idx').on(table.isNifty50),
+}))
+
