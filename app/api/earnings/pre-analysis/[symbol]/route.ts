@@ -284,7 +284,8 @@ async function fetchNews(symbol: string): Promise<any[]> {
 }
 
 /**
- * Fetch options data from Kite
+ * Fetch COMPLETE options data from Kite
+ * This is serious trading analysis - we fetch ALL options data
  */
 async function fetchOptionsData(symbol: string, accessToken: string | null, apiKey: string | null) {
   try {
@@ -296,16 +297,14 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     kite.setAccessToken(accessToken)
     
     // Get NFO instruments for this symbol
-    console.log(`🔍 Fetching F&O instruments for ${symbol}...`)
+    console.log(`🔍 Fetching COMPLETE F&O data for ${symbol}...`)
     const instruments = await kite.getInstruments('NFO')
-    console.log(`📊 Total NFO instruments: ${instruments.length}`)
     
     // Find all options for this symbol
     const symbolOptions = instruments.filter((i: any) => 
       i.name === symbol && 
       (i.instrument_type === 'CE' || i.instrument_type === 'PE')
     )
-    console.log(`📊 ${symbol} options found: ${symbolOptions.length}`)
     
     if (symbolOptions.length === 0) {
       console.log(`⚠️ No options found for ${symbol} - not in F&O segment`)
@@ -315,84 +314,149 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
       }
     }
     
+    console.log(`📊 ${symbol}: Found ${symbolOptions.length} total option contracts`)
+    
     // Get all unique expiries sorted by date
-    const expiries = [...new Set(symbolOptions.map((o: any) => o.expiry))]
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+    const expiries = [...new Set(symbolOptions.map((o: any) => new Date(o.expiry).getTime()))]
+      .sort((a, b) => a - b)
+      .map(t => new Date(t))
     
-    console.log(`📊 ${symbol} has ${expiries.length} expiries`)
+    console.log(`📊 ${symbol}: ${expiries.length} expiries available`)
     
-    // Find the best expiry - one that has both calls and puts with good liquidity
-    let selectedExpiry = expiries[0]
-    let calls: any[] = []
-    let puts: any[] = []
+    // Log all expiries with their option counts
+    const expiryData: { expiry: Date, calls: any[], puts: any[] }[] = []
     
-    for (const expiry of expiries.slice(0, 4)) { // Check first 4 expiries
-      const expiryOptions = symbolOptions.filter((i: any) => i.expiry === expiry)
-      const expiryCalls = expiryOptions.filter((o: any) => o.instrument_type === 'CE')
-      const expiryPuts = expiryOptions.filter((o: any) => o.instrument_type === 'PE')
+    for (const expiry of expiries) {
+      const expiryTime = expiry.getTime()
+      const expiryOptions = symbolOptions.filter((i: any) => 
+        new Date(i.expiry).getTime() === expiryTime
+      )
+      const calls = expiryOptions.filter((o: any) => o.instrument_type === 'CE')
+      const puts = expiryOptions.filter((o: any) => o.instrument_type === 'PE')
       
-      console.log(`  Expiry ${new Date(expiry).toLocaleDateString()}: ${expiryCalls.length} calls, ${expiryPuts.length} puts`)
+      console.log(`  ${expiry.toLocaleDateString()}: ${calls.length} CE, ${puts.length} PE`)
       
-      // Use this expiry if it has both calls and puts (at least 5 each for liquidity)
-      if (expiryCalls.length >= 5 && expiryPuts.length >= 5) {
-        selectedExpiry = expiry
-        calls = expiryCalls
-        puts = expiryPuts
-        break
-      }
+      expiryData.push({ expiry, calls, puts })
+    }
+    
+    // Select the MONTHLY expiry (usually last Thursday of month) with most liquidity
+    // Monthly expiries typically have more options than weekly
+    let selectedExpiry = expiryData[0]
+    
+    // Find expiry with most options (likely monthly)
+    for (const ed of expiryData) {
+      const totalOptions = ed.calls.length + ed.puts.length
+      const selectedTotal = selectedExpiry.calls.length + selectedExpiry.puts.length
       
-      // If no good expiry found yet, use the one with most options
-      if (expiryCalls.length + expiryPuts.length > calls.length + puts.length) {
-        selectedExpiry = expiry
-        calls = expiryCalls
-        puts = expiryPuts
+      // Prefer expiry with both calls AND puts, and more total options
+      if (ed.calls.length > 0 && ed.puts.length > 0 && totalOptions > selectedTotal) {
+        selectedExpiry = ed
       }
     }
     
-    console.log(`📊 ${symbol} selected expiry (${new Date(selectedExpiry).toLocaleDateString()}): ${calls.length} calls, ${puts.length} puts`)
+    const calls = selectedExpiry.calls
+    const puts = selectedExpiry.puts
     
-    // Get quotes for ALL options in nearest expiry (up to 50 each for calls/puts)
-    const optionsToQuote = [
-      ...calls.slice(0, 50).map((o: any) => `NFO:${o.tradingsymbol}`),
-      ...puts.slice(0, 50).map((o: any) => `NFO:${o.tradingsymbol}`)
-    ]
+    console.log(`📊 Selected expiry: ${selectedExpiry.expiry.toLocaleDateString()} with ${calls.length} CE, ${puts.length} PE`)
     
-    console.log(`📊 Fetching quotes for ${optionsToQuote.length} options...`)
-    const quotes = await kite.getQuote(optionsToQuote)
+    // Fetch quotes for ALL options in selected expiry
+    // Kite allows ~500 symbols per request, so batch if needed
+    const allOptions = [...calls, ...puts]
+    const BATCH_SIZE = 400
+    let allQuotes: Record<string, any> = {}
+    
+    for (let i = 0; i < allOptions.length; i += BATCH_SIZE) {
+      const batch = allOptions.slice(i, i + BATCH_SIZE)
+      const symbols = batch.map((o: any) => `NFO:${o.tradingsymbol}`)
+      
+      console.log(`📊 Fetching batch ${Math.floor(i/BATCH_SIZE) + 1}: ${symbols.length} options...`)
+      
+      const quotes = await kite.getQuote(symbols)
+      allQuotes = { ...allQuotes, ...quotes }
+    }
+    
+    console.log(`📊 Got quotes for ${Object.keys(allQuotes).length} options`)
     
     // Calculate total open interest for calls and puts
     let totalCallOI = 0
     let totalPutOI = 0
+    let totalCallVolume = 0
+    let totalPutVolume = 0
+    
+    const callDetails: any[] = []
+    const putDetails: any[] = []
     
     for (const call of calls) {
-      const quote = quotes[`NFO:${call.tradingsymbol}`]
-      if (quote?.oi) {
-        totalCallOI += quote.oi
+      const quote = allQuotes[`NFO:${call.tradingsymbol}`]
+      if (quote) {
+        totalCallOI += quote.oi || 0
+        totalCallVolume += quote.volume || 0
+        if (quote.oi > 0) {
+          callDetails.push({
+            strike: call.strike,
+            oi: quote.oi,
+            volume: quote.volume,
+            ltp: quote.last_price
+          })
+        }
       }
     }
     
     for (const put of puts) {
-      const quote = quotes[`NFO:${put.tradingsymbol}`]
-      if (quote?.oi) {
-        totalPutOI += quote.oi
+      const quote = allQuotes[`NFO:${put.tradingsymbol}`]
+      if (quote) {
+        totalPutOI += quote.oi || 0
+        totalPutVolume += quote.volume || 0
+        if (quote.oi > 0) {
+          putDetails.push({
+            strike: put.strike,
+            oi: quote.oi,
+            volume: quote.volume,
+            ltp: quote.last_price
+          })
+        }
       }
     }
     
-    console.log(`📊 ${symbol} OI: Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}`)
+    console.log(`📊 ${symbol} TOTAL OI: Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}`)
+    console.log(`📊 ${symbol} TOTAL Volume: Calls=${totalCallVolume.toLocaleString()}, Puts=${totalPutVolume.toLocaleString()}`)
+    
+    // Find max pain (strike with highest total OI)
+    const strikeOI: Record<number, number> = {}
+    for (const c of callDetails) {
+      strikeOI[c.strike] = (strikeOI[c.strike] || 0) + c.oi
+    }
+    for (const p of putDetails) {
+      strikeOI[p.strike] = (strikeOI[p.strike] || 0) + p.oi
+    }
+    
+    const maxPainStrike = Object.entries(strikeOI)
+      .sort((a, b) => b[1] - a[1])[0]
     
     // PCR = Put OI / Call OI (standard formula)
-    // PCR > 1 = more puts = bearish positioning OR bullish (put writers expect price to stay up)
-    // PCR < 1 = more calls = bullish positioning
     const pcr = totalCallOI > 0 ? totalPutOI / totalCallOI : 0
+    
+    // Volume PCR (more recent sentiment)
+    const volumePCR = totalCallVolume > 0 ? totalPutVolume / totalCallVolume : 0
+    
+    console.log(`📊 ${symbol} PCR (OI): ${pcr.toFixed(2)}, PCR (Volume): ${volumePCR.toFixed(2)}`)
+    console.log(`📊 ${symbol} Max Pain Strike: ${maxPainStrike?.[0]} (OI: ${maxPainStrike?.[1]?.toLocaleString()})`)
     
     return {
       available: true,
-      expiry: selectedExpiry,
+      expiry: selectedExpiry.expiry,
       putCallRatio: pcr,
+      volumePCR,
       totalCallOI,
       totalPutOI,
-      impliedVolatility: null,
-      optionsAvailable: calls.length + puts.length
+      totalCallVolume,
+      totalPutVolume,
+      maxPainStrike: maxPainStrike ? Number(maxPainStrike[0]) : null,
+      optionsAvailable: allOptions.length,
+      callsWithOI: callDetails.length,
+      putsWithOI: putDetails.length,
+      topCalls: callDetails.sort((a, b) => b.oi - a.oi).slice(0, 5),
+      topPuts: putDetails.sort((a, b) => b.oi - a.oi).slice(0, 5)
     }
     
   } catch (error: any) {
@@ -703,7 +767,7 @@ function analyzeSentiment(news: any[]) {
 }
 
 /**
- * Analyze options data
+ * Analyze options data - comprehensive analysis
  */
 function analyzeOptions(optionsData: any) {
   if (!optionsData || !optionsData.available) {
@@ -715,44 +779,64 @@ function analyzeOptions(optionsData: any) {
   }
   
   const pcr = optionsData.putCallRatio
+  const volumePCR = optionsData.volumePCR || pcr
+  
   let sentiment = 'NEUTRAL'
   let interpretation = ''
   
-  // PCR interpretation:
+  // PCR interpretation (using both OI and Volume):
   // PCR > 1.2: More puts = Contrarian BULLISH (put writers expect price to hold/rise)
   // PCR 0.8-1.2: Balanced = NEUTRAL
   // PCR < 0.8: More calls = BULLISH sentiment (call buyers expect rise)
-  // PCR < 0.5: Extreme call buying = Could be topping (contrarian bearish)
+  // PCR < 0.5: Extreme call buying = strong bullish
   
   if (pcr > 1.5) {
     sentiment = 'VERY_BULLISH'
-    interpretation = 'Heavy put writing - market makers expect support'
+    interpretation = `Heavy put writing (PCR: ${pcr.toFixed(2)}) - institutions expect strong support`
   } else if (pcr > 1.2) {
     sentiment = 'BULLISH'
-    interpretation = 'More puts than calls - contrarian bullish signal'
+    interpretation = `Put heavy (PCR: ${pcr.toFixed(2)}) - contrarian bullish, put sellers confident`
   } else if (pcr > 0.8) {
     sentiment = 'NEUTRAL'
-    interpretation = 'Balanced positioning'
+    interpretation = `Balanced (PCR: ${pcr.toFixed(2)}) - market undecided`
   } else if (pcr > 0.5) {
     sentiment = 'BULLISH'
-    interpretation = 'More calls - bullish sentiment'
+    interpretation = `Call heavy (PCR: ${pcr.toFixed(2)}) - bullish sentiment`
   } else if (pcr > 0) {
     sentiment = 'VERY_BULLISH'
-    interpretation = 'Extreme call buying - strong bullish sentiment'
+    interpretation = `Extreme call buying (PCR: ${pcr.toFixed(2)}) - very bullish sentiment`
   } else {
     sentiment = 'NEUTRAL'
-    interpretation = 'Insufficient data'
+    interpretation = 'Insufficient open interest data'
+  }
+  
+  // Add volume PCR context if different from OI PCR
+  if (Math.abs(volumePCR - pcr) > 0.2) {
+    interpretation += `. Today's volume PCR: ${volumePCR.toFixed(2)} (${volumePCR > pcr ? 'more put buying today' : 'more call buying today'})`
   }
   
   return {
     available: true,
     expiry: optionsData.expiry,
     putCallRatio: parseFloat(pcr.toFixed(2)),
+    volumePCR: parseFloat(volumePCR.toFixed(2)),
     sentiment,
     interpretation,
+    maxPainStrike: optionsData.maxPainStrike,
     openInterest: {
       calls: optionsData.totalCallOI,
       puts: optionsData.totalPutOI
+    },
+    volume: {
+      calls: optionsData.totalCallVolume,
+      puts: optionsData.totalPutVolume
+    },
+    contractsAnalyzed: optionsData.optionsAvailable,
+    callsWithOI: optionsData.callsWithOI,
+    putsWithOI: optionsData.putsWithOI,
+    topStrikes: {
+      calls: optionsData.topCalls,
+      puts: optionsData.topPuts
     }
   }
 }

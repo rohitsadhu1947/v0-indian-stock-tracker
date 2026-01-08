@@ -573,15 +573,19 @@ export default function EarningsAnalyzer() {
                 <h4 style={{ margin: '0 0 12px 0' }}>📊 Options Data</h4>
                 {analysis.options?.available ? (
                   <div>
-                    <div style={{ display: 'flex', gap: '24px', fontSize: '0.9em', marginBottom: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px', marginBottom: '12px' }}>
                       <div>
-                        <div style={{ opacity: 0.6 }}>Put-Call Ratio</div>
+                        <div style={{ opacity: 0.6, fontSize: '0.8em' }}>PCR (OI)</div>
                         <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>{analysis.options.putCallRatio}</div>
                       </div>
                       <div>
-                        <div style={{ opacity: 0.6 }}>Options Sentiment</div>
+                        <div style={{ opacity: 0.6, fontSize: '0.8em' }}>PCR (Volume)</div>
+                        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>{analysis.options.volumePCR || '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Sentiment</div>
                         <div style={{ 
-                          fontSize: '1.3em', 
+                          fontSize: '1.1em', 
                           fontWeight: 'bold',
                           color: analysis.options.sentiment?.includes('BULLISH') ? '#10B981' : 
                                  analysis.options.sentiment?.includes('BEARISH') ? '#EF4444' : '#F59E0B'
@@ -589,23 +593,56 @@ export default function EarningsAnalyzer() {
                           {analysis.options.sentiment?.replace('_', ' ')}
                         </div>
                       </div>
+                      {analysis.options.maxPainStrike && (
+                        <div>
+                          <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Max Pain</div>
+                          <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>₹{analysis.options.maxPainStrike}</div>
+                        </div>
+                      )}
                       <div>
-                        <div style={{ opacity: 0.6 }}>Expiry</div>
-                        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
+                        <div style={{ opacity: 0.6, fontSize: '0.8em' }}>Expiry</div>
+                        <div style={{ fontSize: '1.1em', fontWeight: 'bold' }}>
                           {new Date(analysis.options.expiry).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.85em', opacity: 0.8 }}>
-                      <span>Call OI: {analysis.options.openInterest?.calls?.toLocaleString() || 0}</span>
-                      <span>Put OI: {analysis.options.openInterest?.puts?.toLocaleString() || 0}</span>
+                    
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: '12px', 
+                      fontSize: '0.85em',
+                      padding: '12px',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      <div>
+                        <div style={{ color: '#10B981', fontWeight: 'bold', marginBottom: '4px' }}>📈 CALLS</div>
+                        <div>OI: {analysis.options.openInterest?.calls?.toLocaleString() || 0}</div>
+                        <div>Volume: {analysis.options.volume?.calls?.toLocaleString() || 0}</div>
+                        <div style={{ opacity: 0.7 }}>Contracts: {analysis.options.callsWithOI || 0}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#EF4444', fontWeight: 'bold', marginBottom: '4px' }}>📉 PUTS</div>
+                        <div>OI: {analysis.options.openInterest?.puts?.toLocaleString() || 0}</div>
+                        <div>Volume: {analysis.options.volume?.puts?.toLocaleString() || 0}</div>
+                        <div style={{ opacity: 0.7 }}>Contracts: {analysis.options.putsWithOI || 0}</div>
+                      </div>
                     </div>
+                    
+                    {analysis.options.contractsAnalyzed && (
+                      <div style={{ fontSize: '0.8em', opacity: 0.6, marginBottom: '8px' }}>
+                        📊 Analyzed {analysis.options.contractsAnalyzed} option contracts
+                      </div>
+                    )}
+                    
                     {analysis.options.interpretation && (
                       <div style={{ 
-                        marginTop: '10px', 
-                        padding: '8px 12px', 
-                        background: 'rgba(0,0,0,0.2)', 
-                        borderRadius: '6px',
+                        padding: '10px 14px', 
+                        background: 'rgba(59, 130, 246, 0.1)', 
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '8px',
                         fontSize: '0.9em'
                       }}>
                         💡 {analysis.options.interpretation}
