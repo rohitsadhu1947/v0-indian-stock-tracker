@@ -315,19 +315,41 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
       }
     }
     
-    // Get nearest expiry options
-    const sortedByExpiry = symbolOptions.sort((a: any, b: any) => 
-      new Date(a.expiry).getTime() - new Date(b.expiry).getTime()
-    )
+    // Get all unique expiries sorted by date
+    const expiries = [...new Set(symbolOptions.map((o: any) => o.expiry))]
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
     
-    const nearestExpiry = sortedByExpiry[0]?.expiry
-    const nearestOptions = symbolOptions.filter((i: any) => i.expiry === nearestExpiry)
+    console.log(`📊 ${symbol} has ${expiries.length} expiries`)
     
-    // Separate calls and puts
-    const calls = nearestOptions.filter((o: any) => o.instrument_type === 'CE')
-    const puts = nearestOptions.filter((o: any) => o.instrument_type === 'PE')
+    // Find the best expiry - one that has both calls and puts with good liquidity
+    let selectedExpiry = expiries[0]
+    let calls: any[] = []
+    let puts: any[] = []
     
-    console.log(`📊 ${symbol} nearest expiry (${nearestExpiry}): ${calls.length} calls, ${puts.length} puts`)
+    for (const expiry of expiries.slice(0, 4)) { // Check first 4 expiries
+      const expiryOptions = symbolOptions.filter((i: any) => i.expiry === expiry)
+      const expiryCalls = expiryOptions.filter((o: any) => o.instrument_type === 'CE')
+      const expiryPuts = expiryOptions.filter((o: any) => o.instrument_type === 'PE')
+      
+      console.log(`  Expiry ${new Date(expiry).toLocaleDateString()}: ${expiryCalls.length} calls, ${expiryPuts.length} puts`)
+      
+      // Use this expiry if it has both calls and puts (at least 5 each for liquidity)
+      if (expiryCalls.length >= 5 && expiryPuts.length >= 5) {
+        selectedExpiry = expiry
+        calls = expiryCalls
+        puts = expiryPuts
+        break
+      }
+      
+      // If no good expiry found yet, use the one with most options
+      if (expiryCalls.length + expiryPuts.length > calls.length + puts.length) {
+        selectedExpiry = expiry
+        calls = expiryCalls
+        puts = expiryPuts
+      }
+    }
+    
+    console.log(`📊 ${symbol} selected expiry (${new Date(selectedExpiry).toLocaleDateString()}): ${calls.length} calls, ${puts.length} puts`)
     
     // Get quotes for ALL options in nearest expiry (up to 50 each for calls/puts)
     const optionsToQuote = [
@@ -365,12 +387,12 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     
     return {
       available: true,
-      expiry: nearestExpiry,
+      expiry: selectedExpiry,
       putCallRatio: pcr,
       totalCallOI,
       totalPutOI,
       impliedVolatility: null,
-      optionsAvailable: nearestOptions.length
+      optionsAvailable: calls.length + puts.length
     }
     
   } catch (error: any) {
