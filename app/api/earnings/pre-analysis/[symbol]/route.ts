@@ -24,6 +24,8 @@ export async function GET(
     const accessToken = await getKiteAccessToken()
     const apiKey = getKiteApiKey()
     
+    console.log(`🔑 Kite Auth: Token=${accessToken ? 'YES' : 'NO'}, API Key=${apiKey ? 'YES' : 'NO'}`)
+    
     // Parallel fetch all data
     const [
       financials,
@@ -294,11 +296,16 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     kite.setAccessToken(accessToken)
     
     // Get NFO instruments for this symbol
+    console.log(`🔍 Fetching F&O instruments for ${symbol}...`)
     const instruments = await kite.getInstruments('NFO')
+    console.log(`📊 Total NFO instruments: ${instruments.length}`)
+    
+    // Find all options for this symbol
     const symbolOptions = instruments.filter((i: any) => 
       i.name === symbol && 
       (i.instrument_type === 'CE' || i.instrument_type === 'PE')
     )
+    console.log(`📊 ${symbol} options found: ${symbolOptions.length}`)
     
     if (symbolOptions.length === 0) {
       console.log(`⚠️ No options found for ${symbol} - not in F&O segment`)
@@ -788,10 +795,16 @@ function generateVerdict(data: {
   let tradePlan = null
   let currentPrice = data.priceSetup?.currentPrice
   
-  // Get expected move from historical reactions or default to 5% for small caps
-  let expectedMove = 5 // default 5% expected move on results
-  if (data.earningsReactions?.available && data.earningsReactions.summary?.avgAbsoluteMove) {
-    expectedMove = data.earningsReactions.summary.avgAbsoluteMove
+  // Get volatility from price data
+  const dailyVolatility = data.priceSetup?.volatility?.avgDailyRange || 3
+  
+  // Expected move on earnings = at least 2x daily volatility, minimum 5%
+  // Historical reactions can inform but use minimum thresholds
+  let expectedMove = Math.max(5, dailyVolatility * 2)
+  
+  // Check historical reactions - but only use if realistic (> 2%)
+  if (data.earningsReactions?.available && data.earningsReactions.summary?.avgAbsoluteMove > 2) {
+    expectedMove = Math.max(expectedMove, data.earningsReactions.summary.avgAbsoluteMove)
   }
   
   // Adjust expected move based on financial trend
@@ -801,11 +814,17 @@ function generateVerdict(data: {
     expectedMove *= 1.3 // Declining stocks can have sharper moves
   }
   
-  const volatility = data.priceSetup?.volatility?.avgDailyRange || expectedMove / 2
+  // Ensure reasonable bounds: 5-15% for earnings
+  expectedMove = Math.max(5, Math.min(15, expectedMove))
+  
+  const volatility = dailyVolatility
   
   if (currentPrice && (recommendation === 'STRONG_BUY' || recommendation === 'BUY')) {
-    const stopLossPercent = Math.max(3, volatility * 1.5)
+    // Stop loss: 4-5% below entry (reasonable for earnings play)
+    const stopLossPercent = Math.max(4, volatility * 1.5)
+    // Target 1: Expected move (5-10%)
     const target1Percent = expectedMove
+    // Target 2: 1.5-2x expected move
     const target2Percent = expectedMove * 1.8
     
     tradePlan = {
@@ -814,6 +833,9 @@ function generateVerdict(data: {
       stopLoss: parseFloat((currentPrice * (1 - stopLossPercent / 100)).toFixed(2)),
       target1: parseFloat((currentPrice * (1 + target1Percent / 100)).toFixed(2)),
       target2: parseFloat((currentPrice * (1 + target2Percent / 100)).toFixed(2)),
+      stopLossPercent: `-${stopLossPercent.toFixed(1)}%`,
+      target1Percent: `+${target1Percent.toFixed(1)}%`,
+      target2Percent: `+${target2Percent.toFixed(1)}%`,
       expectedMove: `±${expectedMove.toFixed(1)}%`,
       riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
       positionSize: recommendation === 'STRONG_BUY' ? 'Use 4-5% of capital' : 'Use 2-3% of capital',
@@ -821,7 +843,7 @@ function generateVerdict(data: {
       timing: 'Enter before results OR wait for gap and ride momentum'
     }
   } else if (currentPrice && (recommendation === 'STRONG_SELL' || recommendation === 'SELL')) {
-    const stopLossPercent = Math.max(4, volatility * 2)
+    const stopLossPercent = Math.max(5, volatility * 2)
     const target1Percent = expectedMove
     const target2Percent = expectedMove * 1.5
     
@@ -831,6 +853,9 @@ function generateVerdict(data: {
       stopLoss: parseFloat((currentPrice * (1 + stopLossPercent / 100)).toFixed(2)),
       target1: parseFloat((currentPrice * (1 - target1Percent / 100)).toFixed(2)),
       target2: parseFloat((currentPrice * (1 - target2Percent / 100)).toFixed(2)),
+      stopLossPercent: `+${stopLossPercent.toFixed(1)}%`,
+      target1Percent: `-${target1Percent.toFixed(1)}%`,
+      target2Percent: `-${target2Percent.toFixed(1)}%`,
       expectedMove: `±${expectedMove.toFixed(1)}%`,
       riskReward: `1:${(target1Percent / stopLossPercent).toFixed(1)}`,
       positionSize: 'Use 2-3% of capital (higher risk for shorts)',
@@ -838,11 +863,15 @@ function generateVerdict(data: {
       timing: 'Wait for results, short on bad numbers + gap down'
     }
   } else if (currentPrice) {
-    // HOLD recommendation - still show expected move
+    // HOLD recommendation - still show expected move and potential levels
+    const potentialUp = parseFloat((currentPrice * 1.06).toFixed(2))
+    const potentialDown = parseFloat((currentPrice * 0.94).toFixed(2))
+    
     tradePlan = {
       action: 'WAIT',
       currentPrice: parseFloat(currentPrice.toFixed(2)),
       expectedMove: `±${expectedMove.toFixed(1)}%`,
+      potentialRange: `₹${potentialDown} - ₹${potentialUp}`,
       recommendation: 'Wait for results before taking position. Risk/reward not favorable pre-earnings.',
       positionSize: 'None - too risky without clear direction'
     }

@@ -284,18 +284,33 @@ export default function EarningsAnalyzer() {
                           <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#EF4444' }}>
                             ₹{analysis.verdict.tradePlan.stopLoss}
                           </div>
+                          {analysis.verdict.tradePlan.stopLossPercent && (
+                            <div style={{ fontSize: '0.8em', color: '#EF4444' }}>
+                              {analysis.verdict.tradePlan.stopLossPercent}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 1</div>
                           <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
                             ₹{analysis.verdict.tradePlan.target1}
                           </div>
+                          {analysis.verdict.tradePlan.target1Percent && (
+                            <div style={{ fontSize: '0.8em', color: '#10B981' }}>
+                              {analysis.verdict.tradePlan.target1Percent}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div style={{ fontSize: '0.8em', opacity: 0.6 }}>Target 2</div>
                           <div style={{ fontSize: '1.3em', fontWeight: 'bold', color: '#10B981' }}>
                             ₹{analysis.verdict.tradePlan.target2}
                           </div>
+                          {analysis.verdict.tradePlan.target2Percent && (
+                            <div style={{ fontSize: '0.8em', color: '#10B981' }}>
+                              {analysis.verdict.tradePlan.target2Percent}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div style={{ marginTop: '16px', fontSize: '0.9em', opacity: 0.8 }}>
