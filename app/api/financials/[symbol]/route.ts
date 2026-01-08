@@ -4,6 +4,46 @@ import { quarterlyFinancials, annualFinancials, companyInfo } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 
 /**
+ * DELETE /api/financials/[symbol]
+ * 
+ * Delete all financial data for a stock
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { symbol: string } }
+) {
+  try {
+    const symbol = params.symbol.toUpperCase()
+    
+    // Delete quarterly data
+    await db.delete(quarterlyFinancials)
+      .where(eq(quarterlyFinancials.symbol, symbol))
+    
+    // Delete annual data  
+    await db.delete(annualFinancials)
+      .where(eq(annualFinancials.symbol, symbol))
+    
+    // Delete company info
+    await db.delete(companyInfo)
+      .where(eq(companyInfo.symbol, symbol))
+    
+    console.log(`🗑️ Deleted all financial data for ${symbol}`)
+    
+    return NextResponse.json({
+      success: true,
+      message: `Deleted all financial data for ${symbol}`
+    })
+    
+  } catch (error: any) {
+    console.error('Error deleting financials:', error)
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Failed to delete financials'
+    }, { status: 500 })
+  }
+}
+
+/**
  * GET /api/financials/[symbol]
  * 
  * Get all financial data for a stock

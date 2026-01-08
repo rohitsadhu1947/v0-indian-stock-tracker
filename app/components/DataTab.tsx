@@ -3,16 +3,18 @@
 import React, { useState } from 'react'
 import EventCalendar from './EventCalendar'
 import FinancialsUpload from './FinancialsUpload'
+import FinancialsViewer from './FinancialsViewer'
 
 /**
  * Data Tab
  * Central hub for:
  * - Earnings Calendar (upcoming corporate events)
  * - Financial Data Upload (quarterly/annual financials)
+ * - View Uploaded Data (browse all uploaded financials)
  * - Earnings Analyzer (coming soon)
  */
 export default function DataTab() {
-  const [activeSection, setActiveSection] = useState<'calendar' | 'upload' | 'analyzer'>('calendar')
+  const [activeSection, setActiveSection] = useState<'calendar' | 'upload' | 'view' | 'analyzer'>('calendar')
 
   return (
     <div style={{
@@ -56,6 +58,12 @@ export default function DataTab() {
           onClick={() => setActiveSection('upload')}
           icon="📤"
           label="Upload Financials"
+        />
+        <SectionButton 
+          active={activeSection === 'view'}
+          onClick={() => setActiveSection('view')}
+          icon="👁️"
+          label="View Data"
         />
         <SectionButton 
           active={activeSection === 'analyzer'}
@@ -111,6 +119,24 @@ export default function DataTab() {
             </div>
           </div>
           <FinancialsUpload />
+        </div>
+      )}
+
+      {activeSection === 'view' && (
+        <div>
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0' }}>👁️ View Uploaded Data</h3>
+            <p style={{ margin: 0, opacity: 0.8, fontSize: '0.9em' }}>
+              Browse all uploaded financial data. Click on a stock to see quarterly trends,
+              growth metrics, and automatic analysis.
+            </p>
+          </div>
+          <FinancialsViewer />
         </div>
       )}
 
