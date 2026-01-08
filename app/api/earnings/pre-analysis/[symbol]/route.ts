@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { getKiteClient } from '@/lib/kite'
-import { cookies } from 'next/headers'
+import { KiteConnect } from 'kiteconnect'
+import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 
 /**
  * GET /api/earnings/pre-analysis/[symbol]
@@ -16,11 +16,14 @@ export async function GET(
   { params }: { params: { symbol: string } }
 ) {
   const symbol = params.symbol.toUpperCase()
-  const cookieStore = cookies()
   
   console.log(`\n📊 Starting Pre-Earnings Analysis for ${symbol}...`)
   
   try {
+    // Get Kite access
+    const accessToken = await getKiteAccessToken()
+    const apiKey = getKiteApiKey()
+    
     // Parallel fetch all data
     const [
       financials,
@@ -29,9 +32,9 @@ export async function GET(
       optionsData
     ] = await Promise.all([
       fetchFinancials(symbol),
-      fetchPriceData(symbol, cookieStore),
+      fetchPriceData(symbol, accessToken, apiKey),
       fetchNews(symbol),
-      fetchOptionsData(symbol, cookieStore)
+      fetchOptionsData(symbol, accessToken, apiKey)
     ])
     
     // Calculate historical earnings reactions
@@ -111,15 +114,14 @@ async function fetchFinancials(symbol: string) {
 /**
  * Fetch 6 months of price data from Kite
  */
-async function fetchPriceData(symbol: string, cookieStore: any) {
+async function fetchPriceData(symbol: string, accessToken: string | null, apiKey: string | null) {
   try {
-    const accessToken = cookieStore.get('kite_access_token')?.value
-    if (!accessToken) {
+    if (!accessToken || !apiKey) {
       console.log('⚠️ No Kite access token, using limited price data')
       return null
     }
     
-    const kite = getKiteClient()
+    const kite = new KiteConnect({ api_key: apiKey })
     kite.setAccessToken(accessToken)
     
     // Get instrument token
@@ -215,12 +217,11 @@ async function fetchNews(symbol: string): Promise<any[]> {
 /**
  * Fetch options data from Kite
  */
-async function fetchOptionsData(symbol: string, cookieStore: any) {
+async function fetchOptionsData(symbol: string, accessToken: string | null, apiKey: string | null) {
   try {
-    const accessToken = cookieStore.get('kite_access_token')?.value
-    if (!accessToken) return null
+    if (!accessToken || !apiKey) return null
     
-    const kite = getKiteClient()
+    const kite = new KiteConnect({ api_key: apiKey })
     kite.setAccessToken(accessToken)
     
     // Get NFO instruments for this symbol
