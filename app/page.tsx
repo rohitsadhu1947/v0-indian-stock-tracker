@@ -5,6 +5,7 @@ import ResearchTab from './components/ResearchTab'
 import TradeNowTab from './components/TradeNowTab'
 import NewsPopTab from './components/NewsPopTab'
 import SectorRotationTab from './components/SectorRotationTab'
+import DataTab from './components/DataTab'
 import TelegramSettingsTab from './components/TelegramSettingsTab'
 import BacktestTab from './components/BacktestTab'
 import { SignalCard } from './components/SignalCard'
@@ -74,7 +75,7 @@ export default function StockTracker() {
   const [isLoggingOut, setIsLoggingOut] = useState(false) // NEW: Track if we're logging out
   const [watchlist, setWatchlist] = useState<string[]>([]) // 🎯 Start with empty watchlist - user builds their own
   const [stockData, setStockData] = useState<Record<string, StockData>>({})
-  const [activeTab, setActiveTab] = useState<'watchlist' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum' | 'research' | 'tradenow' | 'newspop' | 'sectors' | 'settings' | 'backtest' | 'admin'>('tradenow') // Default to TRADE NOW!
+  const [activeTab, setActiveTab] = useState<'watchlist' | 'intraday' | 'universe' | 'fundamentals' | 'market' | 'momentum' | 'research' | 'tradenow' | 'newspop' | 'sectors' | 'settings' | 'backtest' | 'admin' | 'data'>('tradenow') // Default to TRADE NOW!
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stockInput, setStockInput] = useState('')
@@ -3355,6 +3356,16 @@ export default function StockTracker() {
           onClick={() => setActiveTab('research')}
         >
           📊 Research
+        </button>
+        <button 
+          className={`tab ${activeTab === 'data' ? 'active' : ''}`}
+          onClick={() => setActiveTab('data')}
+          style={{
+            background: activeTab === 'data' ? 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' : undefined,
+            fontWeight: activeTab === 'data' ? 'bold' : undefined
+          }}
+        >
+          📁 Data
         </button>
       </div>
 
@@ -8569,6 +8580,11 @@ export default function StockTracker() {
       {/* 📊 RESEARCH TAB */}
       {activeTab === 'research' && (
         <ResearchTab />
+      )}
+
+      {/* 📁 DATA TAB */}
+      {activeTab === 'data' && (
+        <DataTab />
       )}
 
       {/* ⚙️ SETTINGS TAB */}

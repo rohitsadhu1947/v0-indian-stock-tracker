@@ -9,7 +9,6 @@ import React, { useState, useEffect } from 'react'
 import { SignalCard } from './SignalCard'
 import MarketRegimeCard from './MarketRegimeCard'
 import SmartMoneyCard from './SmartMoneyCard'
-import EventCalendar from './EventCalendar'
 import CorrelationMatrix from './CorrelationMatrix'
 import { SignalWarnings, SignalsSummary } from './SignalWarnings'
 import type { MasterScore } from '@/lib/master-scorer'
@@ -160,32 +159,6 @@ export default function TradeNowTab({
 
       {/* 🐋 Smart Money Tracker - FII/DII Flows */}
       <SmartMoneyCard />
-
-      {/* 📅 Event Calendar - Earnings, Dividends, Corporate Actions */}
-      <details style={{ marginBottom: '20px' }}>
-        <summary style={{
-          cursor: 'pointer',
-          background: 'rgba(59, 130, 246, 0.15)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          borderRadius: '12px',
-          padding: '15px',
-          fontSize: '1.1em',
-          fontWeight: 'bold',
-          color: '#60A5FA',
-          listStyle: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          📅 Event Calendar
-          <span style={{ fontSize: '0.8em', fontWeight: 'normal', opacity: 0.7 }}>
-            (Click to expand - Earnings, Dividends, Corporate Actions)
-          </span>
-        </summary>
-        <div style={{ marginTop: '10px' }}>
-          <EventCalendar />
-        </div>
-      </details>
 
       {/* Capital Dashboard */}
       <CapitalDashboard
