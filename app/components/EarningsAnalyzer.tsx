@@ -572,27 +572,45 @@ export default function EarningsAnalyzer() {
               }}>
                 <h4 style={{ margin: '0 0 12px 0' }}>📊 Options Data</h4>
                 {analysis.options?.available ? (
-                  <div style={{ display: 'flex', gap: '24px', fontSize: '0.9em' }}>
-                    <div>
-                      <div style={{ opacity: 0.6 }}>Put-Call Ratio</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>{analysis.options.putCallRatio}</div>
+                  <div>
+                    <div style={{ display: 'flex', gap: '24px', fontSize: '0.9em', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ opacity: 0.6 }}>Put-Call Ratio</div>
+                        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>{analysis.options.putCallRatio}</div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.6 }}>Options Sentiment</div>
+                        <div style={{ 
+                          fontSize: '1.3em', 
+                          fontWeight: 'bold',
+                          color: analysis.options.sentiment?.includes('BULLISH') ? '#10B981' : 
+                                 analysis.options.sentiment?.includes('BEARISH') ? '#EF4444' : '#F59E0B'
+                        }}>
+                          {analysis.options.sentiment?.replace('_', ' ')}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ opacity: 0.6 }}>Expiry</div>
+                        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
+                          {new Date(analysis.options.expiry).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ opacity: 0.6 }}>Options Sentiment</div>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.85em', opacity: 0.8 }}>
+                      <span>Call OI: {analysis.options.openInterest?.calls?.toLocaleString() || 0}</span>
+                      <span>Put OI: {analysis.options.openInterest?.puts?.toLocaleString() || 0}</span>
+                    </div>
+                    {analysis.options.interpretation && (
                       <div style={{ 
-                        fontSize: '1.3em', 
-                        fontWeight: 'bold',
-                        color: analysis.options.sentiment?.includes('BULLISH') ? '#10B981' : '#EF4444'
+                        marginTop: '10px', 
+                        padding: '8px 12px', 
+                        background: 'rgba(0,0,0,0.2)', 
+                        borderRadius: '6px',
+                        fontSize: '0.9em'
                       }}>
-                        {analysis.options.sentiment}
+                        💡 {analysis.options.interpretation}
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ opacity: 0.6 }}>Expiry</div>
-                      <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>
-                        {new Date(analysis.options.expiry).toLocaleDateString()}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ 

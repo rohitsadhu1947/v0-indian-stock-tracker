@@ -323,27 +323,45 @@ async function fetchOptionsData(symbol: string, accessToken: string | null, apiK
     const nearestExpiry = sortedByExpiry[0]?.expiry
     const nearestOptions = symbolOptions.filter((i: any) => i.expiry === nearestExpiry)
     
-    // Get quotes for ATM options
-    const quotes = await kite.getQuote(
-      nearestOptions.slice(0, 10).map((o: any) => `NFO:${o.tradingsymbol}`)
-    )
+    // Separate calls and puts
+    const calls = nearestOptions.filter((o: any) => o.instrument_type === 'CE')
+    const puts = nearestOptions.filter((o: any) => o.instrument_type === 'PE')
     
-    // Calculate put-call ratio and IV
+    console.log(`📊 ${symbol} nearest expiry (${nearestExpiry}): ${calls.length} calls, ${puts.length} puts`)
+    
+    // Get quotes for ALL options in nearest expiry (up to 50 each for calls/puts)
+    const optionsToQuote = [
+      ...calls.slice(0, 50).map((o: any) => `NFO:${o.tradingsymbol}`),
+      ...puts.slice(0, 50).map((o: any) => `NFO:${o.tradingsymbol}`)
+    ]
+    
+    console.log(`📊 Fetching quotes for ${optionsToQuote.length} options...`)
+    const quotes = await kite.getQuote(optionsToQuote)
+    
+    // Calculate total open interest for calls and puts
     let totalCallOI = 0
     let totalPutOI = 0
     
-    for (const opt of nearestOptions) {
-      const quote = quotes[`NFO:${opt.tradingsymbol}`]
-      if (quote) {
-        if (opt.instrument_type === 'CE') {
-          totalCallOI += quote.oi || 0
-        } else {
-          totalPutOI += quote.oi || 0
-        }
+    for (const call of calls) {
+      const quote = quotes[`NFO:${call.tradingsymbol}`]
+      if (quote?.oi) {
+        totalCallOI += quote.oi
       }
     }
     
-    const pcr = totalPutOI > 0 ? totalCallOI / totalPutOI : 0
+    for (const put of puts) {
+      const quote = quotes[`NFO:${put.tradingsymbol}`]
+      if (quote?.oi) {
+        totalPutOI += quote.oi
+      }
+    }
+    
+    console.log(`📊 ${symbol} OI: Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}`)
+    
+    // PCR = Put OI / Call OI (standard formula)
+    // PCR > 1 = more puts = bearish positioning OR bullish (put writers expect price to stay up)
+    // PCR < 1 = more calls = bullish positioning
+    const pcr = totalCallOI > 0 ? totalPutOI / totalCallOI : 0
     
     return {
       available: true,
@@ -676,17 +694,40 @@ function analyzeOptions(optionsData: any) {
   
   const pcr = optionsData.putCallRatio
   let sentiment = 'NEUTRAL'
+  let interpretation = ''
   
-  if (pcr > 1.5) sentiment = 'VERY_BULLISH' // Heavy put writing = bullish
-  else if (pcr > 1.2) sentiment = 'BULLISH'
-  else if (pcr < 0.7) sentiment = 'BEARISH'
-  else if (pcr < 0.5) sentiment = 'VERY_BEARISH'
+  // PCR interpretation:
+  // PCR > 1.2: More puts = Contrarian BULLISH (put writers expect price to hold/rise)
+  // PCR 0.8-1.2: Balanced = NEUTRAL
+  // PCR < 0.8: More calls = BULLISH sentiment (call buyers expect rise)
+  // PCR < 0.5: Extreme call buying = Could be topping (contrarian bearish)
+  
+  if (pcr > 1.5) {
+    sentiment = 'VERY_BULLISH'
+    interpretation = 'Heavy put writing - market makers expect support'
+  } else if (pcr > 1.2) {
+    sentiment = 'BULLISH'
+    interpretation = 'More puts than calls - contrarian bullish signal'
+  } else if (pcr > 0.8) {
+    sentiment = 'NEUTRAL'
+    interpretation = 'Balanced positioning'
+  } else if (pcr > 0.5) {
+    sentiment = 'BULLISH'
+    interpretation = 'More calls - bullish sentiment'
+  } else if (pcr > 0) {
+    sentiment = 'VERY_BULLISH'
+    interpretation = 'Extreme call buying - strong bullish sentiment'
+  } else {
+    sentiment = 'NEUTRAL'
+    interpretation = 'Insufficient data'
+  }
   
   return {
     available: true,
     expiry: optionsData.expiry,
     putCallRatio: parseFloat(pcr.toFixed(2)),
     sentiment,
+    interpretation,
     openInterest: {
       calls: optionsData.totalCallOI,
       puts: optionsData.totalPutOI
