@@ -396,24 +396,44 @@ export default function EarningsAnalyzer() {
                           {analysis.priceSetup.trend}
                         </strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ opacity: 0.7 }}>30D Momentum</span>
-                        <strong style={{ color: analysis.priceSetup.momentum.thirtyDay > 0 ? '#10B981' : '#EF4444' }}>
-                          {analysis.priceSetup.momentum.thirtyDay > 0 ? '+' : ''}{analysis.priceSetup.momentum.thirtyDay}%
-                        </strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ opacity: 0.7 }}>Support (30D)</span>
-                        <strong>₹{analysis.priceSetup.levels.support30D.toFixed(2)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ opacity: 0.7 }}>Resistance (30D)</span>
-                        <strong>₹{analysis.priceSetup.levels.resistance30D.toFixed(2)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ opacity: 0.7 }}>Avg Daily Range</span>
-                        <strong>{analysis.priceSetup.volatility.avgDailyRange}%</strong>
-                      </div>
+                      {analysis.priceSetup.momentum?.thirtyDay != null && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ opacity: 0.7 }}>30D Momentum</span>
+                          <strong style={{ color: analysis.priceSetup.momentum.thirtyDay > 0 ? '#10B981' : '#EF4444' }}>
+                            {analysis.priceSetup.momentum.thirtyDay > 0 ? '+' : ''}{analysis.priceSetup.momentum.thirtyDay}%
+                          </strong>
+                        </div>
+                      )}
+                      {analysis.priceSetup.levels?.support30D != null && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ opacity: 0.7 }}>Support (30D)</span>
+                          <strong>₹{analysis.priceSetup.levels.support30D.toFixed(2)}</strong>
+                        </div>
+                      )}
+                      {analysis.priceSetup.levels?.resistance30D != null && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ opacity: 0.7 }}>Resistance (30D)</span>
+                          <strong>₹{analysis.priceSetup.levels.resistance30D.toFixed(2)}</strong>
+                        </div>
+                      )}
+                      {analysis.priceSetup.volatility?.avgDailyRange != null && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ opacity: 0.7 }}>Avg Daily Range</span>
+                          <strong>{analysis.priceSetup.volatility.avgDailyRange}%</strong>
+                        </div>
+                      )}
+                      {analysis.priceSetup.note && (
+                        <div style={{ 
+                          marginTop: '8px', 
+                          padding: '8px', 
+                          background: 'rgba(251, 191, 36, 0.1)',
+                          borderRadius: '6px',
+                          fontSize: '0.85em',
+                          opacity: 0.8
+                        }}>
+                          ⚠️ {analysis.priceSetup.note}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
