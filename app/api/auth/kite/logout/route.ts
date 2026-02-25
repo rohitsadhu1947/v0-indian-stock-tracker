@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { clearUserIdCache } from '@/lib/auth-helpers';
 import { db } from '@/db';
 import { sessions, users } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,11 +16,6 @@ export async function POST(request: NextRequest) {
     cookieStore.delete('kite_access_token');
     cookieStore.delete('kite_user_id');
     cookieStore.delete('auth_user_id'); // NEW: Clear unified auth cookie
-
-    // Clear the user ID cache
-    if (kiteUserId) {
-      clearUserIdCache(kiteUserId);
-    }
 
     // IMPORTANT: Delete session from database to prevent auto-login
     if (kiteUserId && accessToken) {

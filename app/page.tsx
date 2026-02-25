@@ -9,7 +9,7 @@ import DataTab from './components/DataTab'
 import TelegramSettingsTab from './components/TelegramSettingsTab'
 import BacktestTab from './components/BacktestTab'
 import { SignalCard } from './components/SignalCard'
-import { formatSymbolForKite, generateTradingSignal } from '@/lib/kite-utils'
+import { formatSymbolForExchange, generateTradingSignal } from '@/lib/market-utils'
 import {
   calculateVWAP,
   generateIntradaySignal,
@@ -533,7 +533,7 @@ export default function StockTracker() {
 
   async function fetchStockQuote(symbol: string): Promise<StockData | null> {
     try {
-      const kiteSymbol = formatSymbolForKite(symbol, exchange)
+      const kiteSymbol = formatSymbolForExchange(symbol, exchange)
       const res = await fetch(`/api/kite/quote?symbols=${encodeURIComponent(kiteSymbol)}`)
       
       if (!res.ok) {

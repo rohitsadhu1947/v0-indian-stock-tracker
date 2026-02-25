@@ -110,22 +110,16 @@ export async function POST(request: NextRequest) {
 // GET - Fetch all paper positions for user (or another user if admin)
 export async function GET(request: NextRequest) {
   try {
-    // Support both old and new auth systems
+    // Use multi-user auth
     let targetUserId: number
     let isAdmin = false
-    
+
     try {
-      // Try new multi-user auth first
       const { userId, isAdmin: adminFlag } = await getDataUserId(request.url)
       targetUserId = userId
       isAdmin = adminFlag
     } catch {
-      // Fallback to old auth system
-      const userId = await getAuthenticatedUserId()
-      if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      targetUserId = userId
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)

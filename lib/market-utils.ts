@@ -1,5 +1,6 @@
-// Utility functions for Kite Connect data processing
+// Utility functions for market data processing and technical analysis
 
+/** Raw quote shape returned by Kite Connect SDK (broker-specific) */
 export interface KiteQuote {
   instrument_token: number;
   timestamp: Date;
@@ -23,6 +24,7 @@ export interface KiteQuote {
   };
 }
 
+/** Raw historical candle shape returned by Kite Connect SDK (broker-specific) */
 export interface KiteHistoricalData {
   date: Date;
   open: number;
@@ -226,19 +228,30 @@ export function generateTradingSignal(
   };
 }
 
-// Map common stock symbols to Kite format
-export function formatSymbolForKite(symbol: string, exchange: string = 'NSE'): string {
-  // Remove any existing exchange prefix
+/**
+ * Format a stock symbol with exchange prefix (e.g. "NSE:RELIANCE")
+ * Works for any Indian exchange broker — Kite, Groww, etc.
+ */
+export function formatSymbolForExchange(symbol: string, exchange: string = 'NSE'): string {
   const cleanSymbol = symbol.replace(/^(NSE|BSE):/i, '');
   return `${exchange}:${cleanSymbol}`;
 }
 
-// Parse Kite symbol to get exchange and trading symbol
-export function parseKiteSymbol(kiteSymbol: string): { exchange: string; symbol: string } {
-  const parts = kiteSymbol.split(':');
+/** @deprecated Use formatSymbolForExchange instead */
+export const formatSymbolForKite = formatSymbolForExchange;
+
+/**
+ * Parse "EXCHANGE:SYMBOL" string into components.
+ * Returns { exchange: 'NSE', symbol } if no prefix found.
+ */
+export function parseExchangeSymbol(exchangeSymbol: string): { exchange: string; symbol: string } {
+  const parts = exchangeSymbol.split(':');
   if (parts.length === 2) {
     return { exchange: parts[0], symbol: parts[1] };
   }
-  return { exchange: 'NSE', symbol: kiteSymbol };
+  return { exchange: 'NSE', symbol: exchangeSymbol };
 }
+
+/** @deprecated Use parseExchangeSymbol instead */
+export const parseKiteSymbol = parseExchangeSymbol;
 
