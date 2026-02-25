@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { KiteConnect } from 'kiteconnect';
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper';
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker';
 import { scanForNewsPops, type NewsPopSignal } from '@/lib/news-pop-scanner';
 import { batchCalculateMasterScores, type MasterScore } from '@/lib/master-scorer';
 import { db } from '@/db';
@@ -14,9 +13,9 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/scanner/news-pop
- * 
+ *
  * Scans for news-driven price/volume spikes
- * 
+ *
  * Query params:
  * - capital: Available capital (default 300000)
  * - customSymbols: Comma-separated symbols to force-scan (optional)
@@ -35,27 +34,22 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const accessToken = await getKiteAccessToken();
-    if (!accessToken) {
+    // Get broker manager
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
       return NextResponse.json({
         success: false,
-        error: 'Kite access token not available. Please ensure admin user has logged in via Kite.'
-      }, { status: 401 });
+        error: 'No broker connections available. Admin must connect a broker in settings.'
+      }, { status: 401 })
     }
-
-    const apiKey = getKiteApiKey();
-    if (!apiKey) {
-      return NextResponse.json({
-        success: false,
-        error: 'Kite API key not configured'
-      }, { status: 500 });
-    }
+    const client = manager.getClient() as KiteBrokerClient
+    const kc = client.getRawClient()
 
     // 2. Get query params
     const { searchParams } = new URL(request.url);
     const capital = parseInt(searchParams.get('capital') || '300000');
     const customSymbolsParam = searchParams.get('customSymbols') || '';
-    
+
     const customSymbols = customSymbolsParam
       .split(',')
       .map(s => s.trim().toUpperCase())
@@ -66,19 +60,15 @@ export async function GET(request: NextRequest) {
       console.log(`📝 Custom symbols: ${customSymbols.join(', ')}`);
     }
 
-    // 3. Initialize Kite Connect
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
-
-    // 4. Fetch instruments (all NSE equity)
+    // 3. Fetch instruments (all NSE equity)
     console.log('\n📊 Fetching NSE instruments...');
     const instruments = await kc.getInstruments('NSE');
     const equityInstruments = instruments.filter(inst => inst.instrument_type === 'EQ');
     console.log(`✅ Found ${equityInstruments.length} equity instruments`);
 
-    // 5. Get symbols to scan (custom or top 200 by volume for speed)
+    // 4. Get symbols to scan (custom or top 200 by volume for speed)
     let symbolsToScan: string[];
-    
+
     if (customSymbols.length > 0) {
       // Custom scan: only these symbols
       symbolsToScan = customSymbols;
@@ -90,12 +80,12 @@ export async function GET(request: NextRequest) {
         .filter(inst => inst.last_price && inst.last_price > 50)
         .sort((a, b) => (b.volume || 0) - (a.volume || 0))
         .slice(0, 200);
-      
+
       symbolsToScan = sortedByVolume.map(inst => inst.tradingsymbol);
       console.log(`🔍 Scanning top 200 stocks by volume`);
     }
 
-    // 6. Create instrument map
+    // 5. Create instrument map
     const instrumentMap = new Map();
     for (const inst of equityInstruments) {
       if (symbolsToScan.includes(inst.tradingsymbol)) {
@@ -105,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Mapped ${instrumentMap.size} instruments`);
 
-    // 7. Fetch quotes for all symbols (in batches)
+    // 6. Fetch quotes for all symbols (in batches)
     console.log(`\n📊 Fetching quotes for ${instrumentMap.size} symbols...`);
     const symbols = Array.from(instrumentMap.keys());
     const batchSize = 200; // Kite allows up to 500, but we'll be conservative
@@ -114,10 +104,10 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < symbols.length; i += batchSize) {
       const batch = symbols.slice(i, i + batchSize);
       const quoteSymbols = batch.map(sym => `NSE:${sym}`);
-      
+
       try {
         const quotes = await kc.getQuote(quoteSymbols);
-        
+
         // Fetch historical data for each stock in batch
         for (const symbol of batch) {
           try {
@@ -152,8 +142,8 @@ export async function GET(request: NextRequest) {
               instrumentToken: inst.instrument_token.toString(),
               current: quote.last_price,
               change: quote.net_change || 0,
-              changePercent: quote.net_change && quote.ohlc?.close 
-                ? ((quote.net_change / quote.ohlc.close) * 100) 
+              changePercent: quote.net_change && quote.ohlc?.close
+                ? ((quote.net_change / quote.ohlc.close) * 100)
                 : 0,
               volume: quote.volume || 0,
               avgVolume,
@@ -179,12 +169,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 8. Run News Pop Scanner (uses direct function import, not HTTP)
+    // 7. Run News Pop Scanner (uses direct function import, not HTTP)
     console.log(`\n📰 Running News Pop Scanner...`);
-    
+
     // For custom symbols, force analyze even without volume/price filters
     const forceAnalyze = customSymbols.length > 0;
-    
+
     const newsPops = await scanForNewsPops(stocksData, capital, forceAnalyze);
     console.log(`✅ Found ${newsPops.length} news pops`);
 
@@ -196,7 +186,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 9. Fetch analyst reports for scoring
+    // 8. Fetch analyst reports for scoring
     console.log(`\n📊 Fetching analyst reports...`);
     const reports = await db
       .select()
@@ -213,7 +203,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Found ${Object.keys(reportsBySymbol).length} analyst reports`);
 
-    // 10. Calculate master scores (includes fundamentals + intelligence)
+    // 9. Calculate master scores (includes fundamentals + intelligence)
     console.log(`\n🎯 Calculating master scores for ${newsPops.length} signals...`);
     const masterScores = await batchCalculateMasterScores(
       newsPops,
@@ -223,7 +213,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Calculated ${masterScores.length} master scores`);
 
-    // 11. Combine news pop data with master scores
+    // 10. Combine news pop data with master scores
     const scoredNewsPops = masterScores.map(score => {
       const newsPop = newsPops.find(np => np.symbol === score.symbol);
       return {
@@ -242,9 +232,9 @@ export async function GET(request: NextRequest) {
     // Sort by total score (highest first)
     scoredNewsPops.sort((a, b) => b.totalScore - a.totalScore);
 
-    // 12. Send Telegram alerts for high-urgency news pops
+    // 11. Send Telegram alerts for high-urgency news pops
     console.log(`\n📱 Checking Telegram alert preferences...`);
-    
+
     // Fetch user preferences for Telegram
     const preferences = await db
       .select()
@@ -288,7 +278,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Get first news headline as snippet
-            const newsSnippet = pop.news && pop.news.length > 0 
+            const newsSnippet = pop.news && pop.news.length > 0
               ? pop.news[0].title
               : undefined;
 
@@ -353,4 +343,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
-

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { KiteConnect } from 'kiteconnect'
 import { scanForMomentumSignals, NIFTY_500_SYMBOLS } from '@/lib/momentum-scanner'
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { db } from '@/db'
+import { patternAnalysis } from '@/db/schema'
 
 /**
  * GET /api/scanner/momentum
- * 
+ *
  * Scans NIFTY 500 for momentum swing trade opportunities
- * 
+ *
  * Query params:
  * - capital: Available capital (default 300000 = ₹3L)
  * - maxPositions: Max concurrent positions (default 5)
@@ -16,26 +17,18 @@ import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
 export async function GET(request: NextRequest) {
   try {
     console.log(`🔍 Starting momentum scan at ${new Date().toISOString()}`)
-    
-    // 1. Check authentication and get Kite token (supports both Kite and email users)
-    const accessToken = await getKiteAccessToken()
-    
-    if (!accessToken) {
+
+    // 1. Check authentication and get broker client
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
       return NextResponse.json({
         success: false,
-        error: 'Not authenticated. Please ensure admin user has logged in via Kite to set master token.'
+        error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    
-    // Get API key
-    const apiKey = getKiteApiKey()
-    if (!apiKey) {
-      return NextResponse.json({
-        success: false,
-        error: 'Kite API key not configured'
-      }, { status: 500 })
-    }
-    
+    const client = manager.getClient() as KiteBrokerClient
+    const kc = client.getRawClient()
+
     // 2. Get query params
     const { searchParams } = new URL(request.url)
     const capital = parseInt(searchParams.get('capital') || '300000')
@@ -43,27 +36,23 @@ export async function GET(request: NextRequest) {
     const minScore = parseInt(searchParams.get('minScore') || '45') // Lower default from 60 to 45
     const customStocksParam = searchParams.get('customStocks') || ''
     const isQuickScan = searchParams.get('quickScan') === 'true'
-    
+
     // Parse custom stocks
     const customStocks = customStocksParam
       .split(',')
       .map(s => s.trim().toUpperCase())
       .filter(s => s.length > 0)
-    
+
     if (customStocks.length > 0) {
       console.log(`📝 Custom stocks requested: ${customStocks.join(', ')}`)
     }
-    
+
     console.log(`🔍 Starting ${isQuickScan ? 'QUICK' : 'FULL'} momentum scan (capital: ₹${capital.toLocaleString()}, maxPositions: ${maxPositions}, minScore: ${minScore})...`)
-    
-    // 3. Initialize Kite Connect
-    const kc = new KiteConnect({ api_key: apiKey })
-    kc.setAccessToken(accessToken)
-    
-    // 4. Get instrument tokens for NIFTY 500 stocks + custom stocks
+
+    // 3. Get instrument tokens for NIFTY 500 stocks + custom stocks
     const instruments = await kc.getInstruments('NSE')
     const symbolMap = new Map<string, any>()
-    
+
     // Determine which symbols to check based on custom stocks
     let symbolsToCheck: string[]
     if (customStocks.length > 0 && !searchParams.get('universe')) {
@@ -74,25 +63,25 @@ export async function GET(request: NextRequest) {
       // Normal mode: Combine NIFTY 500 symbols with custom stocks
       symbolsToCheck = [...NIFTY_500_SYMBOLS, ...customStocks]
     }
-    
+
     for (const inst of instruments) {
       if (inst.instrument_type === 'EQ' && symbolsToCheck.includes(inst.tradingsymbol)) {
         symbolMap.set(inst.tradingsymbol, inst)
       }
     }
-    
+
     console.log(`✅ Found ${symbolMap.size} instruments${customStocks.length > 0 ? ` (${customStocks.length} custom requested)` : ' from NIFTY 500'}`)
-    
-    // 5. Fetch quotes and historical data for all stocks (in batches)
+
+    // 4. Fetch quotes and historical data for all stocks (in batches)
     const stocksData = []
     const batchSize = 10 // Smaller batch size to avoid rate limits
     const symbols = Array.from(symbolMap.keys())
-    
+
     // Always prioritize custom stocks first, then add NIFTY 500
     let symbolsToScan = symbols
     const customSymbolsFound = symbols.filter(s => customStocks.includes(s))
     const otherSymbols = symbols.filter(s => !customStocks.includes(s))
-    
+
     // DEBUG: Check if custom stocks were found
     if (customStocks.length > 0) {
       console.log(`🔍 Looking for custom stocks: ${customStocks.join(', ')}`)
@@ -103,8 +92,8 @@ export async function GET(request: NextRequest) {
         }
       })
     }
-    
-    
+
+
     if (isQuickScan) {
       // Quick scan: Top 100 stocks + all custom stocks
       const quickScanLimit = 100
@@ -119,19 +108,19 @@ export async function GET(request: NextRequest) {
       symbolsToScan = [...customSymbolsFound, ...otherSymbols]
       console.log(`🔍 FULL SCAN: ${symbolsToScan.length} stocks (${customSymbolsFound.length} custom + ${otherSymbols.length} NIFTY 500)`)
     }
-    
+
     let successCount = 0
     let errorCount = 0
-    
+
     for (let i = 0; i < symbolsToScan.length; i += batchSize) {
       const batch = symbolsToScan.slice(i, i + batchSize)
       console.log(`📊 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(symbolsToScan.length / batchSize)} (${batch.length} stocks)...`)
-      
+
       try {
         // Fetch quotes for batch
         const quoteSymbols = batch.map(sym => `NSE:${sym}`)
         const quotes = await kc.getQuote(quoteSymbols)
-        
+
         // Fetch historical data for each stock in batch
         for (const symbol of batch) {
           try {
@@ -143,7 +132,7 @@ export async function GET(request: NextRequest) {
               }
               continue
             }
-            
+
             const quoteKey = `NSE:${symbol}`
             const quote = quotes[quoteKey]
             if (!quote) {
@@ -153,18 +142,18 @@ export async function GET(request: NextRequest) {
               }
               continue
             }
-            
+
             // Get 60 days of historical data
             const to = new Date()
             const from = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-            
+
             const candles = await kc.getHistoricalData(
               inst.instrument_token,
               'day',
               from,
               to
             )
-            
+
             if (!candles || candles.length < 30) {
               console.log(`⚠️ ${symbol}: Insufficient candles (${candles?.length || 0})`)
               if (customStocks.includes(symbol)) {
@@ -172,12 +161,12 @@ export async function GET(request: NextRequest) {
               }
               continue
             }
-            
+
             // Calculate average volume from historical data
             const avgVolume = candles.length > 0
               ? candles.reduce((sum: number, c: any) => sum + c.volume, 0) / candles.length
               : quote.volume
-            
+
             // DEBUG: Show last 10 days of volume to understand the pattern
             if (customStocks.includes(symbol)) {
               console.log(`\n📊 Last 10 days volume for ${symbol}:`)
@@ -187,45 +176,45 @@ export async function GET(request: NextRequest) {
                 console.log(`   ${date}: ${c.volume.toLocaleString()} (${(c.volume / avgVolume * 100).toFixed(0)}% of avg)`)
               })
             }
-            
+
             // For SWING TRADING: Find the last COMPLETED trading day
             // Logic:
             // - During market hours: Use previous day (today's data is incomplete)
             // - After market close: Use today (if it's a trading day with good volume)
             let lastTradingVolume = quote.volume // Fallback
             let lastTradingDate = 'today'
-            
+
             if (candles.length > 0) {
               const now = new Date()
               const istOffset = 5.5 * 60 * 60 * 1000 // IST is UTC+5:30
               const istTime = new Date(now.getTime() + istOffset)
               const istHour = istTime.getUTCHours()
               const istMinute = istTime.getUTCMinutes()
-              
+
               // Market hours: 9:15 AM to 3:30 PM IST
-              const isMarketHours = (istHour === 9 && istMinute >= 15) || 
-                                    (istHour > 9 && istHour < 15) || 
+              const isMarketHours = (istHour === 9 && istMinute >= 15) ||
+                                    (istHour > 9 && istHour < 15) ||
                                     (istHour === 15 && istMinute <= 30)
-              
+
               const today = new Date()
               today.setHours(0, 0, 0, 0)
-              
+
               // Determine starting index:
               // - If market is open: Skip today's partial data, start from [length-2]
               // - If market is closed: Include today's complete data, start from [length-1]
               const startIndex = isMarketHours ? candles.length - 2 : candles.length - 1
-              
+
               // Look back up to 10 days to find last completed trading day
               for (let i = startIndex; i >= Math.max(0, candles.length - 10); i--) {
                 const candle = candles[i]
                 const candleDate = new Date(candle.date)
                 candleDate.setHours(0, 0, 0, 0)
-                
+
                 // During market hours: Skip today's candle (partial data)
                 if (isMarketHours && candleDate.getTime() >= today.getTime()) {
                   continue
                 }
-                
+
                 // Consider it a trading day if volume > 50% of average
                 // (filters out holidays/weekends with zero/minimal volume)
                 if (candle.volume > avgVolume * 0.5) {
@@ -235,9 +224,9 @@ export async function GET(request: NextRequest) {
                 }
               }
             }
-            
+
             const currentVolume = lastTradingVolume
-            
+
             // DEBUG for custom stocks
             if (customStocks.includes(symbol)) {
               const now = new Date()
@@ -245,10 +234,10 @@ export async function GET(request: NextRequest) {
               const istTime = new Date(now.getTime() + istOffset)
               const istHour = istTime.getUTCHours()
               const istMinute = istTime.getUTCMinutes()
-              const isMarketHours = (istHour === 9 && istMinute >= 15) || 
-                                    (istHour > 9 && istHour < 15) || 
+              const isMarketHours = (istHour === 9 && istMinute >= 15) ||
+                                    (istHour > 9 && istHour < 15) ||
                                     (istHour === 15 && istMinute <= 30)
-              
+
               console.log(`\n🔍 VOLUME DEBUG for ${symbol}:`)
               console.log(`   Current IST time: ${istHour}:${istMinute.toString().padStart(2, '0')}`)
               console.log(`   Market status: ${isMarketHours ? '🟢 OPEN (using previous day)' : '🔴 CLOSED (using today if available)'}`)
@@ -258,8 +247,8 @@ export async function GET(request: NextRequest) {
               console.log(`   Average volume (40 days): ${avgVolume.toLocaleString()}`)
               console.log(`   Volume ratio: ${(currentVolume / avgVolume).toFixed(2)}x`)
             }
-            
-            
+
+
             stocksData.push({
               symbol,
               exchange: 'NSE',
@@ -272,12 +261,12 @@ export async function GET(request: NextRequest) {
               candles,
               sector: 'Unknown' // Will add sector mapping later
             })
-            
+
             successCount++
-            
+
             // Small delay to avoid rate limiting
             await new Promise(resolve => setTimeout(resolve, 100))
-            
+
           } catch (error: any) {
             errorCount++
             console.error(`❌ Error fetching data for ${symbol}:`, error.message)
@@ -287,13 +276,13 @@ export async function GET(request: NextRequest) {
         errorCount += batch.length
         console.error(`❌ Error fetching batch quotes:`, error.message)
       }
-      
+
       // Add delay between batches
       await new Promise(resolve => setTimeout(resolve, 500))
     }
-    
+
     console.log(`✅ Collected data for ${stocksData.length} stocks (${successCount} success, ${errorCount} errors)`)
-    
+
     if (stocksData.length === 0) {
       return NextResponse.json({
         success: false,
@@ -305,7 +294,7 @@ export async function GET(request: NextRequest) {
         }
       }, { status: 500 })
     }
-    
+
     // 6. Run momentum scanner with more relaxed filters
     console.log(`\n📊 Running momentum scanner on ${stocksData.length} stocks...`)
     const scanResult = await scanForMomentumSignals(stocksData, capital, {
@@ -315,14 +304,47 @@ export async function GET(request: NextRequest) {
       maxPositions,
       customStocks // Pass custom stocks to scanner
     })
-    
+
     console.log(`✅ Scan complete: ${scanResult.signalsFound} signals found, sentiment: ${scanResult.marketSentiment}`)
-    
+
     // 7. Filter by minimum score
     const filteredSignals = scanResult.signals.filter(s => s.momentumScore >= minScore)
-    
+
     console.log(`✅ Momentum scan complete: ${filteredSignals.length} signals (${scanResult.strongBuyCount} STRONG_BUY)`)
-    
+
+    // Persist pattern analysis to DB (non-fatal)
+    try {
+      if (filteredSignals.length > 0) {
+        const validUntil = new Date(Date.now() + 60 * 60 * 1000) // valid for 1 hour
+        const rows = filteredSignals.map((signal: any) => ({
+          symbol: signal.symbol,
+          exchange: signal.exchange || 'NSE',
+          analysisType: 'momentum',
+          recommendation: signal.recommendation || (signal.momentumScore >= 80 ? 'STRONG_BUY' : signal.momentumScore >= 60 ? 'BUY' : 'WATCH'),
+          score: signal.momentumScore,
+          confidence: signal.confidence ?? null,
+          successRate: signal.successRate ?? null,
+          patterns: signal.patterns ?? null,
+          intelligence: {
+            momentumScore: signal.momentumScore,
+            volumeRatio: signal.volumeRatio,
+            priceChange: signal.priceChangePercent,
+            trend: signal.trend,
+            entry: signal.entry,
+            stopLoss: signal.stopLoss,
+            target1: signal.target1,
+            target2: signal.target2,
+          } as any,
+          validUntil,
+          createdAt: new Date(),
+        }))
+        await db.insert(patternAnalysis).values(rows)
+        console.log(`💾 Saved ${rows.length} pattern analysis records to DB`)
+      }
+    } catch (dbError) {
+      console.error(`⚠️ Failed to save pattern analysis to DB:`, dbError)
+    }
+
     return NextResponse.json({
       success: true,
       scan: {
@@ -332,7 +354,7 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString()
     })
-    
+
   } catch (error: any) {
     console.error('❌ Error in momentum scanner:', error)
     return NextResponse.json({
@@ -341,4 +363,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

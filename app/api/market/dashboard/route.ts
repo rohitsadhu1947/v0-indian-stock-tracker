@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { db } from '@/db'
+import { marketDashboard } from '@/db/schema'
 import type {
   MarketDashboard,
   MarketIndex,
@@ -21,13 +23,13 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/market/dashboard
- * 
+ *
  * Returns comprehensive market dashboard data
  */
 export async function GET(request: NextRequest) {
   try {
     console.log('📊 Fetching market dashboard...')
-    
+
     // Check authentication (supports both old and new systems)
     const userId = await getAuthenticatedUserIdCompat()
     if (!userId) {
@@ -36,22 +38,18 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       )
     }
-    
-    // Get Kite access token (supports both Kite and email users)
-    const accessToken = await getKiteAccessToken()
-    const apiKey = getKiteApiKey()
-    
-    if (!accessToken || !apiKey) {
+
+    // Get broker manager
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
       return NextResponse.json(
-        { success: false, error: 'Kite access token not found. Please ensure admin user has logged in via Kite.' },
+        { success: false, error: 'No broker connections available. Admin must connect a broker in settings.' },
         { status: 401 }
       )
     }
-    
-    const KiteConnect = require('kiteconnect').KiteConnect
-    const kc = new KiteConnect({ api_key: apiKey })
-    kc.setAccessToken(accessToken)
-    
+    const client = manager.getClient() as KiteBrokerClient
+    const kc = client.getRawClient()
+
     // Fetch indices (NIFTY 50, BANK NIFTY, etc.)
     const indexSymbols = [
       'NSE:NIFTY 50',
@@ -61,9 +59,9 @@ export async function GET(request: NextRequest) {
       'NSE:NIFTY AUTO',
       'NSE:NIFTY PHARMA'
     ]
-    
+
     const indicesData = await kc.getQuote(indexSymbols)
-    
+
     const indices: MarketIndex[] = Object.entries(indicesData).map(([symbol, data]: [string, any]) => {
       const name = symbol.replace('NSE:', '').replace(' 50', '').replace('NIFTY ', '')
       return {
@@ -78,9 +76,9 @@ export async function GET(request: NextRequest) {
         previousClose: data.ohlc.close
       }
     })
-    
+
     console.log(`✅ Fetched ${indices.length} indices`)
-    
+
     // Fetch NIFTY 50 constituent data for market breadth and sector analysis
     // For now, use a representative sample of major stocks
     const nifty50Sample = [
@@ -90,11 +88,11 @@ export async function GET(request: NextRequest) {
       'HCLTECH', 'WIPRO', 'ULTRACEMCO', 'NTPC', 'SUNPHARMA',
       'TITAN', 'NESTLEIND', 'POWERGRID', 'M&M', 'TATAMOTORS'
     ]
-    
+
     // Fetch quotes for sample stocks
     const stockSymbols = nifty50Sample.map(s => `NSE:${s}`)
     const stocksData = await kc.getQuote(stockSymbols)
-    
+
     const stocks = Object.entries(stocksData).map(([symbol, data]: [string, any]) => ({
       symbol: symbol.replace('NSE:', ''),
       current: data.last_price,
@@ -104,20 +102,20 @@ export async function GET(request: NextRequest) {
       previousClose: data.ohlc.close,
       sector: getSectorForStock(symbol.replace('NSE:', ''))
     }))
-    
+
     console.log(`✅ Fetched ${stocks.length} stocks for analysis`)
-    
+
     // Calculate market breadth
     const advancers = stocks.filter(s => s.change > 0).length
     const decliners = stocks.filter(s => s.change < 0).length
     const unchanged = stocks.filter(s => s.change === 0).length
     const advanceDeclineRatio = decliners > 0 ? advancers / decliners : advancers
-    
+
     // Simulate 52-week high/low data (in production, would need historical data)
     const stocksAt52WeekHigh = stocks.filter(s => s.changePercent > 3).length
     const stocksAt52WeekLow = stocks.filter(s => s.changePercent < -3).length
     const highLowRatio = stocksAt52WeekLow > 0 ? stocksAt52WeekHigh / stocksAt52WeekLow : stocksAt52WeekHigh
-    
+
     const marketBreadth: MarketBreadth = {
       advancers,
       decliners,
@@ -129,26 +127,26 @@ export async function GET(request: NextRequest) {
       sentiment: 'NEUTRAL'
     }
     marketBreadth.sentiment = calculateBreadthSentiment(marketBreadth)
-    
+
     console.log(`📊 Market breadth: ${advancers} up, ${decliners} down (A/D: ${advanceDeclineRatio.toFixed(2)})`)
-    
+
     // Calculate sector performance
     const sectors = [
       'Banking', 'IT', 'Auto', 'Pharma', 'Consumer', 'Infrastructure', 'Energy', 'Metals'
     ]
-    
+
     const sectorPerformance: SectorPerformance[] = sectors.map(sector => {
       const sectorStocks = stocks.filter(s => s.sector === sector)
       const avgChange = sectorStocks.length > 0
         ? sectorStocks.reduce((sum, s) => sum + s.changePercent, 0) / sectorStocks.length
         : 0
-      
+
       const topGainer = sectorStocks.sort((a, b) => b.changePercent - a.changePercent)[0]
       const topLoser = sectorStocks.sort((a, b) => a.changePercent - b.changePercent)[0]
-      
+
       const stocksUp = sectorStocks.filter(s => s.change > 0).length
       const stocksDown = sectorStocks.filter(s => s.change < 0).length
-      
+
       return {
         sector,
         change: avgChange,
@@ -160,9 +158,9 @@ export async function GET(request: NextRequest) {
         sentiment: avgChange > 0.5 ? 'BULLISH' : avgChange < -0.5 ? 'BEARISH' : 'NEUTRAL'
       }
     })
-    
+
     console.log(`✅ Analyzed ${sectors.length} sectors`)
-    
+
     // Top movers
     const topGainers: TopMover[] = stocks
       .filter(s => s.changePercent > 0)
@@ -177,7 +175,7 @@ export async function GET(request: NextRequest) {
         volume: s.volume,
         sector: s.sector
       }))
-    
+
     const topLosers: TopMover[] = stocks
       .filter(s => s.changePercent < 0)
       .sort((a, b) => a.changePercent - b.changePercent)
@@ -191,7 +189,7 @@ export async function GET(request: NextRequest) {
         volume: s.volume,
         sector: s.sector
       }))
-    
+
     const mostActive: TopMover[] = stocks
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 10)
@@ -204,20 +202,20 @@ export async function GET(request: NextRequest) {
         volume: s.volume,
         sector: s.sector
       }))
-    
+
     console.log(`✅ Top gainers: ${topGainers[0]?.symbol} (+${topGainers[0]?.changePercent.toFixed(2)}%)`)
     console.log(`✅ Top losers: ${topLosers[0]?.symbol} (${topLosers[0]?.changePercent.toFixed(2)}%)`)
-    
+
     // Calculate market sentiment
     const sentiment = calculateMarketSentiment(indices, marketBreadth, sectorPerformance)
-    
+
     console.log(`✅ Market sentiment: ${sentiment.overall} (${sentiment.score}/100)`)
-    
+
     // Generate Stock Spotlight - Detailed analysis of key movers
     const stockSpotlight = generateStockSpotlight(topGainers, topLosers, sectorPerformance, sentiment)
-    
+
     console.log(`✅ Generated ${stockSpotlight.length} stock spotlight analyses`)
-    
+
     // Build dashboard
     const dashboard: Partial<MarketDashboard> = {
       indices,
@@ -228,10 +226,10 @@ export async function GET(request: NextRequest) {
       mostActive,
       sentiment
     }
-    
+
     // Generate daily analysis
     const dailyAnalysis = generateDailyAnalysis(dashboard)
-    
+
     const fullDashboard = {
       timestamp: new Date(),
       indices,
@@ -245,14 +243,28 @@ export async function GET(request: NextRequest) {
       dailyAnalysis,
       alerts: dailyAnalysis.alerts
     }
-    
+
     console.log(`✅ Market dashboard generated successfully`)
-    
+
+    // Persist dashboard data to DB (non-fatal)
+    try {
+      await db.insert(marketDashboard).values({
+        dashboardType: 'daily',
+        data: fullDashboard as any,
+        marketSentiment: sentiment.overall || null,
+        validUntil: new Date(Date.now() + 15 * 60 * 1000), // valid for 15 minutes
+        createdAt: new Date(),
+      })
+      console.log(`💾 Saved market dashboard snapshot to DB`)
+    } catch (dbError) {
+      console.error(`⚠️ Failed to save market dashboard to DB:`, dbError)
+    }
+
     return NextResponse.json({
       success: true,
       data: fullDashboard
     })
-    
+
   } catch (error: any) {
     console.error('❌ Error generating market dashboard:', error)
     return NextResponse.json(
@@ -278,14 +290,14 @@ function getSectorForStock(symbol: string): string {
     'AXISBANK': 'Banking',
     'SBIN': 'Banking',
     'INDUSINDBK': 'Banking',
-    
+
     // IT
     'TCS': 'IT',
     'INFY': 'IT',
     'WIPRO': 'IT',
     'HCLTECH': 'IT',
     'TECHM': 'IT',
-    
+
     // Auto
     'MARUTI': 'Auto',
     'M&M': 'Auto',
@@ -293,13 +305,13 @@ function getSectorForStock(symbol: string): string {
     'EICHERMOT': 'Auto',
     'HEROMOTOCO': 'Auto',
     'BAJAJ-AUTO': 'Auto',
-    
+
     // Pharma
     'SUNPHARMA': 'Pharma',
     'DRREDDY': 'Pharma',
     'CIPLA': 'Pharma',
     'DIVISLAB': 'Pharma',
-    
+
     // Consumer
     'HINDUNILVR': 'Consumer',
     'ITC': 'Consumer',
@@ -308,18 +320,18 @@ function getSectorForStock(symbol: string): string {
     'NESTLEIND': 'Consumer',
     'TATACONSUM': 'Consumer',
     'ASIANPAINT': 'Consumer',
-    
+
     // Infrastructure
     'LT': 'Infrastructure',
     'ADANIPORTS': 'Infrastructure',
     'POWERGRID': 'Infrastructure',
     'NTPC': 'Infrastructure',
-    
+
     // Energy
     'RELIANCE': 'Energy',
     'ONGC': 'Energy',
     'BPCL': 'Energy',
-    
+
     // Metals
     'TATASTEEL': 'Metals',
     'HINDALCO': 'Metals',
@@ -328,11 +340,10 @@ function getSectorForStock(symbol: string): string {
     'ULTRACEMCO': 'Metals',
     'SHREECEM': 'Metals',
     'GRASIM': 'Metals',
-    
+
     // Telecom
     'BHARTIARTL': 'Telecom'
   }
-  
+
   return sectorMap[symbol] || 'Others'
 }
-

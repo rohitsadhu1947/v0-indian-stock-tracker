@@ -1,38 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { KiteConnect } from 'kiteconnect';
 import { getCachedHistorical, cacheHistorical } from '@/lib/cache-helpers';
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper';
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Kite access token (supports both Kite and email users)
-    const accessToken = await getKiteAccessToken();
-
-    if (!accessToken) {
+    // Get broker manager (supports broker_connections, cookie, and admin master token)
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
       return NextResponse.json(
-        { error: 'Not authenticated. Please ensure admin user has logged in via Kite.' },
+        { error: 'No broker connections available. Admin must connect a broker in settings.' },
         { status: 401 }
-      );
+      )
     }
+    const client = manager.getClient() as KiteBrokerClient
 
     const searchParams = request.nextUrl.searchParams;
     const instrumentToken = searchParams.get('instrument_token');
     const interval = searchParams.get('interval') || 'day'; // day, minute, 5minute, etc.
     const fromDate = searchParams.get('from_date');
     const toDate = searchParams.get('to_date');
-    
+
     if (!instrumentToken) {
       return NextResponse.json(
         { error: 'Instrument token is required' },
         { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.KITE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
       );
     }
 
@@ -43,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // 🗄️ DATABASE CACHE: Check cache first
     const cached = await getCachedHistorical(instrumentToken, interval, from, to)
-    
+
     if (cached) {
       console.log(`✅ Historical data served from cache (token ${instrumentToken}, ${interval})`)
       return NextResponse.json({
@@ -63,12 +54,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache miss - fetch from Kite API
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
-
     console.log(`📊 Fetching historical for token ${instrumentToken}, interval ${interval}, from ${from.toISOString().split('T')[0]} to ${to.toISOString().split('T')[0]}`);
-    
-    const historicalData = await kc.getHistoricalData(
+
+    const historicalData = await client.getRawHistoricalData(
       instrumentToken,
       interval,
       from,
@@ -96,7 +84,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching historical data:', error);
-    
+
     // Handle token expiry
     if (error.message && error.message.includes('Token')) {
       return NextResponse.json(
@@ -111,4 +99,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

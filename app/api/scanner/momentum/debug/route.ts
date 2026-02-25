@@ -1,69 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { KiteConnect } from 'kiteconnect'
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper'
-
-const KITE_API_KEY = process.env.KITE_API_KEY!
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
 
 /**
  * GET /api/scanner/momentum/debug
- * 
+ *
  * Debug version that tests each step with just 5 stocks
  */
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 DEBUG SCANNER: Starting...')
-    
-    // 1. Check authentication and get Kite token (supports both Kite and email users)
-    const accessToken = await getKiteAccessToken()
-    
-    if (!accessToken) {
-      console.log('❌ DEBUG: No access token')
+
+    // 1. Check authentication and get broker client
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
+      console.log('❌ DEBUG: No broker connection')
       return NextResponse.json({
         success: false,
-        error: 'Not authenticated. Please ensure admin user has logged in via Kite.'
+        error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    
+    const client = manager.getClient() as KiteBrokerClient
+    const kc = client.getRawClient()
+
     console.log('✅ DEBUG: Authenticated')
-    
-    // 2. Initialize Kite Connect
-    const kc = new KiteConnect({ api_key: KITE_API_KEY })
-    kc.setAccessToken(accessToken)
-    
+
+    // 2. Kite initialized via broker manager
     console.log('✅ DEBUG: Kite initialized')
-    
+
     // 3. Test with just 5 major stocks
     const testStocks = ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK']
-    
+
     const instruments = await kc.getInstruments('NSE')
     console.log(`✅ DEBUG: Got ${instruments.length} total instruments`)
-    
+
     const symbolMap = new Map<string, any>()
     for (const inst of instruments) {
       if (inst.instrument_type === 'EQ' && testStocks.includes(inst.tradingsymbol)) {
         symbolMap.set(inst.tradingsymbol, inst)
       }
     }
-    
+
     console.log(`✅ DEBUG: Found ${symbolMap.size} test stocks: ${Array.from(symbolMap.keys()).join(', ')}`)
-    
+
     // 4. Try to get quotes for test stocks
     const quoteSymbols = Array.from(symbolMap.keys()).map(sym => `NSE:${sym}`)
     console.log(`📊 DEBUG: Fetching quotes for: ${quoteSymbols.join(', ')}`)
-    
+
     const quotes = await kc.getQuote(quoteSymbols)
     console.log(`✅ DEBUG: Got ${Object.keys(quotes).length} quotes`)
-    
+
     // 5. Try to get historical data for first stock
     const firstSymbol = testStocks[0]
     const firstInst = symbolMap.get(firstSymbol)
-    
+
     if (firstInst) {
       console.log(`📊 DEBUG: Fetching historical data for ${firstSymbol} (token: ${firstInst.instrument_token})`)
-      
+
       const to = new Date()
       const from = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-      
+
       try {
         const candles = await kc.getHistoricalData(
           firstInst.instrument_token,
@@ -82,7 +77,7 @@ export async function GET(request: NextRequest) {
         }, { status: 500 })
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       debug: {
@@ -92,7 +87,7 @@ export async function GET(request: NextRequest) {
         message: 'Debug scan complete - check server logs for details'
       }
     })
-    
+
   } catch (error: any) {
     console.error('❌ DEBUG ERROR:', error)
     return NextResponse.json({
@@ -102,4 +97,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

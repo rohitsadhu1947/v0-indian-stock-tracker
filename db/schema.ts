@@ -3,7 +3,7 @@
  * Using Drizzle ORM with Neon PostgreSQL
  */
 
-import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex, varchar } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // ============================================
@@ -53,6 +53,31 @@ export const sessions = pgTable('sessions', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   userIdIdx: index('sessions_user_id_idx').on(table.userId),
+}))
+
+// ============================================
+// BROKER CONNECTIONS (Multi-Broker Support)
+// ============================================
+
+export const brokerConnections = pgTable('broker_connections', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  brokerId: varchar('broker_id', { length: 50 }).notNull(), // 'kite', 'groww', etc.
+  displayName: varchar('display_name', { length: 100 }),
+  accessToken: text('access_token'),
+  apiKey: varchar('api_key', { length: 100 }),
+  apiSecret: text('api_secret'),
+  brokerUserId: varchar('broker_user_id', { length: 100 }),
+  isActive: boolean('is_active').default(true).notNull(),
+  isPrimary: boolean('is_primary').default(false).notNull(),
+  lastConnected: timestamp('last_connected'),
+  tokenExpiry: timestamp('token_expiry'),
+  metadata: jsonb('metadata'), // Broker-specific extra data
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userBrokerIdx: index('broker_connections_user_broker_idx').on(table.userId, table.brokerId),
+  activeIdx: index('broker_connections_active_idx').on(table.isActive),
 }))
 
 // ============================================
@@ -365,6 +390,7 @@ export const userPermissions = pgTable('user_permissions', {
 
 export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
+  brokerConnections: many(brokerConnections),
   watchlists: many(watchlists),
   positions: many(positions),
   paperPositions: many(paperPositions),
@@ -372,7 +398,14 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   tradeHistory: many(tradeHistory),
   alerts: many(alerts),
   preferences: one(userPreferences),
-  permissions: one(userPermissions), // NEW
+  permissions: one(userPermissions),
+}))
+
+export const brokerConnectionsRelations = relations(brokerConnections, ({ one }) => ({
+  user: one(users, {
+    fields: [brokerConnections.userId],
+    references: [users.id],
+  }),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { KiteConnect } from 'kiteconnect';
-import { getKiteAccessToken, getKiteApiKey } from '@/lib/kite-token-helper';
+import { getBrokerManager, KiteBrokerClient } from '@/lib/broker';
 
 // Cache instruments data for 1 hour to avoid repeated API calls
 let instrumentsCache: any = null;
@@ -9,15 +8,15 @@ const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Kite access token (supports both Kite and email users)
-    const accessToken = await getKiteAccessToken();
-
-    if (!accessToken) {
+    // Get broker manager (supports broker_connections, cookie, and admin master token)
+    const manager = await getBrokerManager()
+    if (!manager.hasConnection()) {
       return NextResponse.json(
-        { error: 'Not authenticated. Please ensure admin user has logged in via Kite.' },
+        { error: 'No broker connections available. Admin must connect a broker in settings.' },
         { status: 401 }
-      );
+      )
     }
+    const client = manager.getClient() as KiteBrokerClient
 
     const searchParams = request.nextUrl.searchParams;
     const exchange = searchParams.get('exchange') || 'NSE'; // NSE, BSE, NFO, etc.
@@ -27,15 +26,15 @@ export async function GET(request: NextRequest) {
     const now = Date.now();
     if (instrumentsCache && (now - cacheTimestamp) < CACHE_DURATION) {
       let data = instrumentsCache;
-      
+
       // Filter by search query if provided
       if (searchQuery) {
-        data = data.filter((inst: any) => 
+        data = data.filter((inst: any) =>
           inst.tradingsymbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
           inst.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
-      
+
       return NextResponse.json({
         success: true,
         data: data,
@@ -44,29 +43,18 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const apiKey = process.env.KITE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
-      );
-    }
+    // Fetch instruments list (use raw client to preserve raw Kite response format)
+    const instruments = await client.getRawClient().getInstruments([exchange]);
 
-    const kc = new KiteConnect({ api_key: apiKey });
-    kc.setAccessToken(accessToken);
-
-    // Fetch instruments list
-    const instruments = await kc.getInstruments([exchange]);
-    
     // Update cache
     instrumentsCache = instruments;
     cacheTimestamp = now;
 
     let data = instruments;
-    
+
     // Filter by search query if provided
     if (searchQuery) {
-      data = data.filter((inst: any) => 
+      data = data.filter((inst: any) =>
         inst.tradingsymbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (inst.name && inst.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
@@ -80,7 +68,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error fetching instruments:', error);
-    
+
     // Handle token expiry
     if (error.message && error.message.includes('Token')) {
       return NextResponse.json(
@@ -95,4 +83,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
