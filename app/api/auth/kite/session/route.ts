@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { db } from '@/db';
 import { users, sessions } from '@/db/schema';
 import { eq, and, gt } from 'drizzle-orm';
+// Note: 'and' was already imported but unused in original; now used for scoped session queries
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,54 +22,66 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // PATH 2: No cookie - check database (fallback for refresh/new device)
-    console.log('🔍 No cookie found, checking database...');
-    
+    // PATH 2: No kite cookies - check auth_user_id for scoped DB lookup
+    console.log('🔍 No kite cookies found, checking auth_user_id for scoped lookup...');
+
     try {
-      // Find any valid session (not expired)
-      const now = new Date();
-      const validSessions = await db.select({
-        accessToken: sessions.accessToken,
-        kiteUserId: users.kiteUserId,
-        userName: users.name,
-        expiresAt: sessions.expiresAt,
-      })
-        .from(sessions)
-        .innerJoin(users, eq(sessions.userId, users.id))
-        .where(gt(sessions.expiresAt, now))
-        .limit(1);
+      const authUserToken = cookieStore.get('auth_user_id')?.value;
+      if (!authUserToken) {
+        console.log('❌ No auth_user_id cookie — cannot scope session lookup');
+      } else {
+        // Import verifySessionToken for signed token support
+        const { verifySessionToken } = await import('@/lib/multi-user-auth');
+        const scopedUserId = verifySessionToken(authUserToken);
 
-      if (validSessions.length > 0) {
-        const session = validSessions[0];
-        console.log(`✅ Valid session found in database for user: ${session.kiteUserId}`);
-        
-        // Restore cookies
-        cookieStore.set('kite_access_token', session.accessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: Math.floor((session.expiresAt.getTime() - now.getTime()) / 1000),
-          path: '/',
-        });
-        
-        cookieStore.set('kite_user_id', session.kiteUserId, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: Math.floor((session.expiresAt.getTime() - now.getTime()) / 1000),
-          path: '/',
-        });
+        if (scopedUserId) {
+          // Scoped lookup: only find sessions for THIS user
+          const now = new Date();
+          const validSessions = await db.select({
+            accessToken: sessions.accessToken,
+            kiteUserId: users.kiteUserId,
+            userName: users.name,
+            expiresAt: sessions.expiresAt,
+          })
+            .from(sessions)
+            .innerJoin(users, eq(sessions.userId, users.id))
+            .where(and(
+              eq(sessions.userId, scopedUserId),
+              gt(sessions.expiresAt, now)
+            ))
+            .limit(1);
 
-        return NextResponse.json({
-          authenticated: true,
-          user: {
-            userId: session.kiteUserId,
-            name: session.userName,
-          },
-        });
+          if (validSessions.length > 0) {
+            const session = validSessions[0];
+            console.log(`✅ Scoped session found in database for user ID: ${scopedUserId}`);
+
+            const remainingAge = Math.floor((session.expiresAt.getTime() - now.getTime()) / 1000);
+            const cookieOptions = {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax' as const,
+              maxAge: remainingAge,
+              path: '/',
+            };
+
+            // Restore cookies
+            cookieStore.set('kite_access_token', session.accessToken, cookieOptions);
+            cookieStore.set('kite_user_id', session.kiteUserId || '', cookieOptions);
+
+            return NextResponse.json({
+              authenticated: true,
+              user: {
+                userId: session.kiteUserId,
+                name: session.userName,
+              },
+            });
+          }
+
+          console.log('❌ No valid scoped session found in database');
+        } else {
+          console.log('❌ Invalid auth_user_id token — session lookup skipped');
+        }
       }
-      
-      console.log('❌ No valid session found in database');
     } catch (dbError) {
       console.error('❌ Database check failed (non-fatal):', dbError);
     }

@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { KiteConnect } from 'kiteconnect';
 import { cookies } from 'next/headers';
 import { db } from '@/db';
-import { users, sessions } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, sessions, brokerConnections } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { signSessionToken } from '@/lib/multi-user-auth';
+
+const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours (unified across all cookies)
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,22 +36,16 @@ export async function GET(request: NextRequest) {
 
     // Store access token in secure HTTP-only cookie
     const cookieStore = await cookies();
-    cookieStore.set('kite_access_token', session.access_token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
+      sameSite: 'lax' as const,
+      maxAge: COOKIE_MAX_AGE,
       path: '/',
-    });
+    };
 
-    // Also store user info if needed
-    cookieStore.set('kite_user_id', session.user_id || '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
-      path: '/',
-    });
+    cookieStore.set('kite_access_token', session.access_token, cookieOptions);
+    cookieStore.set('kite_user_id', session.user_id || '', cookieOptions);
 
     // 🗄️ DATABASE INTEGRATION: Save user and session to database
     console.log('💾 Saving authentication to database...');
@@ -105,23 +102,62 @@ export async function GET(request: NextRequest) {
       
       // 🌉 BRIDGE: Set BOTH cookie systems (KEY FIX!)
       // This makes Kite login work with new auth system
-      cookieStore.set('auth_user_id', userId.toString(), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-      });
+      const sessionToken = signSessionToken(userId);
+      cookieStore.set('auth_user_id', sessionToken, cookieOptions);
       
       console.log('✅ Session saved to database successfully!');
       console.log('🌉 BRIDGED: Set auth_user_id cookie for unified auth system');
+
+      // 4. Upsert broker_connections for multi-broker support
+      try {
+        const [existingConn] = await db
+          .select({ id: brokerConnections.id })
+          .from(brokerConnections)
+          .where(
+            and(
+              eq(brokerConnections.userId, userId),
+              eq(brokerConnections.brokerId, 'kite')
+            )
+          )
+          .limit(1);
+
+        if (existingConn) {
+          await db.update(brokerConnections)
+            .set({
+              accessToken: session.access_token,
+              brokerUserId: session.user_id,
+              isActive: true,
+              lastConnected: new Date(),
+              tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              updatedAt: new Date(),
+            })
+            .where(eq(brokerConnections.id, existingConn.id));
+          console.log('✅ Updated existing Kite broker connection');
+        } else {
+          await db.insert(brokerConnections).values({
+            userId,
+            brokerId: 'kite',
+            displayName: 'Zerodha Kite',
+            accessToken: session.access_token,
+            apiKey: apiKey,
+            brokerUserId: session.user_id,
+            isActive: true,
+            isPrimary: true,
+            lastConnected: new Date(),
+            tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          });
+          console.log('✅ Created new Kite broker connection');
+        }
+      } catch (brokerErr) {
+        console.error('⚠️  Failed to upsert broker_connections (non-fatal):', brokerErr);
+      }
     } catch (dbError) {
       console.error('❌ Database save failed (non-fatal):', dbError);
       // Don't block login if DB save fails - user can still use the app via cookies
     }
 
-    // Redirect back to home page (no query param - let the loading screen handle auth check)
-    return NextResponse.redirect(new URL('/', request.url));
+    // Redirect to admin broker settings (broker connection flow) or home page
+    return NextResponse.redirect(new URL('/admin?tab=brokers', request.url));
   } catch (error: any) {
     console.error('Error in authentication callback:', error);
     return NextResponse.redirect(

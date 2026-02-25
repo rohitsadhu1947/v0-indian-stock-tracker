@@ -13,6 +13,7 @@ import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { users, userPermissions } from '@/db/schema'
 import { eq } from 'drizzle-orm'
+import { verifySessionToken } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,14 +27,15 @@ export async function GET(request: NextRequest) {
     // ========================================
     // METHOD 1: Check new auth system first
     // ========================================
-    const authUserId = cookieStore.get('auth_user_id')?.value
-    
-    if (authUserId) {
-      console.log('✅ Found auth_user_id cookie:', authUserId)
-      
-      const userId = parseInt(authUserId)
-      if (isNaN(userId)) {
-        console.log('❌ Invalid auth_user_id')
+    const authUserToken = cookieStore.get('auth_user_id')?.value
+
+    if (authUserToken) {
+      console.log('✅ Found auth_user_id cookie')
+
+      // Verify signed session token (also accepts legacy plain-integer)
+      const userId = verifySessionToken(authUserToken)
+      if (userId === null) {
+        console.log('❌ Invalid or expired session token')
         return NextResponse.json(
           { authenticated: false, error: 'Invalid session' },
           { status: 401 }

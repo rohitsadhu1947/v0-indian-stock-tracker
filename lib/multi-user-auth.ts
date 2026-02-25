@@ -11,6 +11,7 @@
  */
 
 import bcrypt from 'bcrypt'
+import { createHmac } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { users, userPermissions } from '@/db/schema'
@@ -56,6 +57,81 @@ export interface UserPermissionsData {
 const BCRYPT_ROUNDS = 10
 const SESSION_COOKIE_NAME = 'auth_session'
 const USER_ID_COOKIE_NAME = 'auth_user_id'
+const SESSION_MAX_AGE = 60 * 60 * 24 // 24 hours (unified with Kite token expiry)
+
+// ============================================================================
+// SIGNED SESSION TOKENS
+// ============================================================================
+
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET
+  if (!secret || secret === 'generate-another-random-secret-key') {
+    console.warn('⚠️  SESSION_SECRET is not set or is using the default value. Sessions are insecure!')
+    return 'insecure-dev-fallback-do-not-use-in-production'
+  }
+  return secret
+}
+
+/**
+ * Sign a session token: userId:timestamp:hmac
+ * The HMAC ensures the cookie cannot be forged.
+ */
+export function signSessionToken(userId: number): string {
+  const timestamp = Date.now()
+  const payload = `${userId}:${timestamp}`
+  const hmac = createHmac('sha256', getSessionSecret())
+    .update(payload)
+    .digest('hex')
+  return `${payload}:${hmac}`
+}
+
+/**
+ * Verify and parse a session token.
+ * Returns the userId if valid, null otherwise.
+ * Also accepts legacy plain-integer tokens for backward compatibility.
+ */
+export function verifySessionToken(token: string): number | null {
+  // Legacy support: plain integer cookie (e.g., "3")
+  if (/^\d+$/.test(token)) {
+    console.warn('⚠️  Legacy unsigned session token detected. User should re-login for signed token.')
+    const userId = parseInt(token)
+    return isNaN(userId) ? null : userId
+  }
+
+  // Signed token format: userId:timestamp:hmac
+  const parts = token.split(':')
+  if (parts.length !== 3) {
+    return null
+  }
+
+  const [userIdStr, timestampStr, providedHmac] = parts
+  const userId = parseInt(userIdStr)
+  const timestamp = parseInt(timestampStr)
+
+  if (isNaN(userId) || isNaN(timestamp)) {
+    return null
+  }
+
+  // Verify HMAC
+  const payload = `${userId}:${timestamp}`
+  const expectedHmac = createHmac('sha256', getSessionSecret())
+    .update(payload)
+    .digest('hex')
+
+  if (providedHmac !== expectedHmac) {
+    console.warn('⚠️  Session token HMAC mismatch — possible forgery attempt')
+    return null
+  }
+
+  // Check expiry (token is valid for SESSION_MAX_AGE seconds)
+  const ageMs = Date.now() - timestamp
+  if (ageMs > SESSION_MAX_AGE * 1000) {
+    console.log('⏰ Session token expired (age: ' + Math.round(ageMs / 1000 / 60) + ' minutes)')
+    return null
+  }
+
+  return userId
+}
 
 // ============================================================================
 // PASSWORD HASHING
@@ -77,47 +153,49 @@ export async function verifyPassword(
 // ============================================================================
 
 /**
- * Create a session for a user (set cookies)
+ * Create a session for a user (set signed cookie)
  */
 export async function createSession(userId: number): Promise<void> {
   const cookieStore = await cookies()
-  
+
   console.log(`🍪 Creating session for user ID: ${userId}`)
-  
-  // Simple session: store user ID
-  // In production, use a session token stored in DB
-  cookieStore.set(USER_ID_COOKIE_NAME, userId.toString(), {
+
+  // Generate HMAC-signed session token
+  const sessionToken = signSessionToken(userId)
+
+  cookieStore.set(USER_ID_COOKIE_NAME, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: SESSION_MAX_AGE,
     path: '/',
   })
-  
-  console.log(`✅ Session cookie set: ${USER_ID_COOKIE_NAME}=${userId}`)
-  
+
+  console.log(`✅ Signed session cookie set for user ${userId}`)
+
   // Update last login
   await db
     .update(users)
     .set({ lastLogin: new Date() })
     .where(eq(users.id, userId))
-  
+
   console.log(`✅ Last login updated for user ${userId}`)
 }
 
 /**
- * Get current user from session
+ * Get current user from session (supports signed + legacy tokens)
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies()
   const userIdCookie = cookieStore.get(USER_ID_COOKIE_NAME)
-  
+
   if (!userIdCookie) {
     return null
   }
-  
-  const userId = parseInt(userIdCookie.value)
-  if (isNaN(userId)) {
+
+  // Verify session token (handles both signed and legacy plain-integer)
+  const userId = verifySessionToken(userIdCookie.value)
+  if (userId === null) {
     return null
   }
   
@@ -436,34 +514,20 @@ export async function getMasterKiteCredentials(): Promise<{
 }
 
 /**
- * Get authenticated user ID (supports both old and new auth systems)
- * This is a compatibility helper for API routes during the transition
+ * Get authenticated user ID from the current session.
+ * Uses the multi-user auth system (signed session tokens).
+ *
+ * @returns The user's numeric ID, or null if not authenticated
  */
 export async function getAuthenticatedUserIdCompat(): Promise<number | null> {
   try {
-    // Try new multi-user auth first
     const user = await getCurrentUser()
     if (user) {
-      console.log(`✅ Auth compat: Found new auth user ID: ${user.id}`)
       return user.id
     }
+    return null
   } catch (err) {
-    console.log(`⚠️  Auth compat: New auth failed, trying old auth...`)
-    // Ignore error, try fallback
-  }
-  
-  try {
-    // Fallback to old auth system
-    const { getAuthenticatedUserId } = await import('@/lib/auth-helpers')
-    const userId = await getAuthenticatedUserId()
-    if (userId) {
-      console.log(`✅ Auth compat: Found old auth user ID: ${userId}`)
-    } else {
-      console.log(`❌ Auth compat: No auth found in either system`)
-    }
-    return userId
-  } catch (err) {
-    console.log(`❌ Auth compat: Old auth also failed:`, err)
+    console.log(`❌ Auth: Failed to get current user:`, err)
     return null
   }
 }
