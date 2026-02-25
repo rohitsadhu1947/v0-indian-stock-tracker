@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal, type SentimentResult, type AggregateSentiment } from '@/lib/sentiment-utils';
+import { db } from '@/db'
+import { newsData } from '@/db/schema'
 
 // Disable caching for this API route
 export const dynamic = 'force-dynamic';
@@ -125,6 +127,27 @@ export async function GET(request: NextRequest) {
     
     console.log(`📊 Sentiment Analysis: ${aggregateSentiment.overall} (${aggregateSentiment.positive} positive, ${aggregateSentiment.negative} negative, ${aggregateSentiment.neutral} neutral)`);
     console.log(`💡 Trading Signal: ${tradingSignal.signal} (strength: ${tradingSignal.strength}/10)`);
+
+    // Persist news items to DB (non-fatal)
+    try {
+      const newsRows = topNews.map(item => ({
+        symbol: symbol!.toUpperCase(),
+        newsType: 'stock' as const,
+        title: item.title,
+        link: item.link || null,
+        snippet: item.snippet || null,
+        source: item.source || null,
+        publishedAt: item.pubDate ? new Date(item.pubDate) : null,
+        sentiment: item.sentiment as any,
+        fetchedAt: new Date(),
+      }))
+      if (newsRows.length > 0) {
+        await db.insert(newsData).values(newsRows)
+        console.log(`💾 Saved ${newsRows.length} news items to DB for ${symbol}`)
+      }
+    } catch (dbError) {
+      console.error(`⚠️ Failed to save news data to DB for ${symbol}:`, dbError)
+    }
 
     return NextResponse.json({
       success: true,

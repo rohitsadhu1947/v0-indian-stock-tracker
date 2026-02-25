@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
-import { paperPositions, userPreferences } from '@/db/schema'
+import { paperPositions, userPreferences, tradeHistory, alerts } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { sendTargetHitAlert, sendStopLossHitAlert, type TelegramConfig } from '@/lib/telegram-alerts'
@@ -208,6 +208,62 @@ export async function POST(request: NextRequest) {
 
         updates.push(updated)
 
+        // 📝 WIRE: Insert into trade_history
+        try {
+          const entryTime = position.entryTime ? new Date(position.entryTime) : position.createdAt
+          const exitTime = new Date()
+          const durationMs = exitTime.getTime() - entryTime.getTime()
+          const durationMinutes = Math.floor(durationMs / 60000)
+
+          await db.insert(tradeHistory).values({
+            userId: position.userId,
+            positionId: position.id,
+            symbol: position.symbol,
+            exchange: position.exchange,
+            entryPrice: position.entryPrice,
+            exitPrice: currentPrice,
+            quantity: position.quantity,
+            pnl,
+            pnlPercent,
+            strategy: position.strategy,
+            exitReason: exitReason.toLowerCase(),
+            entryTime: entryTime,
+            exitTime: exitTime,
+            duration: durationMinutes,
+          })
+          console.log(`📝 Trade history recorded: ${position.symbol} (${exitReason})`)
+        } catch (histErr) {
+          console.error(`⚠️  Failed to record trade history for ${position.symbol}:`, histErr)
+        }
+
+        // 🔔 WIRE: Insert into alerts table
+        try {
+          const alertTitle = exitReason === 'STOP_LOSS'
+            ? `${position.symbol} stop loss hit`
+            : `${position.symbol} ${exitReason.toLowerCase().replace('_', ' ')} hit`
+          const alertPriority = exitReason === 'STOP_LOSS' ? 'high' : 'medium'
+
+          await db.insert(alerts).values({
+            userId: position.userId,
+            symbol: position.symbol,
+            alertType: exitReason === 'STOP_LOSS' ? 'exit' : 'exit',
+            message: `Position auto-closed at ₹${currentPrice.toFixed(2)}. P&L: ₹${pnl.toFixed(2)} (${pnlPercent > 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`,
+            priority: alertPriority,
+            metadata: {
+              positionId: position.id,
+              symbol: position.symbol,
+              exitReason,
+              entryPrice: position.entryPrice,
+              exitPrice: currentPrice,
+              pnl,
+              pnlPercent,
+            },
+          })
+          console.log(`🔔 Alert created: ${alertTitle}`)
+        } catch (alertErr) {
+          console.error(`⚠️  Failed to create alert for ${position.symbol}:`, alertErr)
+        }
+
         // 📱 SEND TELEGRAM ALERT for exit
         if (telegramConfig.enabled) {
           const entryTime = position.entryTime ? new Date(position.entryTime) : new Date()
@@ -299,7 +355,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check status
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getAuthenticatedUserId()
+    const userId = await getAuthenticatedUserIdCompat()
     
     if (!userId) {
       return NextResponse.json({ 

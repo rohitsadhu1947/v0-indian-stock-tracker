@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { convertToYahooSymbol, type FundamentalData } from '@/lib/fundamentals-utils';
 import https from 'https';
+import { db } from '@/db'
+import { fundamentalData as fundamentalDataTable } from '@/db/schema'
 
 // Disable caching for this API route during development
 export const dynamic = 'force-dynamic';
@@ -80,8 +82,49 @@ async function fetchYahooQuoteSummary(yahooSymbol: string): Promise<any> {
 }
 
 /**
+ * Persist fundamental data to DB (non-fatal on failure)
+ */
+async function saveFundamentalDataToDB(symbol: string, exchange: string, fundData: FundamentalData, fullData: any) {
+  try {
+    await db.insert(fundamentalDataTable).values({
+      symbol: symbol.toUpperCase(),
+      exchange,
+      marketCap: fundData.marketCap ? String(fundData.marketCap) : null,
+      peRatio: fundData.peRatio ?? null,
+      pbRatio: fundData.pbRatio ?? null,
+      dividendYield: fundData.dividendYield ?? null,
+      debtToEquity: fundData.debtToEquity ?? null,
+      roe: fundData.roe != null ? (typeof fundData.roe === 'number' && fundData.roe < 1 ? fundData.roe * 100 : fundData.roe) : null,
+      sector: fundData.sector ?? null,
+      industry: fundData.industry ?? null,
+      data: fullData,
+      score: null,
+      signal: null,
+      fetchedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: [fundamentalDataTable.symbol, fundamentalDataTable.exchange],
+      set: {
+        marketCap: fundData.marketCap ? String(fundData.marketCap) : null,
+        peRatio: fundData.peRatio ?? null,
+        pbRatio: fundData.pbRatio ?? null,
+        dividendYield: fundData.dividendYield ?? null,
+        debtToEquity: fundData.debtToEquity ?? null,
+        roe: fundData.roe != null ? (typeof fundData.roe === 'number' && fundData.roe < 1 ? fundData.roe * 100 : fundData.roe) : null,
+        sector: fundData.sector ?? null,
+        industry: fundData.industry ?? null,
+        data: fullData,
+        fetchedAt: new Date(),
+      }
+    })
+    console.log(`💾 Saved fundamental data to DB for ${symbol}`)
+  } catch (dbError) {
+    console.error(`⚠️ Failed to save fundamental data to DB for ${symbol}:`, dbError)
+  }
+}
+
+/**
  * GET /api/fundamentals/quote?symbol=RELIANCE&exchange=NSE
- * 
+ *
  * Fetches comprehensive fundamental data for a stock from Yahoo Finance
  */
 export async function GET(request: NextRequest) {
@@ -187,7 +230,9 @@ export async function GET(request: NextRequest) {
         
         const source = fallback ? 'Yahoo Finance (Chart) + Fallback Data' : 'Yahoo Finance (Chart)';
         console.log(`✅ Retrieved data for ${yahooSymbol} (${source})`);
-        
+
+        await saveFundamentalDataToDB(symbol, exchange, fundamentalData, { chartMeta: meta, fallback: !!fallback });
+
         return NextResponse.json({
           success: true,
           data: fundamentalData,
@@ -218,6 +263,8 @@ export async function GET(request: NextRequest) {
             lastUpdated: new Date()
           };
           
+          await saveFundamentalDataToDB(symbol, exchange, fundamentalData, { fallbackOnly: true });
+
           return NextResponse.json({
             success: true,
             data: fundamentalData,
@@ -329,7 +376,9 @@ export async function GET(request: NextRequest) {
     console.log(`   P/E Ratio: ${fundamentalData.peRatio?.toFixed(2) || 'N/A'}`);
     console.log(`   ROE: ${fundamentalData.roe ? (fundamentalData.roe * 100).toFixed(1) + '%' : 'N/A'}`);
     console.log(`   Debt/Equity: ${fundamentalData.debtToEquity?.toFixed(2) || 'N/A'}`);
-    
+
+    await saveFundamentalDataToDB(symbol, exchange, fundamentalData, result);
+
     return NextResponse.json({
       success: true,
       data: fundamentalData,

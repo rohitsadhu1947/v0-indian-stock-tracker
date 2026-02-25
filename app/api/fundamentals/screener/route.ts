@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { type FundamentalData } from '@/lib/fundamentals-utils';
+import { db } from '@/db'
+import { fundamentalData as fundamentalDataTable } from '@/db/schema'
 
 // Disable caching for this API route during development
 export const dynamic = 'force-dynamic';
@@ -92,13 +94,50 @@ export async function GET(request: NextRequest) {
     console.log(`   ROE: ${fundamentalData.roe ? (fundamentalData.roe * 100).toFixed(1) + '%' : 'N/A'}`);
     console.log(`   Debt/Equity: ${fundamentalData.debtToEquity?.toFixed(2) || 'N/A'}`);
     
+    // Persist to DB (non-fatal)
+    try {
+      await db.insert(fundamentalDataTable).values({
+        symbol: fundamentalData.symbol,
+        exchange: 'NSE',
+        marketCap: fundamentalData.marketCap ? String(fundamentalData.marketCap) : null,
+        peRatio: fundamentalData.peRatio ?? null,
+        pbRatio: fundamentalData.pbRatio ?? null,
+        dividendYield: fundamentalData.dividendYield ?? null,
+        debtToEquity: fundamentalData.debtToEquity ?? null,
+        roe: fundamentalData.roe ?? null,
+        sector: fundamentalData.sector ?? null,
+        industry: fundamentalData.industry ?? null,
+        data: data, // full Screener.in response
+        score: null,
+        signal: null,
+        fetchedAt: new Date(),
+      }).onConflictDoUpdate({
+        target: [fundamentalDataTable.symbol, fundamentalDataTable.exchange],
+        set: {
+          marketCap: fundamentalData.marketCap ? String(fundamentalData.marketCap) : null,
+          peRatio: fundamentalData.peRatio ?? null,
+          pbRatio: fundamentalData.pbRatio ?? null,
+          dividendYield: fundamentalData.dividendYield ?? null,
+          debtToEquity: fundamentalData.debtToEquity ?? null,
+          roe: fundamentalData.roe ?? null,
+          sector: fundamentalData.sector ?? null,
+          industry: fundamentalData.industry ?? null,
+          data: data,
+          fetchedAt: new Date(),
+        }
+      })
+      console.log(`💾 Saved fundamental data to DB for ${symbol}`)
+    } catch (dbError) {
+      console.error(`⚠️ Failed to save fundamental data to DB for ${symbol}:`, dbError)
+    }
+
     return NextResponse.json({
       success: true,
       data: fundamentalData,
       source: 'Screener.in',
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error: any) {
     console.error('❌ Error fetching from Screener.in:', error);
     

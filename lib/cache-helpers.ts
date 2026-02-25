@@ -5,7 +5,7 @@
 
 import { db } from '@/db'
 import { stockQuotes, historicalData } from '@/db/schema'
-import { and, eq, gte } from 'drizzle-orm'
+import { and, eq, gte, lte } from 'drizzle-orm'
 
 /**
  * Cache duration constants (in minutes)
@@ -89,8 +89,11 @@ export async function cacheQuote(symbol: string, exchange: string, data: any): P
       data,
       timestamp: new Date()
     })
-    
+
     console.log(`💾 Cached quote: ${symbol}`)
+
+    // Periodically clean up old cache entries
+    throttledCacheCleanup()
   } catch (error) {
     console.error('Error caching quote:', error)
   }
@@ -165,8 +168,11 @@ export async function cacheHistorical(
       data,
       timestamp: new Date()
     })
-    
+
     console.log(`💾 Cached historical: ${symbol} (${interval})`)
+
+    // Periodically clean up old cache entries
+    throttledCacheCleanup()
   } catch (error) {
     console.error('Error caching historical data:', error)
   }
@@ -179,13 +185,27 @@ export async function cacheHistorical(
 export async function clearOldCache(hoursOld: number = 24): Promise<void> {
   try {
     const expiryTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000)
-    
-    await db.delete(stockQuotes).where(gte(stockQuotes.timestamp, expiryTime))
-    await db.delete(historicalData).where(gte(historicalData.timestamp, expiryTime))
-    
+
+    await db.delete(stockQuotes).where(lte(stockQuotes.timestamp, expiryTime))
+    await db.delete(historicalData).where(lte(historicalData.timestamp, expiryTime))
+
     console.log(`✅ Cleared cache entries older than ${hoursOld} hours`)
   } catch (error) {
     console.error('Error clearing old cache:', error)
   }
+}
+
+/**
+ * Throttled cache cleanup - runs clearOldCache at most once per hour
+ */
+let _lastCacheCleanup = 0
+const CACHE_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 hour
+
+export function throttledCacheCleanup(): void {
+  const now = Date.now()
+  if (now - _lastCacheCleanup < CACHE_CLEANUP_INTERVAL) return
+  _lastCacheCleanup = now
+  // Fire-and-forget, don't block the caller
+  clearOldCache().catch(() => {})
 }
 
