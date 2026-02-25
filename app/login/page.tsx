@@ -2,10 +2,9 @@
 
 /**
  * Login Page
- * 
- * Handles both:
- * - Email/password authentication (new multi-user system)
- * - Legacy Kite Connect authentication (backward compatibility)
+ *
+ * Email/password authentication only.
+ * Broker connections (Kite, Groww, etc.) are managed in Admin settings.
  */
 
 import { useState, useEffect } from 'react'
@@ -13,7 +12,6 @@ import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'email' | 'kite'>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -24,12 +22,10 @@ export default function LoginPage() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        // Use unified session endpoint
         const res = await fetch('/api/auth/session')
         if (res.ok) {
           const data = await res.json()
           if (data.authenticated) {
-            // Already logged in, redirect to home
             router.push('/')
           }
         }
@@ -70,11 +66,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleKiteLogin = () => {
-    // Redirect to Kite Connect OAuth
-    window.location.href = '/api/auth/kite/login'
-  }
-
   if (checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black">
@@ -88,62 +79,32 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header with Money Smell Branding */}
         <div className="text-center mb-8">
-          {/* Money Smell Visual - Using CSS styled box as fallback */}
           <div className="mb-6 flex justify-center">
             <div className="relative w-80 h-64 bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700 rounded-lg shadow-2xl border-4 border-yellow-600 hover:scale-105 transition-transform duration-300 flex flex-col items-center justify-center p-6">
-              {/* Vintage mustache guy emoji */}
               <div className="text-8xl mb-4">🧔</div>
-              
-              {/* Main text */}
               <div className="text-white font-black text-4xl leading-tight tracking-wider mb-3" style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.5)' }}>
                 DO I SMELL<br/>MONEY?
               </div>
-              
-              {/* Money emoji */}
               <div className="text-5xl">💵</div>
             </div>
           </div>
-          
+
           <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-600 mb-3 drop-shadow-lg">
             DO I SMELL MONEY?
           </h1>
-          
+
           <h2 className="text-2xl font-semibold text-white mb-2">
-            ⚡ Vibe Trades
+            Vibe Trades
           </h2>
-          
+
           <p className="text-gray-400 text-lg">
-            Catch the vibe, stack the cash 💸
+            Catch the vibe, stack the cash
           </p>
         </div>
 
         {/* Login Card */}
         <div className="bg-gray-800 rounded-lg shadow-2xl p-8 border border-gray-700">
-          {/* Mode Toggle */}
-          <div className="flex gap-2 mb-6 bg-gray-900 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setMode('email')}
-              className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-                mode === 'email'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Email Login
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('kite')}
-              className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-                mode === 'kite'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Kite Connect
-            </button>
-          </div>
+          <h3 className="text-lg font-semibold text-white mb-6">Sign In</h3>
 
           {/* Error Message */}
           {error && (
@@ -152,70 +113,43 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Email Login Form */}
-          {mode === 'email' && (
-            <form onSubmit={handleEmailLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="your@email.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </button>
-            </form>
-          )}
-
-          {/* Kite Login */}
-          {mode === 'kite' && (
-            <div className="space-y-4">
-              <p className="text-gray-400 text-sm mb-4">
-                Connect with your Zerodha Kite account to access live market
-                data.
-              </p>
-
-              <button
-                type="button"
-                onClick={handleKiteLogin}
-                disabled={loading}
-                className="w-full py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <span>🔐</span>
-                <span>Login with Kite Connect</span>
-              </button>
-
-              <p className="text-xs text-gray-500 text-center">
-                You'll be redirected to Zerodha for secure authentication
-              </p>
+          <form onSubmit={handleEmailLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="your@email.com"
+                required
+              />
             </div>
-          )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="********"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
         </div>
 
         {/* Footer */}
@@ -229,4 +163,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
