@@ -122,7 +122,7 @@ export interface CandleData {
 
 export interface InstrumentData {
   /** Broker-specific instrument identifier (used for historical data) */
-  instrumentToken: number
+  instrumentToken: number | string
 
   /** Trading symbol (e.g., 'RELIANCE') */
   tradingsymbol: string
@@ -138,6 +138,12 @@ export interface InstrumentData {
 
   /** Lot size (1 for cash, >1 for F&O) */
   lotSize: number
+
+  /** Instrument type (e.g., 'EQ', 'FUT', 'CE', 'PE') */
+  instrumentType?: string
+
+  /** ISIN code for cross-broker symbol mapping (e.g., 'INE002A01018') */
+  isin?: string
 
   /** Raw broker-specific data */
   raw?: Record<string, any>

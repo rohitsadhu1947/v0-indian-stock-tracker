@@ -1,11 +1,11 @@
 /**
  * Broker Module - Entry Point
  *
- * Replaces the old kite-token-helper.ts with a multi-broker aware factory.
+ * Multi-broker aware factory with per-user connection resolution.
  *
  * Usage in API routes:
- *   import { getBrokerManager } from '@/lib/broker'
- *   const manager = await getBrokerManager()
+ *   import { getUserBrokerManager } from '@/lib/broker'
+ *   const manager = await getUserBrokerManager()
  *   const client = manager.getClient()
  *   const quotes = await client.getQuote(['NSE:RELIANCE'])
  */
@@ -16,6 +16,7 @@ import { users, brokerConnections } from '@/db/schema'
 import { eq, and, isNotNull, desc } from 'drizzle-orm'
 import { BrokerManager } from './manager'
 import { KiteBrokerClient } from './kite-client'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 // Re-export all types and classes
 export { BrokerManager } from './manager'
@@ -31,16 +32,38 @@ export type {
 } from './types'
 
 /**
- * Create and configure a BrokerManager with all available broker connections.
+ * Create a BrokerClient from a broker connection record.
+ * Currently supports 'kite'. Will be extended for Angel One, Upstox, etc.
+ */
+function createClientFromConnection(
+  conn: { brokerId: string; accessToken: string | null; apiKey: string | null; isPrimary: boolean },
+  defaultApiKey: string
+): { client: KiteBrokerClient; isPrimary: boolean } | null {
+  if (conn.brokerId === 'kite' && conn.accessToken) {
+    const client = new KiteBrokerClient({
+      apiKey: conn.apiKey || defaultApiKey,
+      accessToken: conn.accessToken,
+    })
+    return { client, isPrimary: conn.isPrimary }
+  }
+  // Future: else if (conn.brokerId === 'angel') { ... }
+  // Future: else if (conn.brokerId === 'upstox') { ... }
+  return null
+}
+
+/**
+ * Create and configure a BrokerManager with broker connections for a specific user.
  *
  * Token resolution order:
- * 1. Check `broker_connections` table for active connections (preferred, multi-broker)
- * 2. Check `kite_access_token` cookie (legacy Kite OAuth users)
- * 3. Check `users.masterKiteToken` for admin's Kite token (legacy email-user bridge)
+ * 1. Specified user's broker_connections (if userId provided)
+ * 2. Admin's broker_connections (fallback for users without own broker)
+ * 3. kite_access_token cookie (legacy Kite OAuth users)
+ * 4. users.masterKiteToken for admin's Kite token (legacy email-user bridge)
  *
- * @returns Configured BrokerManager with all available broker clients
+ * @param userId - Optional user ID to scope broker connections to
+ * @returns Configured BrokerManager with available broker clients
  */
-export async function getBrokerManager(): Promise<BrokerManager> {
+export async function getBrokerManager(userId?: number): Promise<BrokerManager> {
   const manager = new BrokerManager()
   const apiKey = process.env.KITE_API_KEY
 
@@ -50,39 +73,87 @@ export async function getBrokerManager(): Promise<BrokerManager> {
   }
 
   // ────────────────────────────────────────────
-  // METHOD 1: broker_connections table (new system)
+  // METHOD 1: User's own broker_connections
   // ────────────────────────────────────────────
-  try {
-    const connections = await db
-      .select()
-      .from(brokerConnections)
-      .where(eq(brokerConnections.isActive, true))
-      .orderBy(desc(brokerConnections.isPrimary))
+  if (userId) {
+    try {
+      const userConnections = await db
+        .select()
+        .from(brokerConnections)
+        .where(and(
+          eq(brokerConnections.userId, userId),
+          eq(brokerConnections.isActive, true)
+        ))
+        .orderBy(desc(brokerConnections.isPrimary))
 
-    for (const conn of connections) {
-      if (conn.brokerId === 'kite' && conn.accessToken) {
-        const client = new KiteBrokerClient({
-          apiKey: conn.apiKey || apiKey,
-          accessToken: conn.accessToken,
-        })
-        manager.register(client, conn.isPrimary)
-        console.log(`✅ Loaded Kite broker from broker_connections (user ${conn.userId})`)
+      for (const conn of userConnections) {
+        const result = createClientFromConnection(conn, apiKey)
+        if (result) {
+          manager.register(result.client, result.isPrimary)
+          console.log(`✅ Loaded ${conn.brokerId} broker for user ${userId}`)
+        }
       }
-      // Future: else if (conn.brokerId === 'groww') { ... }
-    }
 
-    if (manager.hasConnection()) {
-      return manager
-    }
-  } catch (error: any) {
-    // Table might not exist yet during migration — fall through to legacy
-    if (!error.message?.includes('does not exist') && !error.message?.includes('relation')) {
-      console.warn('⚠️  Error reading broker_connections:', error.message)
+      if (manager.hasConnection()) {
+        return manager
+      }
+    } catch (error: any) {
+      if (!error.message?.includes('does not exist') && !error.message?.includes('relation')) {
+        console.warn(`⚠️  Error reading broker_connections for user ${userId}:`, error.message)
+      }
     }
   }
 
   // ────────────────────────────────────────────
-  // METHOD 2: kite_access_token cookie (legacy)
+  // METHOD 2: Admin's broker_connections (fallback)
+  // ────────────────────────────────────────────
+  try {
+    // Find admin users, then get their active broker connections
+    const adminUsers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.role, 'admin'), eq(users.status, 'active')))
+      .limit(5)
+
+    const adminIds = adminUsers.map(u => u.id)
+
+    if (adminIds.length > 0) {
+      // Skip if the requesting user IS the admin (already checked in Method 1)
+      const adminIdsToCheck = userId ? adminIds.filter(id => id !== userId) : adminIds
+
+      if (adminIdsToCheck.length > 0) {
+        const adminConnections = await db
+          .select()
+          .from(brokerConnections)
+          .where(and(
+            eq(brokerConnections.isActive, true),
+            // drizzle doesn't have `in` as a simple function, use multiple conditions
+          ))
+          .orderBy(desc(brokerConnections.isPrimary))
+
+        // Filter to admin connections only
+        for (const conn of adminConnections) {
+          if (!adminIdsToCheck.includes(conn.userId)) continue
+          const result = createClientFromConnection(conn, apiKey)
+          if (result) {
+            manager.register(result.client, result.isPrimary)
+            console.log(`✅ Fallback: using admin's ${conn.brokerId} broker (user ${conn.userId})`)
+          }
+        }
+
+        if (manager.hasConnection()) {
+          return manager
+        }
+      }
+    }
+  } catch (error: any) {
+    if (!error.message?.includes('does not exist') && !error.message?.includes('relation')) {
+      console.warn('⚠️  Error reading admin broker_connections:', error.message)
+    }
+  }
+
+  // ────────────────────────────────────────────
+  // METHOD 3: kite_access_token cookie (legacy)
   // ────────────────────────────────────────────
   try {
     const cookieStore = await cookies()
@@ -91,7 +162,7 @@ export async function getBrokerManager(): Promise<BrokerManager> {
     if (kiteToken) {
       const client = new KiteBrokerClient({ apiKey, accessToken: kiteToken })
       manager.register(client, true)
-      console.log('✅ Using Kite token from cookie (legacy Kite OAuth user)')
+      console.log('⚠️  Legacy: using Kite token from cookie (user should re-authenticate)')
       return manager
     }
   } catch {
@@ -99,7 +170,7 @@ export async function getBrokerManager(): Promise<BrokerManager> {
   }
 
   // ────────────────────────────────────────────
-  // METHOD 3: Admin's masterKiteToken (legacy bridge)
+  // METHOD 4: Admin's masterKiteToken (legacy bridge)
   // ────────────────────────────────────────────
   try {
     const [adminUser] = await db
@@ -120,7 +191,7 @@ export async function getBrokerManager(): Promise<BrokerManager> {
       })
       manager.register(client, true)
       console.log(
-        `✅ Using master Kite token from admin user (${adminUser.kiteUserId}, last login: ${adminUser.lastLogin})`
+        `⚠️  Legacy: using masterKiteToken from admin (${adminUser.kiteUserId})`
       )
       return manager
     }
@@ -130,6 +201,21 @@ export async function getBrokerManager(): Promise<BrokerManager> {
 
   console.log('❌ No broker connections found')
   return manager
+}
+
+/**
+ * Convenience helper for API routes: resolve broker manager for the current user.
+ *
+ * Extracts the authenticated user ID from the session cookie,
+ * then calls getBrokerManager(userId) with fallback to admin's broker.
+ *
+ * Usage:
+ *   const manager = await getUserBrokerManager()
+ *   const client = manager.getClient()
+ */
+export async function getUserBrokerManager(): Promise<BrokerManager> {
+  const userId = await getAuthenticatedUserIdCompat()
+  return getBrokerManager(userId ?? undefined)
 }
 
 /**

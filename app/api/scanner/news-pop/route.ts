@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker';
+import { getUserBrokerManager } from '@/lib/broker';
+import type { InstrumentData } from '@/lib/broker';
 import { scanForNewsPops, type NewsPopSignal } from '@/lib/news-pop-scanner';
 import { batchCalculateMasterScores, type MasterScore } from '@/lib/master-scorer';
 import { db } from '@/db';
@@ -35,15 +36,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       return NextResponse.json({
         success: false,
         error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
     // 2. Get query params
     const { searchParams } = new URL(request.url);
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
 
     // 3. Fetch instruments (all NSE equity)
     console.log('\n📊 Fetching NSE instruments...');
-    const instruments = await kc.getInstruments('NSE');
-    const equityInstruments = instruments.filter(inst => inst.instrument_type === 'EQ');
+    const instruments = await client.getInstruments('NSE');
+    const equityInstruments = instruments.filter((inst: InstrumentData) => inst.instrumentType === 'EQ');
     console.log(`✅ Found ${equityInstruments.length} equity instruments`);
 
     // 4. Get symbols to scan (custom or top 200 by volume for speed)
@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
       // Regular scan: Top 200 stocks by average volume (for speed)
       // In production, you might want to scan Nifty 500
       const sortedByVolume = [...equityInstruments]
-        .filter(inst => inst.last_price && inst.last_price > 50)
-        .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+        .filter(inst => inst.raw?.last_price && inst.raw.last_price > 50)
+        .sort((a, b) => (b.raw?.volume || 0) - (a.raw?.volume || 0))
         .slice(0, 200);
 
       symbolsToScan = sortedByVolume.map(inst => inst.tradingsymbol);
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       const quoteSymbols = batch.map(sym => `NSE:${sym}`);
 
       try {
-        const quotes = await kc.getQuote(quoteSymbols);
+        const quotes = await client.getQuote(quoteSymbols);
 
         // Fetch historical data for each stock in batch
         for (const symbol of batch) {
@@ -122,12 +122,14 @@ export async function GET(request: NextRequest) {
             const to = new Date();
             const from = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
-            const candles = await kc.getHistoricalData(
-              inst.instrument_token,
-              'day',
+            const candles = await client.getHistoricalData({
+              instrumentToken: inst.instrumentToken,
+              interval: 'day',
               from,
-              to
-            );
+              to,
+              symbol: symbol,
+              exchange: 'NSE'
+            });
 
             if (!candles || candles.length < 30) continue;
 
@@ -139,11 +141,11 @@ export async function GET(request: NextRequest) {
             stocksData.push({
               symbol,
               exchange: 'NSE',
-              instrumentToken: inst.instrument_token.toString(),
-              current: quote.last_price,
-              change: quote.net_change || 0,
-              changePercent: quote.net_change && quote.ohlc?.close
-                ? ((quote.net_change / quote.ohlc.close) * 100)
+              instrumentToken: inst.instrumentToken.toString(),
+              current: quote.lastPrice,
+              change: quote.change || 0,
+              changePercent: quote.change && quote.close
+                ? ((quote.change / quote.close) * 100)
                 : 0,
               volume: quote.volume || 0,
               avgVolume,

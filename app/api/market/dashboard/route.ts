@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
+import type { QuoteData } from '@/lib/broker'
 import { db } from '@/db'
 import { marketDashboard } from '@/db/schema'
 import type {
@@ -40,15 +41,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       return NextResponse.json(
         { success: false, error: 'No broker connections available. Admin must connect a broker in settings.' },
         { status: 401 }
       )
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
     // Fetch indices (NIFTY 50, BANK NIFTY, etc.)
     const indexSymbols = [
@@ -60,20 +60,20 @@ export async function GET(request: NextRequest) {
       'NSE:NIFTY PHARMA'
     ]
 
-    const indicesData = await kc.getQuote(indexSymbols)
+    const indicesData = await client.getQuote(indexSymbols)
 
-    const indices: MarketIndex[] = Object.entries(indicesData).map(([symbol, data]: [string, any]) => {
+    const indices: MarketIndex[] = Object.entries(indicesData).map(([symbol, data]: [string, QuoteData]) => {
       const name = symbol.replace('NSE:', '').replace(' 50', '').replace('NIFTY ', '')
       return {
         name,
         symbol: name.replace(' ', ''),
-        current: data.last_price,
-        change: data.last_price - data.ohlc.close,
-        changePercent: ((data.last_price - data.ohlc.close) / data.ohlc.close) * 100,
-        open: data.ohlc.open,
-        high: data.ohlc.high,
-        low: data.ohlc.low,
-        previousClose: data.ohlc.close
+        current: data.lastPrice,
+        change: data.lastPrice - data.close,
+        changePercent: ((data.lastPrice - data.close) / data.close) * 100,
+        open: data.open,
+        high: data.high,
+        low: data.low,
+        previousClose: data.close
       }
     })
 
@@ -91,15 +91,15 @@ export async function GET(request: NextRequest) {
 
     // Fetch quotes for sample stocks
     const stockSymbols = nifty50Sample.map(s => `NSE:${s}`)
-    const stocksData = await kc.getQuote(stockSymbols)
+    const stocksData = await client.getQuote(stockSymbols)
 
-    const stocks = Object.entries(stocksData).map(([symbol, data]: [string, any]) => ({
+    const stocks = Object.entries(stocksData).map(([symbol, data]: [string, QuoteData]) => ({
       symbol: symbol.replace('NSE:', ''),
-      current: data.last_price,
-      change: data.last_price - data.ohlc.close,
-      changePercent: ((data.last_price - data.ohlc.close) / data.ohlc.close) * 100,
+      current: data.lastPrice,
+      change: data.lastPrice - data.close,
+      changePercent: ((data.lastPrice - data.close) / data.close) * 100,
       volume: data.volume,
-      previousClose: data.ohlc.close,
+      previousClose: data.close,
       sector: getSectorForStock(symbol.replace('NSE:', ''))
     }))
 

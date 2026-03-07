@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { scanForMomentumSignals, NIFTY_500_SYMBOLS } from '@/lib/momentum-scanner'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
+import type { InstrumentData } from '@/lib/broker'
 import { db } from '@/db'
 import { patternAnalysis } from '@/db/schema'
 
@@ -19,15 +20,14 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 Starting momentum scan at ${new Date().toISOString()}`)
 
     // 1. Check authentication and get broker client
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       return NextResponse.json({
         success: false,
         error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
     // 2. Get query params
     const { searchParams } = new URL(request.url)
@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 Starting ${isQuickScan ? 'QUICK' : 'FULL'} momentum scan (capital: ₹${capital.toLocaleString()}, maxPositions: ${maxPositions}, minScore: ${minScore})...`)
 
     // 3. Get instrument tokens for NIFTY 500 stocks + custom stocks
-    const instruments = await kc.getInstruments('NSE')
-    const symbolMap = new Map<string, any>()
+    const instruments = await client.getInstruments('NSE')
+    const symbolMap = new Map<string, InstrumentData>()
 
     // Determine which symbols to check based on custom stocks
     let symbolsToCheck: string[]
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     for (const inst of instruments) {
-      if (inst.instrument_type === 'EQ' && symbolsToCheck.includes(inst.tradingsymbol)) {
+      if (inst.instrumentType === 'EQ' && symbolsToCheck.includes(inst.tradingsymbol)) {
         symbolMap.set(inst.tradingsymbol, inst)
       }
     }
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       try {
         // Fetch quotes for batch
         const quoteSymbols = batch.map(sym => `NSE:${sym}`)
-        const quotes = await kc.getQuote(quoteSymbols)
+        const quotes = await client.getQuote(quoteSymbols)
 
         // Fetch historical data for each stock in batch
         for (const symbol of batch) {
@@ -147,12 +147,14 @@ export async function GET(request: NextRequest) {
             const to = new Date()
             const from = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
 
-            const candles = await kc.getHistoricalData(
-              inst.instrument_token,
-              'day',
+            const candles = await client.getHistoricalData({
+              instrumentToken: inst.instrumentToken,
+              interval: 'day',
               from,
-              to
-            )
+              to,
+              symbol: symbol,
+              exchange: 'NSE'
+            })
 
             if (!candles || candles.length < 30) {
               console.log(`⚠️ ${symbol}: Insufficient candles (${candles?.length || 0})`)
@@ -181,7 +183,7 @@ export async function GET(request: NextRequest) {
             // Logic:
             // - During market hours: Use previous day (today's data is incomplete)
             // - After market close: Use today (if it's a trading day with good volume)
-            let lastTradingVolume = quote.volume // Fallback
+            let lastTradingVolume = quote.volume as number // Fallback
             let lastTradingDate = 'today'
 
             if (candles.length > 0) {
@@ -252,10 +254,10 @@ export async function GET(request: NextRequest) {
             stocksData.push({
               symbol,
               exchange: 'NSE',
-              instrumentToken: inst.instrument_token.toString(),
-              current: quote.last_price,
+              instrumentToken: inst.instrumentToken.toString(),
+              current: quote.lastPrice,
               change: quote.change,
-              changePercent: ((quote.last_price - quote.ohlc.close) / quote.ohlc.close) * 100,
+              changePercent: ((quote.lastPrice - quote.close) / quote.close) * 100,
               volume: currentVolume, // Use last candle's volume if market closed
               avgVolume,
               candles,

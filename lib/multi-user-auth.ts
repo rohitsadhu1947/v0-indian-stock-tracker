@@ -11,7 +11,7 @@
  */
 
 import bcrypt from 'bcrypt'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { users, userPermissions } from '@/db/schema'
@@ -118,7 +118,10 @@ export function verifySessionToken(token: string): number | null {
     .update(payload)
     .digest('hex')
 
-  if (providedHmac !== expectedHmac) {
+  // Use timing-safe comparison to prevent timing attacks
+  const expectedBuf = Buffer.from(expectedHmac, 'hex')
+  const providedBuf = Buffer.from(providedHmac, 'hex')
+  if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
     console.warn('⚠️  Session token HMAC mismatch — possible forgery attempt')
     return null
   }

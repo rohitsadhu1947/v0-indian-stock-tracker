@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
 
 /**
  * GET /api/scanner/momentum/debug
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 DEBUG SCANNER: Starting...')
 
     // 1. Check authentication and get broker client
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       console.log('❌ DEBUG: No broker connection')
       return NextResponse.json({
@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
         error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
     console.log('✅ DEBUG: Authenticated')
 
@@ -30,12 +29,12 @@ export async function GET(request: NextRequest) {
     // 3. Test with just 5 major stocks
     const testStocks = ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK']
 
-    const instruments = await kc.getInstruments('NSE')
+    const instruments = await client.getInstruments('NSE')
     console.log(`✅ DEBUG: Got ${instruments.length} total instruments`)
 
     const symbolMap = new Map<string, any>()
     for (const inst of instruments) {
-      if (inst.instrument_type === 'EQ' && testStocks.includes(inst.tradingsymbol)) {
+      if (inst.instrumentType === 'EQ' && testStocks.includes(inst.tradingsymbol)) {
         symbolMap.set(inst.tradingsymbol, inst)
       }
     }
@@ -46,7 +45,7 @@ export async function GET(request: NextRequest) {
     const quoteSymbols = Array.from(symbolMap.keys()).map(sym => `NSE:${sym}`)
     console.log(`📊 DEBUG: Fetching quotes for: ${quoteSymbols.join(', ')}`)
 
-    const quotes = await kc.getQuote(quoteSymbols)
+    const quotes = await client.getQuote(quoteSymbols)
     console.log(`✅ DEBUG: Got ${Object.keys(quotes).length} quotes`)
 
     // 5. Try to get historical data for first stock
@@ -54,18 +53,20 @@ export async function GET(request: NextRequest) {
     const firstInst = symbolMap.get(firstSymbol)
 
     if (firstInst) {
-      console.log(`📊 DEBUG: Fetching historical data for ${firstSymbol} (token: ${firstInst.instrument_token})`)
+      console.log(`📊 DEBUG: Fetching historical data for ${firstSymbol} (token: ${firstInst.instrumentToken})`)
 
       const to = new Date()
       const from = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
 
       try {
-        const candles = await kc.getHistoricalData(
-          firstInst.instrument_token,
-          'day',
+        const candles = await client.getHistoricalData({
+          instrumentToken: firstInst.instrumentToken,
+          interval: 'day',
           from,
-          to
-        )
+          to,
+          symbol: firstSymbol,
+          exchange: 'NSE'
+        })
         console.log(`✅ DEBUG: Got ${candles.length} candles for ${firstSymbol}`)
         console.log(`📊 DEBUG: Latest candle: ${JSON.stringify(candles[candles.length - 1])}`)
       } catch (error: any) {
