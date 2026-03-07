@@ -14,6 +14,7 @@ import { brokerConnections } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { requireAuth } from '@/lib/multi-user-auth'
 import { getAllBrokerDefinitions, getBrokerDefinition } from '@/lib/broker/registry'
+import { authenticateAngel } from '@/lib/broker/angel-client'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -145,11 +146,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Form-based brokers — accept credentials
+    // Form-based brokers — accept credentials and generate session
     if (brokerDef.supportsFormLogin) {
+      // Credentials can be at top level or nested under 'credentials'
+      const creds = body.credentials || body
+
       // Validate required fields
       const missingFields = (brokerDef.formFields || [])
-        .filter(f => f.required && !body[f.key])
+        .filter(f => f.required && !creds[f.key])
         .map(f => f.label)
 
       if (missingFields.length > 0) {
@@ -158,10 +162,84 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
 
-      // For now, return not-implemented for brokers without client (Angel, ICICI)
-      // Phase 3 will add actual session generation
+      // ── ANGEL ONE ──
+      if (brokerId === 'angel') {
+        try {
+          console.log(`🔐 Authenticating Angel One for user ${user.id}...`)
+
+          const authResult = await authenticateAngel({
+            apiKey: creds.apiKey,
+            clientCode: creds.clientCode,
+            password: creds.password,
+            totp: creds.totp,
+          })
+
+          // Upsert broker connection
+          const [existingConn] = await db
+            .select({ id: brokerConnections.id })
+            .from(brokerConnections)
+            .where(and(
+              eq(brokerConnections.userId, user.id),
+              eq(brokerConnections.brokerId, 'angel')
+            ))
+            .limit(1)
+
+          // Persist-able fields (saved for reconnection): apiKey, clientCode
+          // Non-persist fields (one-time): password, totp
+          const metadata = {
+            refreshToken: authResult.refreshToken,
+            feedToken: authResult.feedToken,
+            clientCode: creds.clientCode,
+            apiKey: creds.apiKey,  // Save for daily reconnect
+          }
+
+          if (existingConn) {
+            await db.update(brokerConnections)
+              .set({
+                accessToken: authResult.jwtToken,
+                apiKey: creds.apiKey,
+                brokerUserId: creds.clientCode,
+                isActive: true,
+                lastConnected: new Date(),
+                tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                metadata,
+                updatedAt: new Date(),
+              })
+              .where(eq(brokerConnections.id, existingConn.id))
+          } else {
+            await db.insert(brokerConnections).values({
+              userId: user.id,
+              brokerId: 'angel',
+              displayName: 'Angel One',
+              accessToken: authResult.jwtToken,
+              apiKey: creds.apiKey,
+              brokerUserId: creds.clientCode,
+              isActive: true,
+              isPrimary: true,
+              lastConnected: new Date(),
+              tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              metadata,
+            })
+          }
+
+          console.log(`✅ Angel One connected for user ${user.id} (client: ${creds.clientCode})`)
+
+          return NextResponse.json({
+            success: true,
+            action: 'connected',
+            message: 'Angel One connected successfully! Token valid for 24 hours.',
+          })
+        } catch (err: any) {
+          console.error(`❌ Angel One auth failed for user ${user.id}:`, err.message)
+          return NextResponse.json({
+            error: err.message || 'Angel One authentication failed. Check your credentials and TOTP.',
+          }, { status: 401 })
+        }
+      }
+
+      // ── ICICI Direct / Other form-based (future) ──
       return NextResponse.json({
-        error: `${brokerDef.displayName} integration is coming soon. Currently supported: Zerodha Kite.`,
+        error: `${brokerDef.displayName} integration is coming soon. Currently supported: Zerodha Kite, Angel One.`,
       }, { status: 501 })
     }
 

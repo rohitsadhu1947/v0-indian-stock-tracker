@@ -35,22 +35,36 @@ export class KiteSymbolAdapter implements BrokerSymbolAdapter {
 }
 
 // ============================================================================
-// ANGEL ONE (SmartAPI) — placeholder for Phase 3
+// ANGEL ONE (SmartAPI)
 // ============================================================================
 
 export class AngelSymbolAdapter implements BrokerSymbolAdapter {
+  /**
+   * Convert canonical symbol to Angel's format.
+   * Angel uses "RELIANCE-EQ" for NSE equity, "RELIANCE" for BSE.
+   * F&O symbols use different suffixes (FUTIDX, OPTIDX, etc.)
+   */
   toBrokerFormat(symbol: string, exchange: string): string {
-    return `${symbol}-EQ` // Angel uses RELIANCE-EQ for equity
+    if (exchange === 'NSE' && !symbol.includes('-')) {
+      return `${symbol}-EQ`
+    }
+    return symbol
   }
 
   fromBrokerFormat(brokerSymbol: string): { canonical: string; exchange: string } {
     // "RELIANCE-EQ" → { canonical: "RELIANCE", exchange: "NSE" }
+    // "SBIN-EQ" → { canonical: "SBIN", exchange: "NSE" }
     const symbol = brokerSymbol.replace(/-EQ$/, '')
     return { canonical: symbol, exchange: 'NSE' }
   }
 
+  /**
+   * Angel One quote API uses token-based lookup, not symbol strings.
+   * The client handles this mapping internally via the instrument master.
+   * This returns the canonical "EXCHANGE:SYMBOL" format for our internal use.
+   */
   toQuoteKey(symbol: string, exchange: string): string {
-    return symbol // Angel uses just the symbol for quote requests
+    return `${exchange}:${symbol}`
   }
 }
 

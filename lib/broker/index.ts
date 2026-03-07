@@ -16,11 +16,14 @@ import { users, brokerConnections } from '@/db/schema'
 import { eq, and, isNotNull, desc } from 'drizzle-orm'
 import { BrokerManager } from './manager'
 import { KiteBrokerClient } from './kite-client'
+import { AngelBrokerClient } from './angel-client'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { getBrokerDefinition } from './registry'
 
 // Re-export all types and classes
 export { BrokerManager } from './manager'
 export { KiteBrokerClient } from './kite-client'
+export { AngelBrokerClient } from './angel-client'
 export type {
   BrokerClient,
   QuoteData,
@@ -33,21 +36,69 @@ export type {
 
 /**
  * Create a BrokerClient from a broker connection record.
- * Currently supports 'kite'. Will be extended for Angel One, Upstox, etc.
+ * Uses the broker registry's createClient factory when available,
+ * with hardcoded fallback for Kite (most common).
  */
 function createClientFromConnection(
-  conn: { brokerId: string; accessToken: string | null; apiKey: string | null; isPrimary: boolean },
+  conn: {
+    brokerId: string
+    accessToken: string | null
+    apiKey: string | null
+    isPrimary: boolean
+    brokerUserId?: string | null
+    metadata?: Record<string, any> | null
+  },
   defaultApiKey: string
-): { client: KiteBrokerClient; isPrimary: boolean } | null {
-  if (conn.brokerId === 'kite' && conn.accessToken) {
+): { client: KiteBrokerClient | AngelBrokerClient; isPrimary: boolean } | null {
+  if (!conn.accessToken) return null
+
+  // Try Kite first (fast path — most common)
+  if (conn.brokerId === 'kite') {
     const client = new KiteBrokerClient({
       apiKey: conn.apiKey || defaultApiKey,
       accessToken: conn.accessToken,
     })
     return { client, isPrimary: conn.isPrimary }
   }
-  // Future: else if (conn.brokerId === 'angel') { ... }
-  // Future: else if (conn.brokerId === 'upstox') { ... }
+
+  // Try Angel One
+  if (conn.brokerId === 'angel') {
+    const metadata = (conn.metadata || {}) as Record<string, any>
+    const client = new AngelBrokerClient({
+      apiKey: conn.apiKey || metadata.apiKey || '',
+      accessToken: conn.accessToken,
+      refreshToken: metadata.refreshToken,
+      feedToken: metadata.feedToken,
+      clientCode: conn.brokerUserId || metadata.clientCode,
+    })
+    return { client, isPrimary: conn.isPrimary }
+  }
+
+  // Fallback: try the broker registry's createClient
+  try {
+    const brokerDef = getBrokerDefinition(conn.brokerId)
+    if (brokerDef) {
+      const client = brokerDef.createClient({
+        id: 0,
+        userId: 0,
+        brokerId: conn.brokerId,
+        displayName: null,
+        accessToken: conn.accessToken,
+        apiKey: conn.apiKey,
+        apiSecret: null,
+        brokerUserId: conn.brokerUserId || null,
+        isActive: true,
+        isPrimary: conn.isPrimary,
+        lastConnected: null,
+        tokenExpiry: null,
+        metadata: conn.metadata || null,
+      })
+      return { client: client as any, isPrimary: conn.isPrimary }
+    }
+  } catch (err: any) {
+    console.warn(`⚠️  Could not create client for broker ${conn.brokerId}:`, err.message)
+  }
+
   return null
 }
 

@@ -70,6 +70,7 @@
     "recharts": "2.15.4",
     "rss-parser": "^3.13.0",
     "sentiment": "^5.0.2",
+    "smartapi-javascript": "^1.0.27",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

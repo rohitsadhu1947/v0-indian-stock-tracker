@@ -12,7 +12,8 @@
 
 import type { BrokerDefinition, BrokerConnectionConfig } from './types'
 import { KiteBrokerClient } from './kite-client'
-import { KiteSymbolAdapter, PassthroughSymbolAdapter } from './symbol-map'
+import { AngelBrokerClient } from './angel-client'
+import { KiteSymbolAdapter, AngelSymbolAdapter, PassthroughSymbolAdapter } from './symbol-map'
 
 // ============================================================================
 // REGISTRY
@@ -60,7 +61,7 @@ registerBroker({
   symbolAdapter: new KiteSymbolAdapter(),
 })
 
-// --- Angel One (SmartAPI) — Phase 3, client not yet implemented ---
+// --- Angel One (SmartAPI) ---
 registerBroker({
   brokerId: 'angel',
   displayName: 'Angel One',
@@ -74,10 +75,20 @@ registerBroker({
     { key: 'password', label: 'Password', type: 'password', placeholder: 'Trading password', required: true, persist: false },
     { key: 'totp', label: 'TOTP', type: 'number', placeholder: '6-digit code', required: true, persist: false },
   ],
-  createClient: (_config: BrokerConnectionConfig) => {
-    throw new Error('Angel One client not yet implemented. Coming in Phase 3.')
+  createClient: (config: BrokerConnectionConfig) => {
+    if (!config.accessToken || !config.apiKey) {
+      throw new Error('Angel One requires apiKey and accessToken (jwtToken)')
+    }
+    const metadata = config.metadata as Record<string, any> || {}
+    return new AngelBrokerClient({
+      apiKey: config.apiKey,
+      accessToken: config.accessToken,
+      refreshToken: metadata.refreshToken,
+      feedToken: metadata.feedToken,
+      clientCode: config.brokerUserId || metadata.clientCode,
+    })
   },
-  symbolAdapter: new PassthroughSymbolAdapter(), // Will be replaced with AngelSymbolAdapter
+  symbolAdapter: new AngelSymbolAdapter(),
 })
 
 // --- Upstox — Phase 4, client not yet implemented ---
