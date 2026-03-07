@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const requestToken = searchParams.get('request_token');
     const status = searchParams.get('status');
+    const stateParam = searchParams.get('state'); // "user:{userId}" for user-initiated connections
 
     if (status === 'error' || !requestToken) {
       return NextResponse.redirect(
@@ -156,7 +157,60 @@ export async function GET(request: NextRequest) {
       // Don't block login if DB save fails - user can still use the app via cookies
     }
 
-    // Redirect to admin broker settings (broker connection flow) or home page
+    // ────────────────────────────────────────────
+    // USER-INITIATED CONNECTION: If state=user:{id}, this was triggered from
+    // the user's Settings page (not admin flow). Store token for THAT user
+    // and redirect back to settings.
+    // ────────────────────────────────────────────
+    if (stateParam?.startsWith('user:')) {
+      const targetUserId = parseInt(stateParam.split(':')[1])
+      if (!isNaN(targetUserId) && targetUserId !== userId) {
+        // Store broker connection for the requesting user (not the Kite account owner)
+        try {
+          const [existingUserConn] = await db
+            .select({ id: brokerConnections.id })
+            .from(brokerConnections)
+            .where(and(
+              eq(brokerConnections.userId, targetUserId),
+              eq(brokerConnections.brokerId, 'kite')
+            ))
+            .limit(1)
+
+          if (existingUserConn) {
+            await db.update(brokerConnections)
+              .set({
+                accessToken: session.access_token,
+                brokerUserId: session.user_id,
+                isActive: true,
+                lastConnected: new Date(),
+                tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                updatedAt: new Date(),
+              })
+              .where(eq(brokerConnections.id, existingUserConn.id))
+          } else {
+            await db.insert(brokerConnections).values({
+              userId: targetUserId,
+              brokerId: 'kite',
+              displayName: 'Zerodha Kite',
+              accessToken: session.access_token,
+              apiKey: apiKey,
+              brokerUserId: session.user_id,
+              isActive: true,
+              isPrimary: true,
+              lastConnected: new Date(),
+              tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            })
+          }
+          console.log(`✅ Stored Kite broker connection for user ${targetUserId} (via state param)`)
+        } catch (stateErr) {
+          console.error('⚠️  Failed to store user-initiated broker connection:', stateErr)
+        }
+      }
+      // Redirect user back to settings page
+      return NextResponse.redirect(new URL('/?tab=settings&broker=connected', request.url))
+    }
+
+    // Default: redirect to admin broker settings (legacy admin flow)
     return NextResponse.redirect(new URL('/admin?tab=brokers', request.url));
   } catch (error: any) {
     console.error('Error in authentication callback:', error);

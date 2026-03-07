@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const requestUrl = new URL(request.url)
     const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
     
-    const priceResponse = await fetch(`${baseUrl}/api/kite/quote?symbols=${formattedSymbols}`, {
+    const priceResponse = await fetch(`${baseUrl}/api/market-data/quote?symbols=${formattedSymbols}`, {
       headers: {
         'Cookie': request.headers.get('cookie') || ''
       }

@@ -6,7 +6,7 @@ import TradeNowTab from './components/TradeNowTab'
 import NewsPopTab from './components/NewsPopTab'
 import SectorRotationTab from './components/SectorRotationTab'
 import DataTab from './components/DataTab'
-import TelegramSettingsTab from './components/TelegramSettingsTab'
+import SettingsTab from './components/SettingsTab'
 import BacktestTab from './components/BacktestTab'
 import { SignalCard } from './components/SignalCard'
 import { formatSymbolForExchange, generateTradingSignal } from '@/lib/market-utils'
@@ -534,7 +534,7 @@ export default function StockTracker() {
   async function fetchStockQuote(symbol: string): Promise<StockData | null> {
     try {
       const kiteSymbol = formatSymbolForExchange(symbol, exchange)
-      const res = await fetch(`/api/kite/quote?symbols=${encodeURIComponent(kiteSymbol)}`)
+      const res = await fetch(`/api/market-data/quote?symbols=${encodeURIComponent(kiteSymbol)}`)
       
       if (!res.ok) {
         const errorData = await res.json()
@@ -556,7 +556,7 @@ export default function StockTracker() {
       console.log(`📊 Fetching historical for ${symbol} (token: ${quote.instrument_token})`)
       
       const historicalRes = await fetch(
-        `/api/kite/historical?instrument_token=${quote.instrument_token}&interval=day`
+        `/api/market-data/historical?instrument_token=${quote.instrument_token}&interval=day`
       )
       
       let prices: number[] = []
@@ -908,7 +908,7 @@ export default function StockTracker() {
 
         // Fetch intraday 5-minute candles
         const intradayRes = await fetch(
-          `/api/kite/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
+          `/api/market-data/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
         )
 
         if (!intradayRes.ok) continue
@@ -1386,7 +1386,7 @@ export default function StockTracker() {
           
           // Fetch 5-minute intraday candles
           const intradayRes = await fetch(
-            `/api/kite/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
+            `/api/market-data/intraday?instrument_token=${data.instrumentToken}&interval=5minute`
           )
           
           if (!intradayRes.ok) {
@@ -1976,7 +1976,7 @@ export default function StockTracker() {
       console.log('🔍 Scanning NIFTY 500 universe with historical analysis...')
 
       // Fetch universe stocks
-      const universeResponse = await fetch('/api/kite/universe')
+      const universeResponse = await fetch('/api/market-data/universe')
       if (!universeResponse.ok) throw new Error('Failed to fetch universe')
       
       const universeData = await universeResponse.json()
@@ -2012,7 +2012,7 @@ export default function StockTracker() {
           
           // Fetch historical data (last 10 days)
           const historicalResponse = await fetch(
-            `/api/kite/historical?instrument_token=${data.instrumentToken}&interval=day`
+            `/api/market-data/historical?instrument_token=${data.instrumentToken}&interval=day`
           )
           
           if (!historicalResponse.ok) {
@@ -8589,7 +8589,7 @@ export default function StockTracker() {
 
       {/* ⚙️ SETTINGS TAB */}
       {activeTab === 'settings' && (
-        <TelegramSettingsTab />
+        <SettingsTab />
       )}
 
       {/* 🔬 BACKTEST TAB */}

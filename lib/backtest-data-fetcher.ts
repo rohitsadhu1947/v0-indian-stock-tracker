@@ -32,7 +32,7 @@ export async function fetchHistoricalData(
   try {
     // Step 1: Get instrument token from symbol
     const instrumentsResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/kite/instruments`,
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/market-data/instruments`,
       {
         // Pass the access token via header for server-side auth check
         headers: {
@@ -74,7 +74,7 @@ export async function fetchHistoricalData(
     
     // Step 2: Fetch historical data using instrument token
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/kite/historical?` +
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'}/api/market-data/historical?` +
       `instrument_token=${instrument.instrument_token}&` +
       `from_date=${options.from.toISOString().split('T')[0]}&` +
       `to_date=${options.to.toISOString().split('T')[0]}&` +
