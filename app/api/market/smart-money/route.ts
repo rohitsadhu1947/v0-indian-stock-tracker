@@ -13,7 +13,6 @@ import {
   getSmartMoneyEmoji,
   fetchFIIDIIData,
   fetchBulkDeals,
-  generateSampleFIIDIIData,
 } from '@/lib/smart-money-tracker'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
@@ -45,17 +44,21 @@ export async function GET(request: NextRequest) {
 
     // Fetch FII/DII data
     console.log('📊 Fetching FII/DII data from NSE...')
-    let fiidiiData = await fetchFIIDIIData()
-    let dataSource = 'NSE'
+    const fiidiiData = await fetchFIIDIIData()
+    const dataSource = 'NSE'
 
     const hasRealData = fiidiiData.length > 0 && fiidiiData.some(d =>
       d.fiiNetValue !== 0 || d.diiNetValue !== 0
     )
 
+    // Never substitute invented flows: report unavailable (and don't cache it)
     if (!hasRealData) {
-      console.log('⚠️ Using sample FII/DII data (NSE returned empty/zero values)')
-      fiidiiData = generateSampleFIIDIIData()
-      dataSource = 'Sample Data (Live NSE data unavailable - markets may be closed)'
+      console.log('⚠️ FII/DII data unavailable (NSE returned empty/zero values)')
+      return NextResponse.json({
+        success: false,
+        available: false,
+        error: 'Live FII/DII data is unavailable from NSE right now',
+      })
     }
 
     console.log(`✅ Got ${fiidiiData.length} days of FII/DII data`)

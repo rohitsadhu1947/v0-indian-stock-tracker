@@ -18,7 +18,7 @@ import { userPreferences } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getMacroSnapshot } from '@/lib/macro-intelligence'
 import { analyzeMarketRegime, type HistoricalBar } from '@/lib/market-regime'
-import { fetchFIIDIIData, analyzeSmartMoney, generateSampleFIIDIIData } from '@/lib/smart-money-tracker'
+import { fetchFIIDIIData, analyzeSmartMoney } from '@/lib/smart-money-tracker'
 import { detectGeopoliticalEvents } from '@/lib/geopolitical-monitor'
 import { generateMorningNote, type MorningNoteParams } from '@/lib/morning-note'
 import { generateMorningNotePDF } from '@/lib/morning-note-pdf'
@@ -95,10 +95,11 @@ export async function GET(request: NextRequest) {
     const headlines = newsResult.status === 'fulfilled' ? newsResult.value : []
     const recommendations = recsResult.status === 'fulfilled' ? recsResult.value : null
 
-    // Use sample FII/DII if real data unavailable
+    // Real FII/DII only — the note shows "Institutional flow data unavailable" otherwise
     const hasRealFII = fiidiiData.length > 0 && fiidiiData.some(d => d.fiiNetValue !== 0 || d.diiNetValue !== 0)
     if (!hasRealFII) {
-      fiidiiData = generateSampleFIIDIIData()
+      logger.warn('FII/DII data unavailable from NSE — omitting from morning note')
+      fiidiiData = []
     }
 
     // ── Phase 2: Derived analysis ────────────────────────────────────────

@@ -165,7 +165,8 @@ export async function GET(request: NextRequest) {
       console.error(`❌ Step 1 FAILED - Yahoo Finance Direct HTTP error for ${yahooSymbol}:`);
       console.error(`   Error message: ${yahooError.message}`);
       
-      // Common Indian stock fallback data - used when APIs fail
+      // Static ESTIMATES for a few large caps (hand-entered, not dated) - used when APIs fail.
+      // Returned with isEstimate: true and never written to the fundamental_data table.
       const fallbackData: Record<string, Partial<FundamentalData>> = {
         'RELIANCE': { marketCap: 1700000000000, peRatio: 24, roe: 12, debtToEquity: 0.6, companyName: 'Reliance Industries Ltd', sector: 'Energy', industry: 'Oil & Gas' },
         'TCS': { marketCap: 1300000000000, peRatio: 28, roe: 42, debtToEquity: 0.1, companyName: 'Tata Consultancy Services', sector: 'Technology', industry: 'IT Services' },
@@ -213,18 +214,25 @@ export async function GET(request: NextRequest) {
           throw new Error(`No chart data for ${yahooSymbol}`);
         }
         
-        // Merge chart data with fallback data for comprehensive fundamentals
+        // Price data alone is not fundamentals: without an estimate, report unavailable
+        if (!fallback) {
+          return NextResponse.json(
+            { success: false, available: false, error: `Fundamentals unavailable for ${symbol.toUpperCase()} (data provider failed)` },
+            { status: 503 }
+          );
+        }
+
+        // Merge live chart prices with static fundamental estimates
         const fundamentalData: FundamentalData = {
           symbol: symbol.toUpperCase(),
-          companyName: meta.longName || meta.shortName || fallback?.companyName || symbol,
+          companyName: meta.longName || meta.shortName || fallback.companyName || symbol,
           
-          // Use fallback for fundamentals, chart for prices
-          marketCap: fallback?.marketCap || 50000000000,
-          peRatio: fallback?.peRatio || 20,
-          roe: fallback?.roe,
-          debtToEquity: fallback?.debtToEquity,
-          sector: fallback?.sector,
-          industry: fallback?.industry,
+          marketCap: fallback.marketCap!,
+          peRatio: fallback.peRatio,
+          roe: fallback.roe,
+          debtToEquity: fallback.debtToEquity,
+          sector: fallback.sector,
+          industry: fallback.industry,
           
           // Use chart for current prices
           fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
@@ -233,17 +241,16 @@ export async function GET(request: NextRequest) {
           lastUpdated: new Date()
         };
         
-        const source = fallback ? 'Yahoo Finance (Chart) + Fallback Data' : 'Yahoo Finance (Chart)';
+        const source = 'Yahoo Finance (Chart) + Static Estimates';
         console.log(`✅ Retrieved data for ${yahooSymbol} (${source})`);
-
-        await saveFundamentalDataToDB(symbol, exchange, fundamentalData, { chartMeta: meta, fallback: !!fallback });
 
         return NextResponse.json({
           success: true,
+          isEstimate: true,
           data: fundamentalData,
           source,
           timestamp: new Date().toISOString(),
-          note: fallback ? 'Using fallback fundamentals with live prices' : 'Limited data from chart API'
+          note: 'Fundamentals are static estimates (not live); prices are live'
         });
         
       } catch (chartError: any) {
@@ -259,8 +266,8 @@ export async function GET(request: NextRequest) {
           const fundamentalData: FundamentalData = {
             symbol: symbol.toUpperCase(),
             companyName: fallback.companyName || symbol,
-            marketCap: fallback.marketCap || 50000000000,
-            peRatio: fallback.peRatio || 20,
+            marketCap: fallback.marketCap!,
+            peRatio: fallback.peRatio,
             roe: fallback.roe,
             debtToEquity: fallback.debtToEquity,
             sector: fallback.sector,
@@ -268,33 +275,23 @@ export async function GET(request: NextRequest) {
             lastUpdated: new Date()
           };
           
-          await saveFundamentalDataToDB(symbol, exchange, fundamentalData, { fallbackOnly: true });
-
           return NextResponse.json({
             success: true,
+            isEstimate: true,
             data: fundamentalData,
-            source: 'Fallback Data',
+            source: 'Static Estimates',
             timestamp: new Date().toISOString(),
-            note: 'Using cached fallback data - Yahoo Finance temporarily unavailable'
+            note: 'Fundamentals are static estimates (not live) - data provider unavailable'
           });
         }
         
-        // For unknown stocks, return minimal data
-        console.log(`⚠️ No fallback for ${symbol}, returning minimal data`);
+        // Unknown stock and no provider: never invent values
+        console.log(`⚠️ No data or estimate for ${symbol}`);
         
-        return NextResponse.json({
-          success: true,
-          data: {
-            symbol: symbol.toUpperCase(),
-            companyName: symbol,
-            marketCap: 50000000000,
-            peRatio: 20,
-            lastUpdated: new Date()
-          } as FundamentalData,
-          source: 'Default',
-          timestamp: new Date().toISOString(),
-          note: 'Using default values - external APIs unavailable'
-        });
+        return NextResponse.json(
+          { success: false, available: false, error: `Fundamentals unavailable for ${symbol.toUpperCase()} (data provider failed)` },
+          { status: 503 }
+        );
       }
     }
     
