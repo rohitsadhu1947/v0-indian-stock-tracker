@@ -91,12 +91,28 @@ describe('calculateMACD', () => {
     expect(result).toEqual({ macd: 0, signal: 0, histogram: 0 })
   })
 
-  it('returns non-zero values for 26+ prices', () => {
-    // 40 prices with a simple upward trend
-    const prices = Array.from({ length: 40 }, (_, i) => 100 + i * 0.5)
-    const result = calculateMACD(prices)
-    // MACD should be positive for an upward trend (EMA12 > EMA26)
-    expect(result.macd).not.toBe(0)
+  // Prices are NEWEST-FIRST (index 0 = latest), matching stock-fetcher output.
+  it('is positive for a rising market', () => {
+    // Chronologically 100 → 119.5, so newest-first starts at the top
+    const newestFirst = Array.from({ length: 40 }, (_, i) => 119.5 - i * 0.5)
+    const result = calculateMACD(newestFirst)
+    expect(result.macd).toBeGreaterThan(0)
+  })
+
+  it('is negative for a falling market', () => {
+    const newestFirst = Array.from({ length: 40 }, (_, i) => 100 + i * 0.5)
+    const result = calculateMACD(newestFirst)
+    expect(result.macd).toBeLessThan(0)
+  })
+
+  it('reflects the latest move, not the oldest one', () => {
+    // 60 days falling, then 20 days rising sharply (chronological)
+    const chronological = [
+      ...Array.from({ length: 60 }, (_, i) => 200 - i),
+      ...Array.from({ length: 20 }, (_, i) => 141 + i * 3),
+    ]
+    const result = calculateMACD([...chronological].reverse())
+    expect(result.histogram).toBeGreaterThan(0)
   })
 
   it('signal line is a proper EMA(9) of MACD, not just macd * 0.2', () => {

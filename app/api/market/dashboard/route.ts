@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     // ── Phase 2: Parallel non-fatal data sources ─────────────────────────────
 
     const now = new Date()
-    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+    const regimeFromDate = new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000) // 400d ≈ 270 bars for SMA200
 
     const [macroResult, historicalResult, fiidiiResult, newsResult] = await Promise.allSettled([
       getMacroSnapshot(),
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         exchange: 'NSE',
         symbol: 'NIFTY 50',
         interval: 'day',
-        from: sixtyDaysAgo,
+        from: regimeFromDate,
         to: now,
       }),
       fetchFIIDIIData(),

@@ -66,13 +66,13 @@ export async function GET(request: NextRequest) {
       if (manager.hasConnection()) {
         const client = manager.getClient()
         const now = new Date()
-        const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+        const regimeFromDate = new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000) // 400d ≈ 270 bars for SMA200
         historicalBars = await client.getHistoricalData({
           instrumentToken: NIFTY_INSTRUMENT_TOKEN,
           exchange: 'NSE',
           symbol: 'NIFTY 50',
           interval: 'day',
-          from: sixtyDaysAgo,
+          from: regimeFromDate,
           to: now,
         })
       }

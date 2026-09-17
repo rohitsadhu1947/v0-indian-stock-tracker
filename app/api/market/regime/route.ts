@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ NIFTY 50 current: ₹${niftyQuote.lastPrice}`)
 
-    // Get historical data (60 days for SMA calculations)
-    console.log('📊 Fetching NIFTY 50 historical data (60 days)...')
+    // Get historical data (400 calendar days ≈ 270 bars, enough for SMA200)
+    console.log('📊 Fetching NIFTY 50 historical data (400 days)...')
     const toDate = new Date()
     const fromDate = new Date()
-    fromDate.setDate(fromDate.getDate() - 60)
+    fromDate.setDate(fromDate.getDate() - 400)
 
     const historical = await client.getHistoricalData({
       instrumentToken: NIFTY_INSTRUMENT_TOKEN,

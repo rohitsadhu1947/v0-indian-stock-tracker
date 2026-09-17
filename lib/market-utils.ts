@@ -61,21 +61,32 @@ export function calculateRSI(prices: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
+/**
+ * EMA of a NEWEST-FIRST price array (same convention as calculateSMA/RSI).
+ * Internally iterates oldest → newest so the result reflects the latest price.
+ */
 export function calculateEMA(prices: number[], period: number): number {
   if (!prices || prices.length < period) return prices ? prices[0] : 0;
-  
+
+  const chronological = [...prices].reverse();
   const multiplier = 2 / (period + 1);
-  let ema = calculateSMA(prices.slice(0, period), period) || prices[0];
-  
-  for (let i = period; i < Math.min(prices.length, 50); i++) {
-    ema = (prices[i] - ema) * multiplier + ema;
+  let ema = chronological.slice(0, period).reduce((a, b) => a + b, 0) / period;
+
+  for (let i = period; i < chronological.length; i++) {
+    ema = (chronological[i] - ema) * multiplier + ema;
   }
-  
+
   return ema;
 }
 
-export function calculateMACD(prices: number[]) {
-  if (!prices || prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+/**
+ * MACD(12, 26, 9) of a NEWEST-FIRST price array (same convention as
+ * calculateSMA/RSI). Iterates oldest → newest so the final values describe
+ * the latest bar; previously it walked newest → oldest and inverted the sign.
+ */
+export function calculateMACD(newestFirst: number[]) {
+  if (!newestFirst || newestFirst.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+  const prices = [...newestFirst].reverse();
 
   const multiplier12 = 2 / (12 + 1);
   const multiplier26 = 2 / (26 + 1);

@@ -18,9 +18,9 @@ interface RegimeData {
     open: number
   }
   indicators: {
-    sma20: number
-    sma50: number
-    sma200: number
+    sma20: number | null
+    sma50: number | null
+    sma200: number | null
     rsi: number
     trendStrength: number
     trendDirection: string
@@ -224,22 +224,22 @@ export default function MarketRegimeCard() {
           }}>
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
               <div style={{ fontSize: '0.75em', opacity: 0.7 }}>SMA 20</div>
-              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma20 === 'ABOVE' ? '#10B981' : '#EF4444' }}>
-                {regime.indicators.sma20.toFixed(0)}
+              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma20 === 'ABOVE' ? '#10B981' : regime.pricePosition.vsSma20 === 'BELOW' ? '#EF4444' : '#9CA3AF' }}>
+                {regime.indicators.sma20?.toFixed(0) ?? 'N/A'}
               </div>
               <div style={{ fontSize: '0.7em', opacity: 0.6 }}>{regime.pricePosition.vsSma20}</div>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
               <div style={{ fontSize: '0.75em', opacity: 0.7 }}>SMA 50</div>
-              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma50 === 'ABOVE' ? '#10B981' : '#EF4444' }}>
-                {regime.indicators.sma50.toFixed(0)}
+              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma50 === 'ABOVE' ? '#10B981' : regime.pricePosition.vsSma50 === 'BELOW' ? '#EF4444' : '#9CA3AF' }}>
+                {regime.indicators.sma50?.toFixed(0) ?? 'N/A'}
               </div>
               <div style={{ fontSize: '0.7em', opacity: 0.6 }}>{regime.pricePosition.vsSma50}</div>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
               <div style={{ fontSize: '0.75em', opacity: 0.7 }}>SMA 200</div>
-              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma200 === 'ABOVE' ? '#10B981' : '#EF4444' }}>
-                {regime.indicators.sma200.toFixed(0)}
+              <div style={{ fontWeight: 'bold', color: regime.pricePosition.vsSma200 === 'ABOVE' ? '#10B981' : regime.pricePosition.vsSma200 === 'BELOW' ? '#EF4444' : '#9CA3AF' }}>
+                {regime.indicators.sma200?.toFixed(0) ?? 'N/A'}
               </div>
               <div style={{ fontSize: '0.7em', opacity: 0.6 }}>{regime.pricePosition.vsSma200}</div>
             </div>

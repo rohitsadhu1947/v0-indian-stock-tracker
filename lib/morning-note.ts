@@ -400,7 +400,7 @@ function buildTechnicalLevels(
   }
 
   return {
-    nifty: levelsFor(nifty, regime?.sma20, regime?.sma50, regime?.sma200),
+    nifty: levelsFor(nifty, regime?.sma20 ?? undefined, regime?.sma50 ?? undefined, regime?.sma200 ?? undefined),
     bankNifty: levelsFor(bankNifty),
   }
 }

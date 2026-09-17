@@ -322,7 +322,7 @@ export async function GET(request: NextRequest) {
 
       if (niftyInst) {
         const to = new Date()
-        const from = new Date(Date.now() - 250 * 24 * 60 * 60 * 1000) // ~1 year for SMA200
+        const from = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000) // 400 calendar days ≈ 270 bars for SMA200
         const niftyCandlesRaw = await client.getHistoricalData({
           instrumentToken: niftyInst.instrumentToken,
           interval: 'day',
