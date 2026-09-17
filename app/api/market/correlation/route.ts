@@ -7,12 +7,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
+import type { InstrumentData } from '@/lib/broker'
 import {
   calculateCorrelationMatrix,
   calculatePortfolioCorrelationScore,
   type PriceData
 } from '@/lib/correlation-matrix'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -25,6 +27,11 @@ const DEFAULT_SYMBOLS = [
 ]
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📊 === CORRELATION MATRIX API CALLED ===')
 
@@ -48,7 +55,7 @@ export async function GET(request: NextRequest) {
     console.log(`   Symbols: ${symbols.join(', ')}`)
 
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       console.error('❌ Broker authentication required')
       return NextResponse.json({
@@ -56,18 +63,17 @@ export async function GET(request: NextRequest) {
         error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
-    console.log('✅ Kite initialized')
+    console.log('✅ Broker initialized')
 
     // Get instruments to find instrument tokens
-    const instruments = await kc.getInstruments('NSE')
-    const symbolToToken = new Map<string, number>()
+    const instruments = await client.getInstruments('NSE')
+    const symbolToToken = new Map<string, number | string>()
 
     for (const inst of instruments) {
-      if (inst.instrument_type === 'EQ' && symbols.includes(inst.tradingsymbol)) {
-        symbolToToken.set(inst.tradingsymbol, inst.instrument_token)
+      if (inst.instrumentType === 'EQ' && symbols.includes(inst.tradingsymbol)) {
+        symbolToToken.set(inst.tradingsymbol, inst.instrumentToken)
       }
     }
 
@@ -91,12 +97,14 @@ export async function GET(request: NextRequest) {
       await Promise.all(batch.map(async (symbol) => {
         try {
           const token = symbolToToken.get(symbol)!
-          const historical = await kc.getHistoricalData(
-            token,
-            'day',
-            fromDate.toISOString().split('T')[0],
-            toDate.toISOString().split('T')[0]
-          )
+          const historical = await client.getHistoricalData({
+            instrumentToken: token,
+            interval: 'day',
+            from: fromDate,
+            to: toDate,
+            symbol,
+            exchange: 'NSE'
+          })
 
           if (historical.length >= 10) {
             priceData.push({

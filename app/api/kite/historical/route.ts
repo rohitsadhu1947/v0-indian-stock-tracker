@@ -1,24 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCachedHistorical, cacheHistorical } from '@/lib/cache-helpers';
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker';
+import { getUserBrokerManager } from '@/lib/broker';
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
-    // Get broker manager (supports broker_connections, cookie, and admin master token)
-    const manager = await getBrokerManager()
+    // Get broker manager scoped to current user (falls back to admin's broker)
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       return NextResponse.json(
         { error: 'No broker connections available. Admin must connect a broker in settings.' },
         { status: 401 }
       )
     }
-    const client = manager.getClient() as KiteBrokerClient
+    const client = manager.getClient()
 
     const searchParams = request.nextUrl.searchParams;
     const instrumentToken = searchParams.get('instrument_token');
     const interval = searchParams.get('interval') || 'day'; // day, minute, 5minute, etc.
     const fromDate = searchParams.get('from_date');
     const toDate = searchParams.get('to_date');
+    const symbol = searchParams.get('symbol') || '';
+    const exchange = searchParams.get('exchange') || 'NSE';
 
     if (!instrumentToken) {
       return NextResponse.json(
@@ -28,7 +36,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate default date range (last 60 days for proper technical indicators)
-    // 60 calendar days = ~40 trading days (enough for all indicators)
     const to = toDate ? new Date(toDate) : new Date();
     const from = fromDate ? new Date(fromDate) : new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
@@ -53,15 +60,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Cache miss - fetch from Kite API
+    // Cache miss - fetch from broker API via unified interface
     console.log(`📊 Fetching historical for token ${instrumentToken}, interval ${interval}, from ${from.toISOString().split('T')[0]} to ${to.toISOString().split('T')[0]}`);
 
-    const historicalData = await client.getRawHistoricalData(
+    const historicalData = await client.getHistoricalData({
       instrumentToken,
       interval,
       from,
-      to
-    );
+      to,
+      symbol,
+      exchange,
+    });
 
     console.log(`✅ Received ${historicalData?.length || 0} candles for token ${instrumentToken}`);
 
@@ -85,10 +94,11 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching historical data:', error);
 
-    // Handle token expiry
-    if (error.message && error.message.includes('Token')) {
+    // Handle token expiry — Kite returns various error messages for expired/invalid tokens
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('token') || msg.includes('access_token') || msg.includes('api_key') || msg.includes('session')) {
       return NextResponse.json(
-        { error: 'Session expired. Please login again.', code: 'TOKEN_EXPIRED' },
+        { error: 'Broker token expired. Reconnect Zerodha to resume market data.', code: 'TOKEN_EXPIRED' },
         { status: 401 }
       );
     }

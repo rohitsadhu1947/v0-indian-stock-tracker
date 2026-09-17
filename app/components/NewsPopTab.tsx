@@ -312,8 +312,8 @@ function NewsPopCard({ pop, rank, onExecute }: {
   const [showFullNews, setShowFullNews] = useState(false);
 
   // Determine if this is a BUY or SELL signal
-  const isBuy = pop.newsSentiment === 'POSITIVE' && pop.changePercent >= 0;
-  const isSell = pop.newsSentiment === 'NEGATIVE' && pop.changePercent < 0;
+  const isBuy = pop.newsSentiment === 'POSITIVE' && (pop as any).changePercent >= 0;
+  const isSell = pop.newsSentiment === 'NEGATIVE' && (pop as any).changePercent < 0;
   const signalType = isBuy ? 'BUY' : isSell ? 'SELL' : 'WATCH';
   const signalColor = isBuy ? '#10B981' : isSell ? '#EF4444' : '#F59E0B';
 
@@ -369,8 +369,8 @@ function NewsPopCard({ pop, rank, onExecute }: {
               📈 Volume: <strong style={{ color: '#FCD34D' }}>{pop.volumeSpike?.toFixed(1) || 'N/A'}x</strong>
             </span>
             <span>
-              💹 Price: <strong style={{ color: (pop.changePercent || 0) >= 0 ? '#10B981' : '#EF4444' }}>
-                {(pop.changePercent || 0) >= 0 ? '+' : ''}{(pop.changePercent || 0).toFixed(2)}%
+              💹 Price: <strong style={{ color: ((pop as any).changePercent || 0) >= 0 ? '#10B981' : '#EF4444' }}>
+                {((pop as any).changePercent || 0) >= 0 ? '+' : ''}{((pop as any).changePercent || 0).toFixed(2)}%
               </strong>
             </span>
           </div>

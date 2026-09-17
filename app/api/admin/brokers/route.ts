@@ -4,6 +4,7 @@
  * DELETE /api/admin/brokers - Disconnect a broker
  *
  * Admin-only routes for managing broker data connections.
+ * Uses the broker registry for available broker definitions.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,6 +12,7 @@ import { db } from '@/db'
 import { brokerConnections } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { requireRole } from '@/lib/multi-user-auth'
+import { getAllBrokerDefinitions, getBrokerDefinition } from '@/lib/broker/registry'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -37,16 +39,16 @@ export async function GET() {
       .from(brokerConnections)
       .where(eq(brokerConnections.userId, admin.id))
 
-    // Add available brokers that can be connected
-    const availableBrokers = [
-      {
-        brokerId: 'kite',
-        displayName: 'Zerodha Kite',
-        supportsOAuth: true,
-        description: 'Real-time quotes, historical data, instruments via Kite Connect API',
-      },
-      // Future: { brokerId: 'groww', displayName: 'Groww', supportsOAuth: false, ... }
-    ]
+    // Available brokers from the registry (replaces hardcoded array)
+    const availableBrokers = getAllBrokerDefinitions().map(def => ({
+      brokerId: def.brokerId,
+      displayName: def.displayName,
+      supportsOAuth: def.supportsOAuth,
+      supportsFormLogin: def.supportsFormLogin ?? false,
+      hasApi: def.hasApi ?? true,
+      description: def.description || '',
+      formFields: def.formFields || [],
+    }))
 
     return NextResponse.json({
       success: true,
@@ -83,28 +85,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'brokerId is required' }, { status: 400 })
     }
 
-    if (brokerId === 'kite') {
-      const apiKey = process.env.KITE_API_KEY
-      if (!apiKey) {
+    const brokerDef = getBrokerDefinition(brokerId)
+    if (!brokerDef) {
+      return NextResponse.json(
+        { error: `Unknown broker: ${brokerId}. Check /api/admin/brokers GET for available brokers.` },
+        { status: 400 }
+      )
+    }
+
+    // OAuth-based brokers: return redirect URL
+    if (brokerDef.supportsOAuth && brokerDef.getOAuthUrl) {
+      try {
+        const loginUrl = brokerDef.getOAuthUrl()  // admin flow: no state param
+        return NextResponse.json({
+          success: true,
+          action: 'redirect',
+          url: loginUrl,
+          message: `Redirect to ${brokerDef.displayName} login to complete broker connection`,
+        })
+      } catch (err: any) {
         return NextResponse.json(
-          { error: 'KITE_API_KEY not configured in environment' },
+          { error: err.message || `Failed to generate ${brokerDef.displayName} OAuth URL` },
           { status: 500 }
         )
       }
-
-      // Generate Kite OAuth URL
-      const loginUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${apiKey}`
-
-      return NextResponse.json({
-        success: true,
-        action: 'redirect',
-        url: loginUrl,
-        message: 'Redirect to Kite login to complete broker connection',
-      })
     }
 
+    // Brokers without API
+    if (!brokerDef.hasApi) {
+      return NextResponse.json(
+        { error: `${brokerDef.displayName} does not have a public API. Users selecting this broker will use admin's market data.` },
+        { status: 400 }
+      )
+    }
+
+    // Form-based brokers: credentials are handled in /api/user/brokers POST
     return NextResponse.json(
-      { error: `Unsupported broker: ${brokerId}` },
+      { error: `${brokerDef.displayName} uses form-based login. Use /api/user/brokers POST endpoint instead.` },
       { status: 400 }
     )
   } catch (error: any) {

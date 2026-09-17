@@ -337,3 +337,152 @@ export function getSmartMoneyEmoji(signal: SmartMoneyAnalysis['overallSignal']):
     case 'STRONG_BEARISH': return '🐋🔻'
   }
 }
+
+// ─── Data Fetching (shared by API route + dashboard) ─────────────────────────
+
+import https from 'https'
+import logger from '@/lib/logger'
+
+/**
+ * Fetch FII/DII data from NSE.
+ * NSE returns separate records for FII and DII that we need to combine by date.
+ */
+export async function fetchFIIDIIData(): Promise<FIIDIIData[]> {
+  return new Promise((resolve) => {
+    const url = 'https://www.nseindia.com/api/fiidiiTradeReact'
+
+    const timeout = setTimeout(() => {
+      logger.warn('NSE FII/DII request timed out')
+      resolve([])
+    }, 8000)
+
+    const options = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.nseindia.com/reports/fii-dii'
+      }
+    }
+
+    const req = https.get(url, options, (res) => {
+      let data = ''
+      res.on('data', (chunk: string) => data += chunk)
+      res.on('end', () => {
+        clearTimeout(timeout)
+        try {
+          const json = JSON.parse(data)
+          if (Array.isArray(json) && json.length > 0) {
+            const dateMap = new Map<string, FIIDIIData>()
+
+            for (const item of json) {
+              const date = item.date || new Date().toISOString().split('T')[0]
+              const category = (item.category || '').toUpperCase()
+
+              if (!dateMap.has(date)) {
+                dateMap.set(date, {
+                  date,
+                  fiiBuyValue: 0, fiiSellValue: 0, fiiNetValue: 0,
+                  diiBuyValue: 0, diiSellValue: 0, diiNetValue: 0,
+                  totalNetValue: 0
+                })
+              }
+
+              const record = dateMap.get(date)!
+              const buyValue = parseFloat(item.buyValue || item.BuyValue || 0)
+              const sellValue = parseFloat(item.sellValue || item.SellValue || 0)
+              const netValue = parseFloat(item.netValue || item.NetValue || 0)
+
+              if (category.includes('FII') || category.includes('FPI')) {
+                record.fiiBuyValue = buyValue
+                record.fiiSellValue = sellValue
+                record.fiiNetValue = netValue
+              } else if (category.includes('DII')) {
+                record.diiBuyValue = buyValue
+                record.diiSellValue = sellValue
+                record.diiNetValue = netValue
+              }
+
+              record.totalNetValue = record.fiiNetValue + record.diiNetValue
+            }
+
+            const parsed = Array.from(dateMap.values())
+            logger.info('Parsed FII/DII records from NSE', { count: parsed.length })
+            resolve(parsed)
+          } else {
+            logger.warn('NSE returned empty or invalid FII/DII data')
+            resolve([])
+          }
+        } catch (e: any) {
+          logger.warn('Failed to parse NSE FII/DII data', { error: e.message })
+          resolve([])
+        }
+      })
+    })
+
+    req.on('error', (err: Error) => {
+      clearTimeout(timeout)
+      logger.warn('NSE FII/DII request error', { error: err.message })
+      resolve([])
+    })
+  })
+}
+
+/**
+ * Fetch bulk/block deals from BSE.
+ */
+export async function fetchBulkDeals(): Promise<BulkBlockDeal[]> {
+  return new Promise((resolve) => {
+    const today = new Date()
+    const fromDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const formatDate = (d: Date) => d.toISOString().split('T')[0].split('-').reverse().join('/')
+
+    const url = `https://api.bseindia.com/BseIndiaAPI/api/BulkDealData/w?pageNo=1&strFromDate=${formatDate(fromDate)}&strToDate=${formatDate(today)}`
+
+    const timeout = setTimeout(() => {
+      logger.warn('BSE bulk deals request timed out')
+      resolve([])
+    }, 5000)
+
+    const req = https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json',
+        'Referer': 'https://www.bseindia.com/'
+      }
+    }, (res) => {
+      let data = ''
+      res.on('data', (chunk: string) => data += chunk)
+      res.on('end', () => {
+        clearTimeout(timeout)
+        try {
+          const json = JSON.parse(data)
+          if (json.Table && Array.isArray(json.Table)) {
+            const deals: BulkBlockDeal[] = json.Table.slice(0, 20).map((item: any) => ({
+              date: item.DT_TM || item.TRADE_DT || new Date().toISOString().split('T')[0],
+              symbol: item.SCRIP_CD || item.Symbol || 'UNKNOWN',
+              clientName: item.CLIENTNAME || item.Client || 'Institutional Investor',
+              dealType: 'BULK' as const,
+              buySell: (item.BUYSELL || item.Action || 'B').toUpperCase().startsWith('B') ? 'BUY' as const : 'SELL' as const,
+              quantity: parseInt(item.QTY || item.Qty || 0),
+              price: parseFloat(item.RATE || item.Rate || 0),
+              value: parseFloat(item.VALUE || item.Value || 0) / 10000000
+            }))
+            resolve(deals)
+          } else {
+            resolve([])
+          }
+        } catch {
+          resolve([])
+        }
+      })
+    })
+
+    req.on('error', () => {
+      clearTimeout(timeout)
+      resolve([])
+    })
+  })
+}
+

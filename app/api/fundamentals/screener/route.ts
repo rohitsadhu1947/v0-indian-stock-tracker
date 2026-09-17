@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { type FundamentalData } from '@/lib/fundamentals-utils';
 import { db } from '@/db'
 import { fundamentalData as fundamentalDataTable } from '@/db/schema'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 // Disable caching for this API route during development
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,11 @@ export const dynamic = 'force-dynamic';
  * This is an alternative to Yahoo Finance that works better for Indian stocks
  */
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const symbol = searchParams.get('symbol');
@@ -144,7 +150,7 @@ export async function GET(request: NextRequest) {
     if (error.message?.includes('404') || error.message?.includes('Not Found')) {
       return NextResponse.json(
         { 
-          error: `Symbol "${searchParams.get('symbol')}" not found on Screener.in`,
+          error: `Symbol not found on Screener.in`,
           suggestion: 'Verify symbol spelling. Screener.in uses NSE symbols (e.g., RELIANCE, TCS, INFY)',
           details: error.message
         },

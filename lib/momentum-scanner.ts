@@ -74,6 +74,12 @@ export interface MomentumScanResult {
   maxPositions: number
 }
 
+function safeDivide(numerator: number, denominator: number, fallback: number = 0): number {
+  if (denominator === 0 || !Number.isFinite(denominator)) return fallback;
+  const result = numerator / denominator;
+  return Number.isFinite(result) ? result : fallback;
+}
+
 /**
  * Calculate Simple Moving Average
  */
@@ -174,7 +180,7 @@ function calculateMomentumScore(
     score += 30
     
     // Bonus for strong separation
-    const separation = ((sma5 - sma20) / sma20) * 100
+    const separation = safeDivide(sma5 - sma20, sma20) * 100
     if (separation > 2) score += 5
     if (separation > 3) score += 5
   }
@@ -196,7 +202,7 @@ function calculateMomentumScore(
   else if (changePercent > 0 && changePercent <= 0.5) score += 5
   
   // 5. Price position relative to SMA5 (10 points)
-  const distanceFromSMA5 = ((current - sma5) / sma5) * 100
+  const distanceFromSMA5 = safeDivide(current - sma5, sma5) * 100
   if (distanceFromSMA5 > 0 && distanceFromSMA5 < 2) score += 10 // Close to support
   else if (distanceFromSMA5 >= 2 && distanceFromSMA5 < 4) score += 5
   
@@ -274,9 +280,10 @@ function calculatePositionSize(
   
   // Risk per share
   const riskPerShare = entryPrice - stopLoss
-  
+  if (riskPerShare <= 0) return { positionSize: 0, capitalRequired: 0, riskAmount: 0 }
+
   // Position size
-  let positionSize = Math.floor(riskAmount / riskPerShare)
+  let positionSize = Math.floor(safeDivide(riskAmount, riskPerShare, 0))
   
   // Capital required
   let capitalRequired = positionSize * entryPrice
@@ -285,7 +292,7 @@ function calculatePositionSize(
   const maxCapitalPerTrade = capital * 0.33
   if (capitalRequired > maxCapitalPerTrade) {
     capitalRequired = maxCapitalPerTrade
-    positionSize = Math.floor(capitalRequired / entryPrice)
+    positionSize = Math.floor(safeDivide(capitalRequired, entryPrice, 0))
   }
   
   return {
@@ -332,7 +339,7 @@ function generateReasons(
     reasons.push('✅ High momentum score - strong setup')
   }
   
-  const distanceFromSMA5 = ((current - sma5) / sma5) * 100
+  const distanceFromSMA5 = safeDivide(current - sma5, sma5) * 100
   if (distanceFromSMA5 < 2) {
     reasons.push('✅ Close to SMA5 support')
   }
@@ -368,7 +375,7 @@ function generateWarnings(
     warnings.push('⚠️ Negative day - wait for confirmation')
   }
   
-  const distanceFromSMA5 = ((current - sma5) / sma5) * 100
+  const distanceFromSMA5 = safeDivide(current - sma5, sma5) * 100
   if (distanceFromSMA5 > 5) {
     warnings.push('⚠️ Extended from SMA5 - wait for pullback')
   }
@@ -380,7 +387,7 @@ function generateWarnings(
  * Estimate timeframe based on momentum and volatility
  */
 function estimateTimeframe(momentumScore: number, atr: number, current: number): string {
-  const atrPercent = (atr / current) * 100
+  const atrPercent = safeDivide(atr, current) * 100
   
   // High momentum + high volatility = quick trade
   if (momentumScore >= 75 && atrPercent > 2) {
@@ -423,6 +430,11 @@ export async function scanForMomentumSignals(
     minVolume?: number
     maxPositions?: number
     customStocks?: string[] // Add custom stocks parameter
+    niftyRegime?: {
+      regime: string           // STRONG_BULL, BULL, SIDEWAYS, BEAR, STRONG_BEAR
+      positionSizeMultiplier: number
+      confidence: number
+    }
   } = {}
 ): Promise<MomentumScanResult> {
   const {
@@ -430,7 +442,8 @@ export async function scanForMomentumSignals(
     maxPrice = 5000,
     minVolume = 100000,
     maxPositions = 5,
-    customStocks = [] // Default to empty array
+    customStocks = [], // Default to empty array
+    niftyRegime
   } = options
   
   const signals: MomentumSignal[] = []
@@ -635,18 +648,41 @@ export async function scanForMomentumSignals(
   const avgMomentum = topSignals.length > 0
     ? topSignals.reduce((sum, s) => sum + s.momentumScore, 0) / topSignals.length
     : 0
-  
+
   const marketSentiment: 'STRONG' | 'MODERATE' | 'WEAK' | 'CHOPPY' =
     avgMomentum >= 70 ? 'STRONG' :
     avgMomentum >= 55 ? 'MODERATE' :
     avgMomentum >= 40 ? 'WEAK' : 'CHOPPY'
-  
-  // Recommend capital allocation based on market strength
-  const recommendedCapitalAllocation =
+
+  // Determine NIFTY trend from real market regime analysis
+  let niftyTrend: 'UP' | 'DOWN' | 'SIDEWAYS' = 'SIDEWAYS' // Default to SIDEWAYS (conservative)
+  if (niftyRegime) {
+    const r = niftyRegime.regime
+    if (r === 'STRONG_BULL' || r === 'BULL') {
+      niftyTrend = 'UP'
+    } else if (r === 'STRONG_BEAR' || r === 'BEAR') {
+      niftyTrend = 'DOWN'
+    } else {
+      niftyTrend = 'SIDEWAYS'
+    }
+    console.log(`📊 NIFTY regime: ${r} (confidence: ${niftyRegime.confidence}%) → trend: ${niftyTrend}`)
+    console.log(`   Position size multiplier: ${niftyRegime.positionSizeMultiplier}x`)
+  } else {
+    console.log(`⚠️ No NIFTY regime data available — defaulting to SIDEWAYS (conservative)`)
+  }
+
+  // Recommend capital allocation based on market strength AND regime
+  let recommendedCapitalAllocation =
     marketSentiment === 'STRONG' ? 0.75 : // Use 75% of capital
     marketSentiment === 'MODERATE' ? 0.5 : // Use 50%
     marketSentiment === 'WEAK' ? 0.25 : 0.15 // Be cautious
-  
+
+  // Further adjust allocation by regime
+  if (niftyRegime) {
+    recommendedCapitalAllocation *= niftyRegime.positionSizeMultiplier
+    recommendedCapitalAllocation = Math.min(0.9, Math.max(0.1, recommendedCapitalAllocation))
+  }
+
   const result: MomentumScanResult = {
     timestamp: new Date(),
     totalScanned: stocksData.length,
@@ -655,7 +691,7 @@ export async function scanForMomentumSignals(
     buyCount,
     signals: topSignals,
     marketSentiment,
-    niftyTrend: 'UP', // Will calculate this properly later
+    niftyTrend,
     recommendedCapitalAllocation,
     maxPositions
   }

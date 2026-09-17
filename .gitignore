@@ -26,3 +26,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 public/uploads/reports/*.pdf
+.env*.local
+
+# local-only
+.DS_Store
+.claude/
+error.log
+Reports/
+.vercel

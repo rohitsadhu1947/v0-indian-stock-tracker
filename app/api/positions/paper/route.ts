@@ -223,7 +223,7 @@ export async function PATCH(request: NextRequest) {
       .returning()
 
     console.log(
-      `🔄 Paper position updated: ${existingPosition.symbol} | P&L: ₹${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`
+      `🔄 Paper position updated: ${existingPosition.symbol} | P&L: ₹${(pnl ?? 0).toFixed(2)} (${(pnlPercent ?? 0).toFixed(2)}%)`
     )
 
     return NextResponse.json({

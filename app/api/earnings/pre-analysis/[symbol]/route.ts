@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
+import type { BrokerClient, InstrumentData } from '@/lib/broker'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * GET /api/earnings/pre-analysis/[symbol]
@@ -14,19 +16,23 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   const symbol = params.symbol.toUpperCase()
 
   console.log(`\n📊 Starting Pre-Earnings Analysis for ${symbol}...`)
 
   try {
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     const hasConnection = manager.hasConnection()
-    let kc: any = null
+    let brokerClient: BrokerClient | null = null
 
     if (hasConnection) {
-      const client = manager.getClient() as KiteBrokerClient
-      kc = client.getRawClient()
+      brokerClient = manager.getClient()
     }
 
     console.log(`🔑 Broker: ${hasConnection ? 'Connected' : 'Not connected'}`)
@@ -39,9 +45,9 @@ export async function GET(
       optionsData
     ] = await Promise.all([
       fetchFinancials(symbol),
-      fetchPriceData(symbol, kc),
+      fetchPriceData(symbol, brokerClient),
       fetchNews(symbol),
-      fetchOptionsData(symbol, kc)
+      fetchOptionsData(symbol, brokerClient)
     ])
 
     // Calculate historical earnings reactions
@@ -121,13 +127,13 @@ async function fetchFinancials(symbol: string) {
 /**
  * Fetch 6 months of price data from Kite, with fallback to NSE/Google
  */
-async function fetchPriceData(symbol: string, kc: any) {
-  // Try Kite first
-  if (kc) {
+async function fetchPriceData(symbol: string, client: BrokerClient | null) {
+  // Try broker first
+  if (client) {
     try {
       // Get instrument token
-      const instruments = await kc.getInstruments('NSE')
-      const instrument = instruments.find((i: any) => i.tradingsymbol === symbol)
+      const instruments = await client.getInstruments('NSE')
+      const instrument = instruments.find((i) => i.tradingsymbol === symbol)
 
       if (!instrument) {
         console.log(`⚠️ Instrument not found for ${symbol}`)
@@ -137,28 +143,30 @@ async function fetchPriceData(symbol: string, kc: any) {
         const fromDate = new Date()
         fromDate.setMonth(fromDate.getMonth() - 6)
 
-        const historicalData = await kc.getHistoricalData(
-          instrument.instrument_token,
-          'day',
-          fromDate,
-          toDate
-        )
+        const historicalData = await client.getHistoricalData({
+          instrumentToken: instrument.instrumentToken,
+          interval: 'day',
+          from: fromDate,
+          to: toDate,
+          symbol,
+          exchange: 'NSE'
+        })
 
         // Get current quote
-        const quote = await kc.getQuote([`NSE:${symbol}`])
-        const currentPrice = quote[`NSE:${symbol}`]?.last_price
+        const quote = await client.getQuote([`NSE:${symbol}`])
+        const currentPrice = quote[`NSE:${symbol}`]?.lastPrice
 
-        console.log(`✅ Got Kite price data for ${symbol}: ₹${currentPrice}`)
+        console.log(`✅ Got broker price data for ${symbol}: ₹${currentPrice}`)
 
         return {
           historical: historicalData,
           currentPrice,
-          instrumentToken: instrument.instrument_token,
-          source: 'kite'
+          instrumentToken: instrument.instrumentToken,
+          source: 'broker'
         }
       }
     } catch (error: any) {
-      console.error('Kite price data error:', error.message)
+      console.error('Broker price data error:', error.message)
     }
   }
 
@@ -289,20 +297,20 @@ async function fetchNews(symbol: string): Promise<any[]> {
  * Fetch COMPLETE options data from Kite
  * This is serious trading analysis - we fetch ALL options data
  */
-async function fetchOptionsData(symbol: string, kc: any) {
+async function fetchOptionsData(symbol: string, client: BrokerClient | null) {
   try {
-    if (!kc) {
-      return { available: false, reason: 'Kite not connected' }
+    if (!client) {
+      return { available: false, reason: 'Broker not connected' }
     }
 
     // Get NFO instruments for this symbol
     console.log(`🔍 Fetching COMPLETE F&O data for ${symbol}...`)
-    const instruments = await kc.getInstruments('NFO')
+    const instruments = await client.getInstruments('NFO')
 
     // Find all options for this symbol
-    const symbolOptions = instruments.filter((i: any) =>
+    const symbolOptions = instruments.filter((i) =>
       i.name === symbol &&
-      (i.instrument_type === 'CE' || i.instrument_type === 'PE')
+      (i.instrumentType === 'CE' || i.instrumentType === 'PE')
     )
 
     if (symbolOptions.length === 0) {
@@ -316,22 +324,22 @@ async function fetchOptionsData(symbol: string, kc: any) {
     console.log(`📊 ${symbol}: Found ${symbolOptions.length} total option contracts`)
 
     // Get all unique expiries sorted by date
-    const expiries = [...new Set(symbolOptions.map((o: any) => new Date(o.expiry).getTime()))]
+    const expiries = [...new Set(symbolOptions.map((o) => new Date(o.raw?.expiry).getTime()))]
       .sort((a, b) => a - b)
       .map(t => new Date(t))
 
     console.log(`📊 ${symbol}: ${expiries.length} expiries available`)
 
     // Log all expiries with their option counts
-    const expiryData: { expiry: Date, calls: any[], puts: any[] }[] = []
+    const expiryData: { expiry: Date, calls: InstrumentData[], puts: InstrumentData[] }[] = []
 
     for (const expiry of expiries) {
       const expiryTime = expiry.getTime()
-      const expiryOptions = symbolOptions.filter((i: any) =>
-        new Date(i.expiry).getTime() === expiryTime
+      const expiryOptions = symbolOptions.filter((i) =>
+        new Date(i.raw?.expiry).getTime() === expiryTime
       )
-      const calls = expiryOptions.filter((o: any) => o.instrument_type === 'CE')
-      const puts = expiryOptions.filter((o: any) => o.instrument_type === 'PE')
+      const calls = expiryOptions.filter((o) => o.instrumentType === 'CE')
+      const puts = expiryOptions.filter((o) => o.instrumentType === 'PE')
 
       console.log(`  ${expiry.toLocaleDateString()}: ${calls.length} CE, ${puts.length} PE`)
 
@@ -359,18 +367,18 @@ async function fetchOptionsData(symbol: string, kc: any) {
     console.log(`📊 Selected expiry: ${selectedExpiry.expiry.toLocaleDateString()} with ${calls.length} CE, ${puts.length} PE`)
 
     // Fetch quotes for ALL options in selected expiry
-    // Kite allows ~500 symbols per request, so batch if needed
+    // Batch if needed (brokers typically allow ~500 symbols per request)
     const allOptions = [...calls, ...puts]
     const BATCH_SIZE = 400
     let allQuotes: Record<string, any> = {}
 
     for (let i = 0; i < allOptions.length; i += BATCH_SIZE) {
       const batch = allOptions.slice(i, i + BATCH_SIZE)
-      const symbols = batch.map((o: any) => `NFO:${o.tradingsymbol}`)
+      const symbols = batch.map((o) => `NFO:${o.tradingsymbol}`)
 
       console.log(`📊 Fetching batch ${Math.floor(i/BATCH_SIZE) + 1}: ${symbols.length} options...`)
 
-      const quotes = await kc.getQuote(symbols)
+      const quotes = await client.getQuote(symbols)
       allQuotes = { ...allQuotes, ...quotes }
     }
 
@@ -388,14 +396,15 @@ async function fetchOptionsData(symbol: string, kc: any) {
     for (const call of calls) {
       const quote = allQuotes[`NFO:${call.tradingsymbol}`]
       if (quote) {
-        totalCallOI += quote.oi || 0
+        const oi = quote.raw?.oi || 0
+        totalCallOI += oi
         totalCallVolume += quote.volume || 0
-        if (quote.oi > 0) {
+        if (oi > 0) {
           callDetails.push({
-            strike: call.strike,
-            oi: quote.oi,
+            strike: call.raw?.strike,
+            oi,
             volume: quote.volume,
-            ltp: quote.last_price
+            ltp: quote.lastPrice
           })
         }
       }
@@ -404,14 +413,15 @@ async function fetchOptionsData(symbol: string, kc: any) {
     for (const put of puts) {
       const quote = allQuotes[`NFO:${put.tradingsymbol}`]
       if (quote) {
-        totalPutOI += quote.oi || 0
+        const oi = quote.raw?.oi || 0
+        totalPutOI += oi
         totalPutVolume += quote.volume || 0
-        if (quote.oi > 0) {
+        if (oi > 0) {
           putDetails.push({
-            strike: put.strike,
-            oi: quote.oi,
+            strike: put.raw?.strike,
+            oi,
             volume: quote.volume,
-            ltp: quote.last_price
+            ltp: quote.lastPrice
           })
         }
       }

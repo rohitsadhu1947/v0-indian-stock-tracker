@@ -11,11 +11,12 @@
  */
 
 import bcrypt from 'bcrypt'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { users, userPermissions } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import logger from '@/lib/logger'
 
 // ============================================================================
 // TYPES & CONSTANTS
@@ -66,7 +67,10 @@ const SESSION_MAX_AGE = 60 * 60 * 24 // 24 hours (unified with Kite token expiry
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET
   if (!secret || secret === 'generate-another-random-secret-key') {
-    console.warn('⚠️  SESSION_SECRET is not set or is using the default value. Sessions are insecure!')
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: SESSION_SECRET must be set in production. Generate one with: openssl rand -base64 64')
+    }
+    logger.warn('SESSION_SECRET is not set — using insecure dev fallback. DO NOT deploy to production.')
     return 'insecure-dev-fallback-do-not-use-in-production'
   }
   return secret
@@ -91,11 +95,9 @@ export function signSessionToken(userId: number): string {
  * Also accepts legacy plain-integer tokens for backward compatibility.
  */
 export function verifySessionToken(token: string): number | null {
-  // Legacy support: plain integer cookie (e.g., "3")
+  // Reject legacy unsigned tokens — users must re-login to get a signed token
   if (/^\d+$/.test(token)) {
-    console.warn('⚠️  Legacy unsigned session token detected. User should re-login for signed token.')
-    const userId = parseInt(token)
-    return isNaN(userId) ? null : userId
+    return null
   }
 
   // Signed token format: userId:timestamp:hmac
@@ -118,15 +120,18 @@ export function verifySessionToken(token: string): number | null {
     .update(payload)
     .digest('hex')
 
-  if (providedHmac !== expectedHmac) {
-    console.warn('⚠️  Session token HMAC mismatch — possible forgery attempt')
+  // Use timing-safe comparison to prevent timing attacks
+  const expectedBuf = Buffer.from(expectedHmac, 'hex')
+  const providedBuf = Buffer.from(providedHmac, 'hex')
+  if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+    logger.warn('Session token HMAC mismatch — possible forgery attempt')
     return null
   }
 
   // Check expiry (token is valid for SESSION_MAX_AGE seconds)
   const ageMs = Date.now() - timestamp
   if (ageMs > SESSION_MAX_AGE * 1000) {
-    console.log('⏰ Session token expired (age: ' + Math.round(ageMs / 1000 / 60) + ' minutes)')
+    logger.info('Session token expired (age: ' + Math.round(ageMs / 1000 / 60) + ' minutes)')
     return null
   }
 
@@ -158,7 +163,7 @@ export async function verifyPassword(
 export async function createSession(userId: number): Promise<void> {
   const cookieStore = await cookies()
 
-  console.log(`🍪 Creating session for user ID: ${userId}`)
+  logger.info('Creating session', { userId })
 
   // Generate HMAC-signed session token
   const sessionToken = signSessionToken(userId)
@@ -171,7 +176,7 @@ export async function createSession(userId: number): Promise<void> {
     path: '/',
   })
 
-  console.log(`✅ Signed session cookie set for user ${userId}`)
+  logger.info('Session cookie set', { userId })
 
   // Update last login
   await db
@@ -179,7 +184,7 @@ export async function createSession(userId: number): Promise<void> {
     .set({ lastLogin: new Date() })
     .where(eq(users.id, userId))
 
-  console.log(`✅ Last login updated for user ${userId}`)
+  logger.debug('Last login updated', { userId })
 }
 
 /**
@@ -316,50 +321,6 @@ export async function loginWithEmail(
   }
   
   // Create session
-  await createSession(user.id)
-  
-  return {
-    success: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
-      kiteUserId: user.kiteUserId,
-      masterKiteToken: user.masterKiteToken,
-      masterKiteUserId: user.masterKiteUserId,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin,
-    },
-  }
-}
-
-/**
- * Legacy Kite login support (for backward compatibility)
- */
-export async function loginWithKite(kiteUserId: string): Promise<LoginResult> {
-  // Find user by Kite user ID
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.kiteUserId, kiteUserId))
-    .limit(1)
-  
-  if (!user) {
-    return {
-      success: false,
-      error: 'Kite user not found. Please use email/password login.',
-    }
-  }
-  
-  if (user.status !== 'active') {
-    return {
-      success: false,
-      error: 'Account is suspended or pending activation',
-    }
-  }
-  
   await createSession(user.id)
   
   return {
@@ -527,7 +488,7 @@ export async function getAuthenticatedUserIdCompat(): Promise<number | null> {
     }
     return null
   } catch (err) {
-    console.log(`❌ Auth: Failed to get current user:`, err)
+    logger.error('Failed to get current user', { error: String(err) })
     return null
   }
 }
@@ -635,7 +596,7 @@ export async function createUser(
     
     return { success: true, userId: newUser.id }
   } catch (error: any) {
-    console.error('Error creating user:', error)
+    logger.error('Error creating user', { error: String(error) })
     return { success: false, error: 'Failed to create user' }
   }
 }

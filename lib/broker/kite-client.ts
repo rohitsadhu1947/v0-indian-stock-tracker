@@ -80,7 +80,7 @@ export class KiteBrokerClient implements BrokerClient {
     try {
       const rawData = await this.kc.getHistoricalData(
         params.instrumentToken,
-        params.interval,
+        params.interval as any,
         params.from,
         params.to
       )
@@ -126,7 +126,7 @@ export class KiteBrokerClient implements BrokerClient {
    */
   async getInstruments(exchange?: string): Promise<InstrumentData[]> {
     try {
-      const exchangeArg = exchange ? [exchange] : undefined
+      const exchangeArg = exchange ? [exchange] as any : undefined
       const rawInstruments = await this.kc.getInstruments(exchangeArg)
 
       if (!rawInstruments || !Array.isArray(rawInstruments)) {
@@ -140,6 +140,8 @@ export class KiteBrokerClient implements BrokerClient {
         exchange: inst.exchange || exchange || '',
         segment: inst.segment || '',
         lotSize: inst.lot_size || 1,
+        instrumentType: inst.instrument_type || undefined,
+        isin: inst.isin || undefined,
         raw: inst,
       }))
     } catch (error: any) {
@@ -151,32 +153,11 @@ export class KiteBrokerClient implements BrokerClient {
   }
 
   /**
-   * Get the underlying KiteConnect instance for routes that need direct access.
-   * This is a temporary escape hatch during migration — prefer using the
-   * BrokerClient interface methods instead.
+   * Get the underlying KiteConnect instance for Kite-specific operations.
+   * Only used by the debug/kite-status route for getProfile().
+   * All other routes should use the BrokerClient interface methods.
    */
   getRawClient(): InstanceType<typeof KiteConnect> {
     return this.kc
-  }
-
-  /**
-   * Get the raw Kite quote (un-normalized) for backward compatibility.
-   * Some routes cache the full Kite response as-is.
-   */
-  async getRawQuote(symbols: string[]): Promise<Record<string, any>> {
-    return this.kc.getQuote(symbols) as Promise<Record<string, any>>
-  }
-
-  /**
-   * Get raw historical data (un-normalized) for backward compatibility.
-   * Some routes store the raw candle array directly.
-   */
-  async getRawHistoricalData(
-    instrumentToken: number | string,
-    interval: string,
-    from: Date,
-    to: Date
-  ): Promise<any[]> {
-    return this.kc.getHistoricalData(instrumentToken, interval, from, to) as Promise<any[]>
   }
 }

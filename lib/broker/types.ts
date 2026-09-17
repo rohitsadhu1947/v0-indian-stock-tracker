@@ -122,7 +122,7 @@ export interface CandleData {
 
 export interface InstrumentData {
   /** Broker-specific instrument identifier (used for historical data) */
-  instrumentToken: number
+  instrumentToken: number | string
 
   /** Trading symbol (e.g., 'RELIANCE') */
   tradingsymbol: string
@@ -138,6 +138,12 @@ export interface InstrumentData {
 
   /** Lot size (1 for cash, >1 for F&O) */
   lotSize: number
+
+  /** Instrument type (e.g., 'EQ', 'FUT', 'CE', 'PE') */
+  instrumentType?: string
+
+  /** ISIN code for cross-broker symbol mapping (e.g., 'INE002A01018') */
+  isin?: string
 
   /** Raw broker-specific data */
   raw?: Record<string, any>
@@ -199,12 +205,66 @@ export interface BrokerDefinition {
   /** Display name */
   displayName: string
 
-  /** Whether this broker supports OAuth login */
+  /** Short description of the broker */
+  description?: string
+
+  /** Whether this broker supports OAuth login (redirect flow) */
   supportsOAuth: boolean
 
+  /** Whether this broker supports form-based login (API key + credentials) */
+  supportsFormLogin: boolean
+
+  /** Whether this broker has a working API (false for Groww, HDFC etc.) */
+  hasApi: boolean
+
+  /** Fields required for form-based login */
+  formFields?: BrokerFormField[]
+
   /** OAuth login URL builder (if supportsOAuth) */
-  getOAuthUrl?: () => string
+  getOAuthUrl?: (state?: string) => string
 
   /** Factory function to create a client from connection config */
   createClient: (config: BrokerConnectionConfig) => BrokerClient
+
+  /** Symbol adapter for this broker */
+  symbolAdapter: BrokerSymbolAdapter
+}
+
+// ============================================================================
+// SYMBOL NORMALIZATION
+// ============================================================================
+
+export interface BrokerSymbolAdapter {
+  /** Convert canonical "RELIANCE" + exchange "NSE" to broker-specific format */
+  toBrokerFormat(symbol: string, exchange: string): string
+
+  /** Convert broker-specific quote key to canonical symbol */
+  fromBrokerFormat(brokerSymbol: string): { canonical: string; exchange: string }
+
+  /** Convert canonical to broker's quote request format (e.g., "NSE:RELIANCE" for Kite) */
+  toQuoteKey(symbol: string, exchange: string): string
+}
+
+// ============================================================================
+// BROKER FORM FIELDS (for form-based login like Angel One)
+// ============================================================================
+
+export interface BrokerFormField {
+  /** Field key (e.g., 'apiKey', 'clientCode', 'totp') */
+  key: string
+
+  /** Display label */
+  label: string
+
+  /** Input type */
+  type: 'text' | 'password' | 'number'
+
+  /** Placeholder text */
+  placeholder?: string
+
+  /** Whether this field is required */
+  required: boolean
+
+  /** Whether this field should be saved for reconnection */
+  persist: boolean
 }

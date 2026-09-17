@@ -385,6 +385,66 @@ export const userPermissions = pgTable('user_permissions', {
 }))
 
 // ============================================
+// INSIDER TRADES & DELIVERY DATA (Hedge Fund Edge)
+// ============================================
+
+export const insiderTrades = pgTable('insider_trades', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').notNull(),
+  insiderName: text('insider_name').notNull(),
+  designation: text('designation'),
+  company: text('company'),
+  tradeType: text('trade_type').notNull(),
+  quantity: integer('quantity').notNull(),
+  value: real('value'),
+  tradeDate: timestamp('trade_date').notNull(),
+  exchange: text('exchange').default('NSE'),
+  category: text('category'),
+  preHolding: real('pre_holding'),
+  postHolding: real('post_holding'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  symbolIdx: index('insider_trades_symbol_idx').on(table.symbol),
+  tradeDateIdx: index('insider_trades_trade_date_idx').on(table.tradeDate),
+  tradeTypeIdx: index('insider_trades_trade_type_idx').on(table.tradeType),
+  symbolDateIdx: index('insider_trades_symbol_date_idx').on(table.symbol, table.tradeDate),
+}))
+
+export const deliveryData = pgTable('delivery_data', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').notNull(),
+  date: timestamp('date').notNull(),
+  totalVolume: integer('total_volume').notNull(),
+  deliveryVolume: integer('delivery_volume').notNull(),
+  deliveryPct: real('delivery_pct').notNull(),
+  closePrice: real('close_price'),
+  priceChange: real('price_change'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  symbolIdx: index('delivery_data_symbol_idx').on(table.symbol),
+  dateIdx: index('delivery_data_date_idx').on(table.date),
+  symbolDateIdx: uniqueIndex('delivery_data_symbol_date_idx').on(table.symbol, table.date),
+}))
+
+export const smartAlerts = pgTable('smart_alerts', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  alertType: text('alert_type').notNull(),
+  symbol: text('symbol'),
+  message: text('message').notNull(),
+  severity: text('severity').notNull().default('info'),
+  actionable: text('actionable'),
+  seen: boolean('seen').default(false).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('smart_alerts_user_id_idx').on(table.userId),
+  seenIdx: index('smart_alerts_seen_idx').on(table.seen),
+  createdAtIdx: index('smart_alerts_created_at_idx').on(table.createdAt),
+  typeIdx: index('smart_alerts_type_idx').on(table.alertType),
+}))
+
+// ============================================
 // RELATIONS (Optional, for Drizzle Queries)
 // ============================================
 
@@ -397,6 +457,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   screenerResults: many(screenerResults),
   tradeHistory: many(tradeHistory),
   alerts: many(alerts),
+  smartAlerts: many(smartAlerts),
   preferences: one(userPreferences),
   permissions: one(userPermissions),
 }))
@@ -471,6 +532,13 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
 export const userPermissionsRelations = relations(userPermissions, ({ one }) => ({
   user: one(users, {
     fields: [userPermissions.userId],
+    references: [users.id],
+  }),
+}))
+
+export const smartAlertsRelations = relations(smartAlerts, ({ one }) => ({
+  user: one(users, {
+    fields: [smartAlerts.userId],
     references: [users.id],
   }),
 }))

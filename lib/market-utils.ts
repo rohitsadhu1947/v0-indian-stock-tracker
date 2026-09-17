@@ -56,36 +56,77 @@ export function calculateRSI(prices: number[], period: number = 14): number {
   const avgGain = gains / period;
   const avgLoss = losses / period;
   
-  if (avgLoss === 0) return 100;
+  if (avgLoss === 0) return 95;
   const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
 }
 
+/**
+ * EMA of a NEWEST-FIRST price array (same convention as calculateSMA/RSI).
+ * Internally iterates oldest → newest so the result reflects the latest price.
+ */
 export function calculateEMA(prices: number[], period: number): number {
   if (!prices || prices.length < period) return prices ? prices[0] : 0;
-  
+
+  const chronological = [...prices].reverse();
   const multiplier = 2 / (period + 1);
-  let ema = calculateSMA(prices.slice(0, period), period) || prices[0];
-  
-  for (let i = period; i < Math.min(prices.length, 50); i++) {
-    ema = (prices[i] - ema) * multiplier + ema;
+  let ema = chronological.slice(0, period).reduce((a, b) => a + b, 0) / period;
+
+  for (let i = period; i < chronological.length; i++) {
+    ema = (chronological[i] - ema) * multiplier + ema;
   }
-  
+
   return ema;
 }
 
-export function calculateMACD(prices: number[]) {
-  if (!prices || prices.length < 26) return { macd: 0, signal: 0, histogram: 0 };
-  
-  const ema12 = calculateEMA(prices, 12);
-  const ema26 = calculateEMA(prices, 26);
-  const macd = ema12 - ema26;
-  const signal = macd * 0.2;
-  
+/**
+ * MACD(12, 26, 9) of a NEWEST-FIRST price array (same convention as
+ * calculateSMA/RSI). Iterates oldest → newest so the final values describe
+ * the latest bar; previously it walked newest → oldest and inverted the sign.
+ */
+export function calculateMACD(newestFirst: number[]) {
+  if (!newestFirst || newestFirst.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+  const prices = [...newestFirst].reverse();
+
+  const multiplier12 = 2 / (12 + 1);
+  const multiplier26 = 2 / (26 + 1);
+  const multiplierSignal = 2 / (9 + 1);
+
+  // Initialize EMAs with SMA
+  let ema12 = prices.slice(0, 12).reduce((a, b) => a + b, 0) / 12;
+  let ema26 = prices.slice(0, 26).reduce((a, b) => a + b, 0) / 26;
+
+  // Compute EMA12 for first 26 points
+  for (let i = 12; i < 26; i++) {
+    ema12 = (prices[i] - ema12) * multiplier12 + ema12;
+  }
+
+  // Now compute MACD line for remaining points
+  const macdLine: number[] = [];
+  macdLine.push(ema12 - ema26);
+
+  for (let i = 26; i < prices.length; i++) {
+    ema12 = (prices[i] - ema12) * multiplier12 + ema12;
+    ema26 = (prices[i] - ema26) * multiplier26 + ema26;
+    macdLine.push(ema12 - ema26);
+  }
+
+  // Signal line = EMA(9) of MACD line
+  if (macdLine.length < 9) {
+    const lastMacd = macdLine[macdLine.length - 1];
+    return { macd: lastMacd, signal: lastMacd, histogram: 0 };
+  }
+
+  let signalLine = macdLine.slice(0, 9).reduce((a, b) => a + b, 0) / 9;
+  for (let i = 9; i < macdLine.length; i++) {
+    signalLine = (macdLine[i] - signalLine) * multiplierSignal + signalLine;
+  }
+
+  const lastMacd = macdLine[macdLine.length - 1];
   return {
-    macd: macd,
-    signal: signal,
-    histogram: macd - signal
+    macd: lastMacd,
+    signal: signalLine,
+    histogram: lastMacd - signalLine
   };
 }
 

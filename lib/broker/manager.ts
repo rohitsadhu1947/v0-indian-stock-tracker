@@ -9,6 +9,7 @@
  */
 
 import type { BrokerClient, QuoteData } from './types'
+import logger from '@/lib/logger'
 
 export class BrokerManager {
   private clients: Map<string, BrokerClient> = new Map()
@@ -25,10 +26,7 @@ export class BrokerManager {
       this.primaryBrokerId = client.brokerId
     }
 
-    console.log(
-      `🔌 Broker registered: ${client.displayName} (${client.brokerId})` +
-        (isPrimary ? ' [PRIMARY]' : '')
-    )
+    logger.info('Broker registered', { brokerId: client.brokerId, displayName: client.displayName, isPrimary })
   }
 
   /**
@@ -43,7 +41,7 @@ export class BrokerManager {
       if (client && client.isConnected()) {
         return client
       }
-      console.warn(`⚠️  Broker '${brokerId}' not found or disconnected, falling back to primary`)
+      logger.warn('Broker not found, falling back to primary', { brokerId })
     }
 
     // Return primary broker
@@ -98,7 +96,7 @@ export class BrokerManager {
       return await primary.getQuote(symbols)
     } catch (err: any) {
       errors.push(err)
-      console.warn(`⚠️  Primary broker quote failed: ${err.message}`)
+      logger.warn('Primary broker quote failed', { error: err.message })
     }
 
     // Try all other connected brokers
@@ -110,7 +108,7 @@ export class BrokerManager {
         return await client.getQuote(symbols)
       } catch (err: any) {
         errors.push(err)
-        console.warn(`⚠️  Broker '${client.brokerId}' quote failed: ${err.message}`)
+        logger.warn('Broker quote failed', { brokerId: client.brokerId, error: err.message })
       }
     }
 

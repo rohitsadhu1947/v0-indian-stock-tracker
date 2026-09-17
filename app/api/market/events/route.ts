@@ -9,15 +9,15 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import https from 'https'
-import { 
-  categorizeEvents, 
-  generateSampleEvents,
+import {
+  categorizeEvents,
   filterWatchlistEvents,
   getTodayAlerts,
   getEventEmoji,
   getEventColor,
-  type CorporateEvent 
+  type CorporateEvent
 } from '@/lib/event-calendar'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -273,6 +273,11 @@ function parseIndianDate(dateStr: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📅 === EVENT CALENDAR API CALLED ===')
     
@@ -316,13 +321,11 @@ export async function GET(request: NextRequest) {
     console.log(`✅ NSE Board Meetings: ${nseBoardMeetings.length}`)
     console.log(`✅ NSE Corporate Actions: ${nseCorporateActions.length}`)
     
-    // Combine all events
+    // Combine all events (real NSE data only — never invent events)
     let allEvents = [...nseBoardMeetings, ...nseCorporateActions]
-    
-    // If no real data, use sample data
-    if (allEvents.length === 0) {
-      console.log('⚠️ Using sample events (BSE data unavailable)')
-      allEvents = generateSampleEvents()
+    const hasRealData = allEvents.length > 0
+    if (!hasRealData) {
+      console.log('⚠️ No corporate events returned by NSE')
     }
     
     // Remove duplicates by symbol + date + type
@@ -337,9 +340,11 @@ export async function GET(request: NextRequest) {
     // Sort by date
     allEvents.sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
     
-    // Update cache
-    cachedEvents = allEvents
-    cacheTimestamp = now
+    // Update cache (skip caching an empty result so the next request retries NSE)
+    if (hasRealData) {
+      cachedEvents = allEvents
+      cacheTimestamp = now
+    }
     
     console.log(`✅ Total events: ${allEvents.length}`)
     
@@ -378,7 +383,7 @@ export async function GET(request: NextRequest) {
       
       // Metadata
       totalEvents: filteredEvents.length,
-      dataSource: nseBoardMeetings.length > 0 || nseCorporateActions.length > 0 ? 'NSE' : 'Sample Data'
+      dataSource: hasRealData ? 'NSE' : 'Unavailable (NSE returned no events)'
     })
     
   } catch (error: any) {

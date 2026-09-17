@@ -29,17 +29,30 @@ export interface EnhancementContext {
     pair: [string, string]
     correlation: number
   }[]
+  macroContext?: {
+    overallSentiment: string  // STRONGLY_RISK_ON, RISK_ON, NEUTRAL, RISK_OFF, STRONGLY_RISK_OFF
+    crudeOilChange: number    // % change in crude oil
+    crudeOilPrice: number
+    usdInrChange: number      // % change in USD/INR
+    usdInr: number
+    vixLevel: number           // India VIX level
+    vixTrend: string           // RISING, FALLING, STABLE
+    usMarketChange: number     // S&P 500 % change
+    sectorImpacts: Record<string, number>  // sector → impact score
+    relevantFactors: string[]  // human-readable factor descriptions for this stock
+    sentimentScore: number     // -100 to +100
+  }
 }
 
 export interface SignalWarning {
-  type: 'EARNINGS' | 'REGIME' | 'SMART_MONEY' | 'CORRELATION' | 'VOLATILITY'
+  type: 'EARNINGS' | 'REGIME' | 'SMART_MONEY' | 'CORRELATION' | 'VOLATILITY' | 'MACRO'
   severity: 'HIGH' | 'MEDIUM' | 'LOW'
   message: string
   emoji: string
 }
 
 export interface SignalSuggestion {
-  type: 'POSITION_SIZE' | 'TIMING' | 'DIVERSIFICATION'
+  type: 'POSITION_SIZE' | 'TIMING' | 'DIVERSIFICATION' | 'MACRO'
   suggestion: string
   emoji: string
 }
@@ -174,7 +187,80 @@ function enhanceSignal(
     }
   }
   
-  // 4. Correlation check with other selected signals
+  // 4. Macro context warnings and suggestions
+  if (context.macroContext) {
+    const macro = context.macroContext
+
+    // High VIX warning
+    if (macro.vixLevel > 25) {
+      warnings.push({
+        type: 'MACRO',
+        severity: 'HIGH',
+        message: `India VIX at ${macro.vixLevel.toFixed(1)} — extreme volatility, reduce position sizes`,
+        emoji: '🌊'
+      })
+      positionSizeMultiplier *= 0.5
+    } else if (macro.vixLevel > 20) {
+      warnings.push({
+        type: 'MACRO',
+        severity: 'MEDIUM',
+        message: `India VIX elevated at ${macro.vixLevel.toFixed(1)} — use wider stops`,
+        emoji: '⚠️'
+      })
+      positionSizeMultiplier *= 0.75
+    }
+
+    // Crude oil impact
+    if (Math.abs(macro.crudeOilChange) > 3) {
+      const dir = macro.crudeOilChange > 0 ? 'up' : 'down'
+      warnings.push({
+        type: 'MACRO',
+        severity: Math.abs(macro.crudeOilChange) > 5 ? 'HIGH' : 'MEDIUM',
+        message: `Crude oil ${dir} ${Math.abs(macro.crudeOilChange).toFixed(1)}% ($${macro.crudeOilPrice.toFixed(0)}) — impacts energy, transport, OMC sectors`,
+        emoji: '🛢️'
+      })
+    }
+
+    // USD/INR
+    if (Math.abs(macro.usdInrChange) > 0.3) {
+      const dir = macro.usdInrChange > 0 ? 'weakening' : 'strengthening'
+      suggestions.push({
+        type: 'MACRO',
+        suggestion: `Rupee ${dir} (₹${macro.usdInr.toFixed(2)}, ${macro.usdInrChange > 0 ? '+' : ''}${macro.usdInrChange.toFixed(2)}%) — ${macro.usdInrChange > 0 ? 'positive for IT/pharma, negative for importers' : 'negative for exporters'}`,
+        emoji: '💰'
+      })
+    }
+
+    // Global risk-off
+    if (macro.usMarketChange < -2) {
+      warnings.push({
+        type: 'MACRO',
+        severity: 'HIGH',
+        message: `Global risk-off: US markets down ${Math.abs(macro.usMarketChange).toFixed(1)}% — expect FII selling pressure`,
+        emoji: '🌍'
+      })
+      positionSizeMultiplier *= 0.7
+    } else if (macro.usMarketChange > 2) {
+      suggestions.push({
+        type: 'MACRO',
+        suggestion: `Global risk-on: US markets up ${macro.usMarketChange.toFixed(1)}% — positive sentiment flow`,
+        emoji: '🌍'
+      })
+    }
+
+    // Add stock-specific macro factors
+    if (macro.relevantFactors && macro.relevantFactors.length > 0) {
+      for (const factor of macro.relevantFactors.slice(0, 2)) {
+        suggestions.push({
+          type: 'MACRO',
+          suggestion: factor,
+          emoji: '📊'
+        })
+      }
+    }
+  }
+
+  // 5. Correlation check with other selected signals
   if (context.correlations && allSignals.length > 1) {
     const otherSymbols = allSignals
       .filter(s => (s.symbol || s.tradingSymbol) !== symbol)

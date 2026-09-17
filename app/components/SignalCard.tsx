@@ -498,7 +498,7 @@ export function SignalCard({ signal, rank, onExecute, accentColor, enhancement }
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '0.85em', marginTop: '10px' }}>
                   <div>Analyst: {signal.intelligence.breakdown?.analystScore ?? 0}/10</div>
                   <div>Target Upside: {signal.intelligence.breakdown?.targetUpsideScore ?? 0}/8</div>
-                  <div>News: {signal.intelligence.breakdown?.newsSentimentScore ?? signal.intelligence.breakdown?.newsScore ?? 0}/12</div>
+                  <div>News: {signal.intelligence.breakdown?.newsSentimentScore ?? (signal.intelligence.breakdown as any)?.newsScore ?? 0}/12</div>
                 </div>
               </div>
             </div>

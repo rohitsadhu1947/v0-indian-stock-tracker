@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
 import { analyzeSectorPerformance } from '@/lib/sector-rotation'
 import { getSectorInfo, STOCK_SECTOR_MAP } from '@/lib/sector-mapping'
 
@@ -29,22 +29,21 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Sector Scanner: Phase 1 - Fetching basic quotes for ALL sectors...')
 
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       return NextResponse.json({ error: 'No broker connections available. Admin must connect a broker in settings.' }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
     // Get representative stocks from each sector (10-15 per sector for good coverage)
     const allSymbols = Object.keys(STOCK_SECTOR_MAP)
 
     // Get instruments
-    const instruments = await kc.getInstruments('NSE')
+    const instruments = await client.getInstruments('NSE')
     const symbolMap = new Map<string, any>()
 
     for (const inst of instruments) {
-      if (inst.instrument_type === 'EQ' && allSymbols.includes(inst.tradingsymbol)) {
+      if (inst.instrumentType === 'EQ' && allSymbols.includes(inst.tradingsymbol)) {
         symbolMap.set(inst.tradingsymbol, inst)
       }
     }
@@ -61,7 +60,7 @@ export async function GET(request: NextRequest) {
 
       try {
         const exchangeSymbols = batch.map(s => `NSE:${s}`)
-        const quotes = await kc.getQuote(exchangeSymbols)
+        const quotes = await client.getQuote(exchangeSymbols)
 
         for (const symbol of batch) {
           const quoteKey = `NSE:${symbol}`
@@ -70,10 +69,10 @@ export async function GET(request: NextRequest) {
           if (quote) {
             stockData[symbol] = {
               symbol,
-              price: quote.last_price,
-              change: ((quote.last_price - quote.ohlc.close) / quote.ohlc.close) * 100,
+              price: quote.lastPrice,
+              change: ((quote.lastPrice - quote.close) / quote.close) * 100,
               volume: quote.volume,
-              avgVolume: quote.average_price || quote.volume
+              avgVolume: quote.volume // BrokerClient QuoteData doesn't expose average_price
             }
           }
         }

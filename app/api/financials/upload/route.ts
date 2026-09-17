@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials, annualFinancials, companyInfo } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * POST /api/financials/upload
@@ -17,6 +18,11 @@ import { eq, and } from 'drizzle-orm'
  * TCS,FY25,2025-03-31,240000,180000,60000,5000,1000,15000,44000,120,450,45,35,25,0.1
  */
 export async function POST(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File

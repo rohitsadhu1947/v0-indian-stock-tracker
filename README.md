@@ -1,304 +1,161 @@
-# Indian Stock Tracker - Zerodha Kite Connect Edition
+# Vibe Trades — Indian Stock Tracker
 
-*Real-time NSE/BSE stock analysis powered by Zerodha Kite Connect API*
+> Real-time NSE/BSE analysis, momentum scanning, and paper trading — powered by Zerodha Kite Connect.
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://v0-indian-stock-tracker-seven.vercel.app)
-[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
-[![Zerodha Kite](https://img.shields.io/badge/Powered%20by-Zerodha%20Kite-blue?style=for-the-badge)](https://kite.trade)
-
-## 🚀 Overview
-
-A comprehensive Indian stock market tracking and analysis application with real-time data from **Zerodha Kite Connect API**. Features advanced technical analysis, automated trading signals, powerful stock screeners, and AI-powered pattern recognition for intraday trading.
-
-### 📚 **NEW: Complete Documentation for Beginners!**
-
-- 📖 **[Complete User Guide](./USER_GUIDE.md)** - Everything you need to know (recommended start here!)
-- 🚀 **[Quick Reference Card](./QUICK_REFERENCE.md)** - Print and keep at your trading desk
-- 🔧 **[Migration Guide](./MIGRATION_GUIDE.md)** - For developers migrating from other APIs
-
-### ✨ Key Features
-
-#### Core Features:
-- 📊 **Real-Time Data** - Live NSE/BSE quotes with 60 days of historical data
-- 🔐 **Secure OAuth** - Zerodha authentication for data access
-- 📈 **Technical Analysis** - RSI, MACD, Bollinger Bands, SMA/EMA with proper indicator periods
-- 🎯 **Trading Signals** - Automated buy/sell/hold recommendations with multiple confirmations
-- ⚡ **Fast & Reliable** - Server-side API with proper session management
-- 🎨 **Modern UI** - Beautiful gradient interface with glass-morphism
-
-#### Advanced Trading Tools:
-- 🔍 **Stock Screener** - Custom groups with technical analysis (Conservative/Moderate/Aggressive levels)
-- 🤖 **Universe Scanner** - AI-powered NIFTY 500 scanner with historical pattern analysis
-- 📊 **Intraday Tools** - Morning screener, position tracker, ORB scanner, Trade Watch
-- 📉 **Market Close Analyzer** - Evening analysis for tomorrow's game plan
-- 🎯 **Position Management** - Real-time P&L tracking with auto-refresh and exit signals
-- 🔔 **Smart Alerts** - Browser notifications for critical exit signals
-- 📱 **Multi-Screener Levels** - 3-level intraday screening (Conservative/Moderate/Aggressive)
-
-## 🆕 What's New
-
-**🎉 Migrated from Alpha Vantage to Zerodha Kite Connect!**
-
-- ✅ More comprehensive Indian stock data
-- ✅ No more 5 requests/minute rate limits
-- ✅ Real-time quotes instead of delayed data
-- ✅ Secure server-side authentication
-- ✅ Access to full NSE/BSE instruments
-
-See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for detailed migration information.
-
-## 🏗️ Tech Stack
-
-- **Framework:** Next.js 14.2 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS v4
-- **UI Components:** Radix UI
-- **Data Source:** Zerodha Kite Connect API
-- **Authentication:** OAuth 2.0
-- **Deployment:** Vercel
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-1. **Zerodha Account** - Active Zerodha trading account
-2. **Kite Connect App** - Create an app at [kite.trade](https://kite.trade)
-3. **API Credentials** - API Key and Secret from Kite Connect
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/rohitsadhu1947/v0-indian-stock-tracker.git
-cd v0-indian-stock-tracker
-
-# Install dependencies
-npm install
-# or
-pnpm install
-
-# Setup environment variables
-cp .env.local.example .env.local
-# Edit .env.local with your Kite Connect credentials
-
-# Run development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to see the app.
-
-### Environment Setup
-
-Create a `.env.local` file with:
-
-```env
-# Zerodha Kite Connect Credentials
-KITE_API_KEY=your_api_key
-KITE_API_SECRET=your_api_secret
-KITE_CLIENT_ID=your_client_id
-
-# App URLs
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXTAUTH_URL=http://localhost:3000
-
-# Session Secrets (generate random strings)
-NEXTAUTH_SECRET=your_random_secret
-SESSION_SECRET=your_random_secret
-```
-
-### Kite Connect Setup
-
-1. Go to [kite.trade](https://kite.trade) and login
-2. Create a new app
-3. Set **Redirect URL** to: `http://localhost:3000/api/auth/kite/callback`
-4. For production, use: `https://your-domain.vercel.app/api/auth/kite/callback`
-5. Copy API Key and Secret to `.env.local`
-
-## 📖 Usage
-
-### 1. Authentication
-
-Click **"Login with Zerodha Kite"** and authenticate with your Zerodha credentials. The app will request read-only access to market data.
-
-### 2. Watchlist
-
-- Add stocks using the input field (e.g., RELIANCE, TCS, INFY)
-- Select exchange (NSE or BSE)
-- View real-time prices, changes, and indicators
-- Get automated trading signals for each stock
-
-### 3. Stock Screener
-
-- Click **"Run Screener"** to analyze 15 popular NSE stocks
-- View results sorted by signal strength
-- Add promising stocks to your watchlist
-- Strategies: Momentum Breakout, Oversold Bounce, Trend Following
-
-### 4. Active Signals
-
-- Monitor strong buy/sell signals across all watched stocks
-- View signal history with timestamps and reasons
-- Track up to 15 recent signals
-
-## 📊 Technical Indicators
-
-The app calculates multiple technical indicators:
-
-| Indicator | Period | Usage |
-|-----------|--------|-------|
-| RSI | 14 | Identify overbought (>70) and oversold (<30) conditions |
-| MACD | 12/26/9 | Detect bullish/bearish momentum changes |
-| Bollinger Bands | 20 | Find support/resistance levels |
-| SMA | 20, 50 | Identify trend direction |
-| EMA | 12, 26 | Calculate MACD components |
-
-## 🎯 Trading Signals
-
-Signals are generated based on multiple indicator confirmations:
-
-- **STRONG BUY** (⭐⭐⭐⭐⭐) - 4+ bullish signals
-- **BUY** (⭐⭐⭐⭐) - 2-3 bullish signals  
-- **HOLD** (⭐⭐) - Mixed or insufficient signals
-- **SELL** (⭐⭐⭐⭐) - 2-3 bearish signals
-- **STRONG SELL** (⭐⭐⭐⭐⭐) - 4+ bearish signals
-
-### Signal Components
-
-- RSI oversold/overbought
-- MACD crossovers
-- Bollinger Band touches
-- Moving average crossovers (Golden/Death Cross)
-- Volume confirmation
-
-## 🚢 Deployment
-
-### Vercel (Recommended)
-
-1. Push code to GitHub
-2. Import project in [Vercel](https://vercel.com)
-3. Add environment variables in project settings
-4. Update Kite Connect redirect URL to: `https://your-app.vercel.app/api/auth/kite/callback`
-5. Deploy!
-
-### Environment Variables for Production
-
-Make sure to set all variables from `.env.local.example` in your Vercel project settings.
-
-## 🔐 Security
-
-- ✅ API credentials stored server-side only
-- ✅ HTTP-only cookies for session management
-- ✅ No client-side credential exposure
-- ✅ OAuth 2.0 authentication flow
-- ✅ Secure session encryption
-
-## 📁 Project Structure
-
-```
-app/
-├── api/
-│   ├── auth/kite/     # Authentication endpoints
-│   └── kite/          # Data fetching endpoints
-├── page.tsx           # Main UI
-├── layout.tsx         # Root layout
-└── globals.css        # Styles
-
-lib/
-├── utils.ts           # Utilities
-└── kite-utils.ts      # Kite-specific utils & technical analysis
-
-components/
-└── theme-provider.tsx
-```
-
-## 🛠️ API Routes
-
-### Authentication
-- `GET /api/auth/kite/login` - Initiate OAuth flow
-- `GET /api/auth/kite/callback` - Handle OAuth callback
-- `GET /api/auth/kite/session` - Check authentication status
-- `POST /api/auth/kite/logout` - Clear session
-
-### Data
-- `GET /api/kite/quote?symbols=NSE:RELIANCE` - Fetch quotes
-- `GET /api/kite/historical?instrument_token=123` - Fetch OHLC data
-- `GET /api/kite/instruments?search=RELIANCE` - Search instruments
-
-## 📚 Documentation
-
-- [Migration Guide](./MIGRATION_GUIDE.md) - Detailed migration from Alpha Vantage
-- [Kite Connect Docs](https://kite.trade/docs/connect/v3/) - Official API documentation
-- [Next.js Docs](https://nextjs.org/docs) - Framework documentation
-
-## 🐛 Known Issues
-
-1. **WebSocket warnings** - Optional dependencies for kiteconnect (can be ignored)
-2. **Daily token expiry** - Users need to re-authenticate daily (Kite Connect limitation)
-3. **Market hours only** - Live data available during 9:15 AM - 3:30 PM IST
-
-## 🎯 Roadmap
-
-### ✅ Completed:
-- [x] Zerodha Kite Connect integration
-- [x] Real-time watchlist & screener
-- [x] Advanced intraday trading tools
-- [x] Universe Scanner (AI-powered NIFTY 500 analysis)
-- [x] Historical pattern analysis
-- [x] Position tracking with P&L
-- [x] Opening Range Breakout (ORB) scanner
-- [x] Trade Watch system
-- [x] Market Close Analyzer
-- [x] Comprehensive documentation for beginners
-- [x] 60-day historical data for accurate indicators
-
-### 🚧 In Progress:
-- [ ] Export analysis to CSV/Excel
-- [ ] Better stock search with autocomplete
-
-### 🔮 Future Enhancements:
-- [ ] WebSocket integration for real-time streaming
-- [ ] TradingView chart integration
-- [ ] Multi-timeframe analysis (1min, 5min, 15min, 1hr)
-- [ ] Strategy backtesting engine
-- [ ] Portfolio tracking (holdings & positions)
-- [ ] Order placement capability (requires additional API permissions)
-- [ ] Custom alerts & notifications (SMS/Email)
-- [ ] Mobile app (React Native)
-- [ ] Advanced pattern recognition (Head & Shoulders, Cup & Handle, etc.)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## ⚠️ Disclaimer
-
-This application is for educational and informational purposes only. It does not constitute financial advice. Always do your own research before making investment decisions. Trading in stocks involves risk of loss.
-
-## 📝 License
-
-This project is open source and available under the MIT License.
-
-## 🙏 Acknowledgments
-
-- [Zerodha](https://zerodha.com) for the excellent Kite Connect API
-- [Next.js](https://nextjs.org) team for the amazing framework
-- [Vercel](https://vercel.com) for seamless deployment
-- [v0.app](https://v0.app) for initial project generation
-
-## 📞 Support
-
-- **Issues:** [GitHub Issues](https://github.com/rohitsadhu1947/v0-indian-stock-tracker/issues)
-- **Kite API:** [Kite Support](https://kite.trade/support)
-- **Email:** rohitsadhu1947@gmail.com
+[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2014-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![Zerodha Kite](https://img.shields.io/badge/Powered%20by-Kite%20Connect-blue?style=for-the-badge)](https://kite.trade)
 
 ---
 
-**Built with ❤️ for the Indian stock market community**
+## Tech Stack
 
-⭐ Star this repo if you find it helpful!
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14.2 (App Router), TypeScript 5 |
+| UI | Tailwind CSS v4, Radix UI |
+| State | Zustand v5 (5 stores) |
+| Database | PostgreSQL via Neon serverless, Drizzle ORM 0.44 |
+| Auth | HMAC-signed sessions (email/password) + Kite OAuth |
+| Broker | Zerodha Kite Connect SDK (multi-broker abstraction) |
+| AI | Google Gemini (PDF parsing, sentiment) |
+| Alerts | Telegram Bot API |
+| Tests | Vitest (75 tests) |
+
+---
+
+## Architecture
+
+```
+app/
+├── page.tsx                  # Shell (~989 lines): auth, tab bar, store init
+├── components/
+│   ├── WatchlistTab.tsx       # Watchlist + signal cards
+│   ├── IntradayTab.tsx        # Morning screener, ORB, trade watch, positions
+│   ├── UniverseTab.tsx        # NIFTY 500 scanner
+│   ├── FundamentalsTab.tsx    # Fundamental analysis + combined intelligence
+│   ├── MarketTab.tsx          # Market dashboard (indices, breadth, movers)
+│   ├── MomentumTab.tsx        # Momentum swing scanner + paper trading
+│   ├── ErrorBoundary.tsx      # Generic React error boundary
+│   ├── TabErrorBoundary.tsx   # Per-tab isolation
+│   └── ...29 total components
+│
+lib/
+├── stores/                   # Zustand stores (auth, watchlist, positions, market, ui)
+├── hooks/                    # use-auth, use-market-data, use-positions
+├── broker/                   # Multi-broker abstraction (Kite, Angel)
+├── logger.ts                 # Structured JSON logger (prod) / colorized (dev)
+├── rate-limit.ts             # Sliding-window rate limiter (PostgreSQL-backed)
+├── market-utils.ts           # RSI, MACD, Bollinger Bands, trading signals
+├── momentum-scanner.ts       # NIFTY 500 momentum scan algorithm
+├── master-scorer.ts          # Composite signal scoring
+├── intraday-utils.ts         # VWAP, ORB, gap detection
+├── multi-user-auth.ts        # HMAC session auth + RBAC
+├── api-client.ts             # Typed fetch client with 401 handling
+└── ...37 total modules
+
+app/api/                      # 57 API routes
+db/
+├── schema.ts                 # 22 PostgreSQL tables (Drizzle ORM)
+└── index.ts                  # Neon serverless connection
+
+middleware.ts                 # Auth gate + security headers (CSP, HSTS, etc.)
+```
+
+---
+
+## Features
+
+### Trading Tabs (all lazy-loaded, error-isolated)
+- **Watchlist** — Live quotes, RSI/MACD signals, strength bars
+- **Intraday** — Morning screener, Opening Range Breakout scanner, Trade Watch monitor, position P&L
+- **Universe Scanner** — Scans 200+ NIFTY 500 stocks for gap/volume/volatility candidates
+- **Momentum** — Systematic 1-7 day swing scanner with paper trade execution
+- **Fundamentals** — PE ratio, ROE, debt metrics + combined technical+fundamental signal
+- **Market Dashboard** — Indices, sector heatmap, market breadth, top movers
+- **Top Picks** — AI-powered recommendation engine
+- **Global Macro** — Geopolitical and macro intelligence
+- **News Pops** — Sentiment-driven momentum scanner
+- **Sector Rotation** — Inter-sector flow analysis
+- **Research** — Analyst reports and multi-layer news
+- **Backtest** — Strategy backtesting engine
+- **Settings / Admin** — Broker connection, RBAC, data management
+
+### Infrastructure
+- **Security** — HMAC-signed sessions, middleware auth gate on all `/api/*` routes, security headers (CSP, HSTS, X-Frame-Options), no legacy plain-integer tokens
+- **Rate limiting** — 10 login attempts/15 min, 30 scanner calls/min (PostgreSQL-backed sliding window)
+- **Caching** — DB-backed quote and historical data cache (Neon PostgreSQL)
+- **Logging** — Structured JSON in production, colorized in development
+- **Health check** — `GET /api/health` with DB connectivity probe
+
+---
+
+## Database Schema (22 tables)
+
+`users`, `userPermissions`, `brokerConnections`, `watchlists`, `positions`, `paperPositions`, `stockQuotes`, `historicalData`, `screenerResults`, `patternAnalysis`, `marketCloseAnalyses`, `fundamentalData`, `newsCache`, `backtestRuns`, `backtestTrades`, `adminAuditLog`, `rateLimitBuckets`, `sectors`, `sectorStocks`, `events`, `telegramSettings`, `systemConfig`
+
+---
+
+## Setup
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL (Neon serverless recommended)
+- Zerodha Kite Connect API key + secret
+
+### Environment Variables
+
+```env
+# Database
+DATABASE_URL=postgresql://...
+
+# Auth
+SESSION_SECRET=<64+ random chars: openssl rand -base64 64>
+
+# Kite Connect
+KITE_API_KEY=your_api_key
+KITE_API_SECRET=your_api_secret
+KITE_REDIRECT_URL=https://yourdomain.com/api/auth/kite/callback
+
+# Optional
+GEMINI_API_KEY=...
+TELEGRAM_BOT_TOKEN=...
+LOG_LEVEL=info   # debug | info | warn | error
+```
+
+### Running locally
+
+```bash
+npm install
+npm run db:push        # Apply schema to database
+npm run dev            # Start development server
+```
+
+### Tests
+
+```bash
+npm test               # Run all 75 tests
+npm run test:coverage  # Coverage report
+```
+
+---
+
+## Auth Flow
+
+1. User visits `/` → middleware checks `auth_user_id` cookie → redirects to `/login` if absent
+2. Login via email/password (`POST /api/auth/login`) or Kite OAuth (`/api/auth/kite/login`)
+3. Server sets `auth_user_id` cookie: `userId:timestamp:hmac` (HMAC-signed, 24h expiry)
+4. Kite access token stored in `brokerConnections` table per user
+5. All `/api/*` routes (except public allowlist) validated by middleware before handler runs
+
+---
+
+## Deployment (Vercel)
+
+```bash
+vercel --prod
+```
+
+Required env vars: `DATABASE_URL`, `SESSION_SECRET`, `KITE_API_KEY`, `KITE_API_SECRET`, `KITE_REDIRECT_URL`
+
+Health check: `GET /api/health` (no auth required)

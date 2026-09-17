@@ -7,8 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getBrokerManager, KiteBrokerClient } from '@/lib/broker'
+import { getUserBrokerManager } from '@/lib/broker'
 import { analyzeMarketRegime, getRegimeColor, getRegimeEmoji, type HistoricalBar } from '@/lib/market-regime'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,6 +20,11 @@ let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📊 === MARKET REGIME API CALLED ===')
 
@@ -34,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get broker manager
-    const manager = await getBrokerManager()
+    const manager = await getUserBrokerManager()
     if (!manager.hasConnection()) {
       console.error('❌ Broker authentication required')
       return NextResponse.json({
@@ -42,10 +48,9 @@ export async function GET(request: NextRequest) {
         error: 'No broker connections available. Admin must connect a broker in settings.'
       }, { status: 401 })
     }
-    const client = manager.getClient() as KiteBrokerClient
-    const kc = client.getRawClient()
+    const client = manager.getClient()
 
-    console.log('✅ Kite initialized')
+    console.log('✅ Broker initialized')
 
     // Fetch NIFTY 50 index data
     // NIFTY 50 instrument token is 256265
@@ -54,27 +59,29 @@ export async function GET(request: NextRequest) {
 
     // Get current quote
     console.log('📊 Fetching NIFTY 50 current price...')
-    const quotes = await kc.getQuote(['NSE:NIFTY 50'])
+    const quotes = await client.getQuote(['NSE:NIFTY 50'])
     const niftyQuote = quotes['NSE:NIFTY 50']
 
     if (!niftyQuote) {
       throw new Error('Failed to fetch NIFTY 50 quote')
     }
 
-    console.log(`✅ NIFTY 50 current: ₹${niftyQuote.last_price}`)
+    console.log(`✅ NIFTY 50 current: ₹${niftyQuote.lastPrice}`)
 
-    // Get historical data (60 days for SMA calculations)
-    console.log('📊 Fetching NIFTY 50 historical data (60 days)...')
+    // Get historical data (400 calendar days ≈ 270 bars, enough for SMA200)
+    console.log('📊 Fetching NIFTY 50 historical data (400 days)...')
     const toDate = new Date()
     const fromDate = new Date()
-    fromDate.setDate(fromDate.getDate() - 60)
+    fromDate.setDate(fromDate.getDate() - 400)
 
-    const historical = await kc.getHistoricalData(
-      NIFTY_INSTRUMENT_TOKEN,
-      'day',
-      fromDate.toISOString().split('T')[0],
-      toDate.toISOString().split('T')[0]
-    )
+    const historical = await client.getHistoricalData({
+      instrumentToken: NIFTY_INSTRUMENT_TOKEN,
+      interval: 'day',
+      from: fromDate,
+      to: toDate,
+      symbol: NIFTY_SYMBOL,
+      exchange: 'NSE'
+    })
 
     console.log(`✅ Got ${historical.length} historical bars`)
 
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     // Analyze regime
     console.log('🔍 Analyzing market regime...')
-    const regime = analyzeMarketRegime(bars, niftyQuote.last_price)
+    const regime = analyzeMarketRegime(bars, niftyQuote.lastPrice)
 
     console.log(`✅ Regime: ${regime.regime} (${regime.confidence}% confidence)`)
     console.log(`   Recommendation: ${regime.recommendation}`)
@@ -112,9 +119,9 @@ export async function GET(request: NextRequest) {
         price: regime.niftyPrice,
         change: regime.niftyChange,
         changePercent: regime.niftyChangePercent,
-        dayHigh: niftyQuote.ohlc?.high || niftyQuote.last_price,
-        dayLow: niftyQuote.ohlc?.low || niftyQuote.last_price,
-        open: niftyQuote.ohlc?.open || niftyQuote.last_price
+        dayHigh: niftyQuote.high || niftyQuote.lastPrice,
+        dayLow: niftyQuote.low || niftyQuote.lastPrice,
+        open: niftyQuote.open || niftyQuote.lastPrice
       },
 
       // Technical indicators

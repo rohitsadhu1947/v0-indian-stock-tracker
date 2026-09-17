@@ -168,19 +168,40 @@ export function calculateBreadthSentiment(breadth: MarketBreadth): MarketBreadth
 
 /**
  * Calculate overall market sentiment from multiple factors
+ *
+ * @param indices - Market index data (NIFTY, BANKNIFTY, etc.)
+ * @param breadth - Market breadth (advancers/decliners)
+ * @param sectorPerformance - Sector performance data
+ * @param realTimeFactors - Optional real-time news and institutional data
  */
 export function calculateMarketSentiment(
   indices: MarketIndex[],
   breadth: MarketBreadth,
-  sectorPerformance: SectorPerformance[]
+  sectorPerformance: SectorPerformance[],
+  realTimeFactors?: {
+    newsSentimentScore?: number       // 0-100, from news API
+    institutionalScore?: number       // 0-100, from FII/DII data
+    institutionalSignals?: string[]   // Human-readable signals
+    newsSignals?: string[]            // Human-readable news signals
+  }
 ): MarketSentiment {
   const signals: string[] = []
   const factors = {
     technicals: 50,
     breadth: 50,
     volume: 50,
-    news: 50,
-    institutional: 50
+    news: realTimeFactors?.newsSentimentScore ?? 50,       // Use real data or default to 50
+    institutional: realTimeFactors?.institutionalScore ?? 50 // Use real data or default to 50
+  }
+
+  // Add news signals if provided
+  if (realTimeFactors?.newsSignals) {
+    signals.push(...realTimeFactors.newsSignals)
+  }
+
+  // Add institutional signals if provided
+  if (realTimeFactors?.institutionalSignals) {
+    signals.push(...realTimeFactors.institutionalSignals)
   }
   
   // 1. Technical analysis (index movements)

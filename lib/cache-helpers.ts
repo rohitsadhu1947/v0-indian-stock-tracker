@@ -6,6 +6,7 @@
 import { db } from '@/db'
 import { stockQuotes, historicalData } from '@/db/schema'
 import { and, eq, gte, lte } from 'drizzle-orm'
+import logger from '@/lib/logger'
 
 /**
  * Cache duration constants (in minutes)
@@ -58,14 +59,14 @@ export async function getCachedQuote(symbol: string, exchange: string = 'NSE'): 
       .limit(1)
     
     if (cached) {
-      console.log(`✅ Cache HIT: ${symbol} (${Math.floor((Date.now() - cached.timestamp.getTime()) / 1000)}s old)`)
+      logger.debug('Cache HIT', { symbol, ageS: Math.floor((Date.now() - cached.timestamp.getTime()) / 1000) })
       return cached.data
     }
     
-    console.log(`❌ Cache MISS: ${symbol}`)
+    logger.debug('Cache MISS', { symbol })
     return null
   } catch (error) {
-    console.error('Error reading quote cache:', error)
+    logger.error('Error reading quote cache', { error: String(error) })
     return null
   }
 }
@@ -75,27 +76,28 @@ export async function getCachedQuote(symbol: string, exchange: string = 'NSE'): 
  */
 export async function cacheQuote(symbol: string, exchange: string, data: any): Promise<void> {
   try {
-    // Delete old cache for this symbol
-    await db.delete(stockQuotes)
-      .where(and(
-        eq(stockQuotes.symbol, symbol.toUpperCase()),
-        eq(stockQuotes.exchange, exchange)
-      ))
-    
-    // Insert new cache
-    await db.insert(stockQuotes).values({
-      symbol: symbol.toUpperCase(),
-      exchange,
-      data,
-      timestamp: new Date()
+    // Atomic delete + insert to prevent cache gaps
+    await db.transaction(async (tx) => {
+      await tx.delete(stockQuotes)
+        .where(and(
+          eq(stockQuotes.symbol, symbol.toUpperCase()),
+          eq(stockQuotes.exchange, exchange)
+        ))
+
+      await tx.insert(stockQuotes).values({
+        symbol: symbol.toUpperCase(),
+        exchange,
+        data,
+        timestamp: new Date()
+      })
     })
 
-    console.log(`💾 Cached quote: ${symbol}`)
+    logger.debug('Cached quote', { symbol })
 
     // Periodically clean up old cache entries
     throttledCacheCleanup()
   } catch (error) {
-    console.error('Error caching quote:', error)
+    logger.error('Error caching quote', { error: String(error) })
   }
 }
 
@@ -127,14 +129,14 @@ export async function getCachedHistorical(
       .limit(1)
     
     if (cached) {
-      console.log(`✅ Cache HIT: ${symbol} historical (${interval}, ${Math.floor((Date.now() - cached.timestamp.getTime()) / 1000)}s old)`)
+      logger.debug('Cache HIT historical', { symbol, interval, ageS: Math.floor((Date.now() - cached.timestamp.getTime()) / 1000) })
       return cached.data
     }
     
-    console.log(`❌ Cache MISS: ${symbol} historical (${interval})`)
+    logger.debug('Cache MISS historical', { symbol, interval })
     return null
   } catch (error) {
-    console.error('Error reading historical cache:', error)
+    logger.error('Error reading historical cache', { error: String(error) })
     return null
   }
 }
@@ -150,31 +152,32 @@ export async function cacheHistorical(
   data: any
 ): Promise<void> {
   try {
-    // Delete old cache for this exact query
-    await db.delete(historicalData)
-      .where(and(
-        eq(historicalData.symbol, symbol.toUpperCase()),
-        eq(historicalData.interval, interval),
-        eq(historicalData.fromDate, fromDate),
-        eq(historicalData.toDate, toDate)
-      ))
-    
-    // Insert new cache
-    await db.insert(historicalData).values({
-      symbol: symbol.toUpperCase(),
-      interval,
-      fromDate,
-      toDate,
-      data,
-      timestamp: new Date()
+    // Atomic delete + insert to prevent cache gaps
+    await db.transaction(async (tx) => {
+      await tx.delete(historicalData)
+        .where(and(
+          eq(historicalData.symbol, symbol.toUpperCase()),
+          eq(historicalData.interval, interval),
+          eq(historicalData.fromDate, fromDate),
+          eq(historicalData.toDate, toDate)
+        ))
+
+      await tx.insert(historicalData).values({
+        symbol: symbol.toUpperCase(),
+        interval,
+        fromDate,
+        toDate,
+        data,
+        timestamp: new Date()
+      })
     })
 
-    console.log(`💾 Cached historical: ${symbol} (${interval})`)
+    logger.debug('Cached historical', { symbol, interval })
 
     // Periodically clean up old cache entries
     throttledCacheCleanup()
   } catch (error) {
-    console.error('Error caching historical data:', error)
+    logger.error('Error caching historical data', { error: String(error) })
   }
 }
 
@@ -189,9 +192,9 @@ export async function clearOldCache(hoursOld: number = 24): Promise<void> {
     await db.delete(stockQuotes).where(lte(stockQuotes.timestamp, expiryTime))
     await db.delete(historicalData).where(lte(historicalData.timestamp, expiryTime))
 
-    console.log(`✅ Cleared cache entries older than ${hoursOld} hours`)
+    logger.info('Cleared old cache entries', { hoursOld })
   } catch (error) {
-    console.error('Error clearing old cache:', error)
+    logger.error('Error clearing old cache', { error: String(error) })
   }
 }
 

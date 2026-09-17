@@ -7,28 +7,43 @@
 import type { MomentumSignal } from './momentum-scanner'
 import { getFundamentals, calculateFundamentalScore, type FundamentalData, type FundamentalScore } from './fundamental-api'
 import { calculateIntelligenceScore, convertDbReportToAnalystReport, type AnalystReport, type IntelligenceScore } from './intelligence-scorer'
+import type { MacroSnapshot } from './macro-intelligence'
+import { getMacroImpactForStock } from './macro-intelligence'
+
+export interface MacroScore {
+  score: number  // 0-15
+  breakdown: {
+    globalSentiment: number   // 0-4 (based on overallSentiment)
+    stockSpecific: number     // 0-5 (sector-macro alignment)
+    vixAdjustment: number     // -3 to +3
+    currencyEffect: number    // -3 to +3
+  }
+  factors: string[]  // Human-readable factors
+}
 
 export interface MasterScore {
   symbol: string
   exchange: string  // NSE/BSE
   totalScore: number  // 0-100
   tier: 'HIGH_CONVICTION' | 'MODERATE' | 'WATCH' | 'SKIP'
-  
+
   technical: {
-    score: number  // 0-40
+    score: number  // 0-35 (was 0-40, reduced to make room for macro)
     breakdown: {
-      momentum: number  // 0-15 (RSI, MACD)
-      breakout: number  // 0-10 (price action)
-      volume: number    // 0-10 (volume surge)
-      trend: number     // 0-5 (trend strength)
+      momentum: number  // 0-13
+      breakout: number  // 0-9
+      volume: number    // 0-9
+      trend: number     // 0-4
     }
     signals: string[]
   }
-  
-  fundamental: FundamentalScore
-  
-  intelligence: IntelligenceScore
-  
+
+  fundamental: FundamentalScore  // 0-25 (was 0-30)
+
+  intelligence: IntelligenceScore  // 0-25 (was 0-30)
+
+  macro: MacroScore  // 0-15 (NEW)
+
   tradePlan: {
     entry: number
     stopLoss: number
@@ -39,9 +54,13 @@ export interface MasterScore {
     riskAmount: number
     riskPercent: number
   }
-  
+
   reasoning: string[]  // Top 3-5 reasons why this trade
   timestamp: Date
+}
+
+function sanitizeNumber(value: number, fallback: number = 0): number {
+  return Number.isFinite(value) ? value : fallback;
 }
 
 /**
@@ -57,15 +76,16 @@ function calculateTechnicalScore(signal: MomentumSignal): {
 } {
   const signals: string[] = []
   
-  // PRIMARY: Use the momentum scanner's overall score (0-100) and scale to 0-40
+  // PRIMARY: Use the momentum scanner's overall score (0-100) and scale to 0-35
+  // (was 0-40, reduced to make room for 15% macro alignment)
   const rawScore = signal.momentumScore || 0
-  const technicalScore = Math.round((rawScore / 100) * 40)
-  
+  const technicalScore = Math.round((rawScore / 100) * 35)
+
   // Breakdown estimation (for display purposes)
-  const momentumScore = Math.round(technicalScore * 0.375) // 37.5% of 40 = 15
-  const breakoutScore = Math.round(technicalScore * 0.25)  // 25% of 40 = 10
-  const volumeScore = Math.round(technicalScore * 0.25)    // 25% of 40 = 10
-  const trendScore = Math.round(technicalScore * 0.125)    // 12.5% of 40 = 5
+  const momentumScore = Math.round(technicalScore * 0.375) // 37.5% of 35 = ~13
+  const breakoutScore = Math.round(technicalScore * 0.25)  // 25% of 35 = ~9
+  const volumeScore = Math.round(technicalScore * 0.25)    // 25% of 35 = ~9
+  const trendScore = Math.round(technicalScore * 0.125)    // 12.5% of 35 = ~4
   
   // Add human-readable signals based on the momentum signal data
   signals.push(`${signal.signal} signal (${rawScore.toFixed(0)}/100 momentum)`)
@@ -182,28 +202,121 @@ function generateTradePlan(
 }
 
 /**
+ * Calculate macro alignment score (0-15 points)
+ * Determines how well a stock aligns with current global macro conditions.
+ */
+function calculateMacroScore(
+  symbol: string,
+  macroSnapshot?: MacroSnapshot | null
+): MacroScore {
+  if (!macroSnapshot) {
+    return {
+      score: 8, // Neutral default (middle of 0-15)
+      breakdown: { globalSentiment: 2, stockSpecific: 3, vixAdjustment: 0, currencyEffect: 0 },
+      factors: ['Macro data unavailable — using neutral score'],
+    }
+  }
+
+  const factors: string[] = []
+  let globalSentiment = 2 // Base: neutral (0-4 range)
+  let stockSpecific = 3   // Base: neutral (0-5 range)
+  let vixAdjustment = 0   // -3 to +3
+  let currencyEffect = 0  // -3 to +3
+
+  // 1. Global sentiment score (0-4)
+  switch (macroSnapshot.overallSentiment) {
+    case 'STRONGLY_RISK_ON':
+      globalSentiment = 4
+      factors.push('🌍 Global markets strongly risk-on')
+      break
+    case 'RISK_ON':
+      globalSentiment = 3
+      factors.push('🌍 Global markets risk-on')
+      break
+    case 'NEUTRAL':
+      globalSentiment = 2
+      break
+    case 'RISK_OFF':
+      globalSentiment = 1
+      factors.push('🌍 Global markets risk-off')
+      break
+    case 'STRONGLY_RISK_OFF':
+      globalSentiment = 0
+      factors.push('🌍 Global markets strongly risk-off')
+      break
+  }
+
+  // 2. Stock-specific macro alignment (0-5)
+  const stockImpact = getMacroImpactForStock(symbol, macroSnapshot)
+  // Map -100 to +100 impact to 0-5 score
+  stockSpecific = Math.round(((stockImpact.score + 100) / 200) * 5)
+  stockSpecific = Math.max(0, Math.min(5, stockSpecific))
+  if (stockImpact.factors.length > 0) {
+    factors.push(...stockImpact.factors.slice(0, 2))
+  }
+
+  // 3. VIX adjustment (-3 to +3)
+  if (macroSnapshot.volatility.indiaVix > 30) {
+    vixAdjustment = -3
+    factors.push(`⚠️ Extreme VIX (${macroSnapshot.volatility.indiaVix.toFixed(1)})`)
+  } else if (macroSnapshot.volatility.indiaVix > 22) {
+    vixAdjustment = -2
+    factors.push(`⚠️ High VIX (${macroSnapshot.volatility.indiaVix.toFixed(1)})`)
+  } else if (macroSnapshot.volatility.indiaVix > 17) {
+    vixAdjustment = -1
+  } else if (macroSnapshot.volatility.indiaVix < 12) {
+    vixAdjustment = 2
+    factors.push(`✅ Low VIX (${macroSnapshot.volatility.indiaVix.toFixed(1)}) — calm markets`)
+  } else if (macroSnapshot.volatility.indiaVix < 14) {
+    vixAdjustment = 1
+  }
+
+  // 4. Currency effect (-3 to +3)
+  // This is already captured in stockSpecific via getMacroImpactForStock, so keep small
+  if (Math.abs(macroSnapshot.currency.usdInrChange) > 0.5) {
+    currencyEffect = macroSnapshot.currency.trend === 'WEAKENING' ? -1 : 1
+  }
+
+  // Total macro score (0-15)
+  const rawScore = globalSentiment + stockSpecific + vixAdjustment + currencyEffect
+  const score = Math.max(0, Math.min(15, rawScore))
+
+  return {
+    score,
+    breakdown: { globalSentiment, stockSpecific, vixAdjustment, currencyEffect },
+    factors,
+  }
+}
+
+/**
  * Calculate master score for a momentum signal
+ *
+ * New weights: Technical 35% + Fundamental 25% + Intelligence 25% + Macro 15%
  */
 export async function calculateMasterScore(
   signal: MomentumSignal,
   analystReport?: any,  // From database
   newsSentiment: number = 0,
-  capitalAvailable: number = 300000  // Default ₹3L
+  capitalAvailable: number = 300000,  // Default ₹3L
+  macroSnapshot?: MacroSnapshot | null
 ): Promise<MasterScore> {
-  // 1. Calculate Technical Score (40 points)
+  // 1. Calculate Technical Score (35 points, was 40)
   const technical = calculateTechnicalScore(signal)
 
-  // 2. Calculate Fundamental Score (30 points)
+  // 2. Calculate Fundamental Score (25 points, was 30)
   let fundamental: FundamentalScore
   try {
     const fundamentalData = await getFundamentals(signal.symbol)
     fundamental = calculateFundamentalScore(fundamentalData)
+    // Scale from 0-30 to 0-25
+    fundamental = { ...fundamental, score: Math.round((fundamental.score / 30) * 25) }
   } catch (error) {
     console.error(`Error fetching fundamentals for ${signal.symbol}:`, error)
     fundamental = calculateFundamentalScore(null)
+    fundamental = { ...fundamental, score: Math.round((fundamental.score / 30) * 25) }
   }
 
-  // 3. Calculate Intelligence Score (30 points) with REAL news sentiment
+  // 3. Calculate Intelligence Score (25 points, was 30) with REAL news sentiment
   const analystReportConverted = analystReport ? convertDbReportToAnalystReport(analystReport) : null
   
   // Fetch actual news sentiment for the stock
@@ -249,12 +362,17 @@ export async function calculateMasterScore(
     // Continue with default/provided sentiment
   }
   
-  const intelligence = calculateIntelligenceScore(analystReportConverted, actualNewsSentiment)
+  let intelligence = calculateIntelligenceScore(analystReportConverted, actualNewsSentiment)
+  // Scale from 0-30 to 0-25
+  intelligence = { ...intelligence, score: Math.round((intelligence.score / 30) * 25) }
 
-  // 4. Calculate Total Score
-  const totalScore = technical.score + fundamental.score + intelligence.score
+  // 4. Calculate Macro Alignment Score (15 points) — NEW
+  const macro = calculateMacroScore(signal.symbol, macroSnapshot)
 
-  // 5. Determine Tier
+  // 5. Calculate Total Score (35 + 25 + 25 + 15 = 100)
+  const totalScore = technical.score + fundamental.score + intelligence.score + macro.score
+
+  // 6. Determine Tier
   let tier: MasterScore['tier']
   if (totalScore >= 75) {
     tier = 'HIGH_CONVICTION'
@@ -266,10 +384,10 @@ export async function calculateMasterScore(
     tier = 'SKIP'
   }
 
-  // 6. Generate Trade Plan
+  // 7. Generate Trade Plan
   const tradePlan = generateTradePlan(signal, capitalAvailable)
 
-  // 7. Build Reasoning (Top 3-5 reasons)
+  // 8. Build Reasoning (Top 3-5 reasons)
   const reasoning: string[] = []
   
   // Add top technical signal
@@ -299,20 +417,40 @@ export async function calculateMasterScore(
     reasoning.push(`✅ ${intelligence.reasoning[1]}`)
   }
 
+  // Add top macro factor if impactful
+  if (macro.factors.length > 0 && macro.score >= 10) {
+    reasoning.push(`🌍 ${macro.factors[0]}`)
+  } else if (macro.factors.length > 0 && macro.score <= 5) {
+    reasoning.push(`⚠️ ${macro.factors[0]}`)
+  }
+
+  // Sanitize all numeric scores to prevent NaN/Infinity propagation
+  const sanitizedTechnicalScore = sanitizeNumber(technical.score);
+  const sanitizedFundamentalScore = sanitizeNumber(fundamental.score);
+  const sanitizedIntelligenceScore = sanitizeNumber(intelligence.score);
+  const sanitizedMacroScore = sanitizeNumber(macro.score);
+  const sanitizedTotalScore = sanitizeNumber(totalScore);
+
   return {
     symbol: signal.symbol,
-    exchange: signal.exchange,  // Add exchange field
-    totalScore: Math.round(totalScore),
+    exchange: signal.exchange,
+    totalScore: Math.round(sanitizedTotalScore),
     tier,
     technical: {
-      score: technical.score,
-      breakdown: technical.breakdown,
+      score: sanitizedTechnicalScore,
+      breakdown: {
+        momentum: sanitizeNumber(technical.breakdown.momentum),
+        breakout: sanitizeNumber(technical.breakdown.breakout),
+        volume: sanitizeNumber(technical.breakdown.volume),
+        trend: sanitizeNumber(technical.breakdown.trend),
+      },
       signals: technical.signals
     },
-    fundamental,
-    intelligence,
+    fundamental: { ...fundamental, score: sanitizedFundamentalScore },
+    intelligence: { ...intelligence, score: sanitizedIntelligenceScore },
+    macro: { ...macro, score: sanitizedMacroScore },
     tradePlan,
-    reasoning: reasoning.slice(0, 5),  // Max 5 reasons
+    reasoning: reasoning.slice(0, 6),  // Max 6 reasons (added macro)
     timestamp: new Date()
   }
 }
@@ -324,7 +462,8 @@ export async function calculateMasterScore(
 export async function batchCalculateMasterScores(
   signals: MomentumSignal[],
   analystReports: Record<string, any> = {},
-  capitalAvailable: number = 300000
+  capitalAvailable: number = 300000,
+  macroSnapshot?: MacroSnapshot | null
 ): Promise<MasterScore[]> {
   console.log(`🎯 Starting master score calculation for ${signals.length} signals...`)
   
@@ -344,7 +483,8 @@ export async function batchCalculateMasterScores(
             signal,
             analystReports[signal.symbol],
             undefined,  // Let calculateMasterScore fetch news sentiment
-            capitalAvailable
+            capitalAvailable,
+            macroSnapshot  // Pass macro data for macro alignment scoring
           ),
           new Promise<MasterScore>((_, reject) => 
             setTimeout(() => reject(new Error(`Timeout calculating ${signal.symbol}`)), 20000) // Increased to 20s
@@ -361,11 +501,12 @@ export async function batchCalculateMasterScores(
         console.warn(`  ⚠️  Failed to score ${batch[idx].symbol}: ${result.reason.message}`)
         // Create a fallback score with just technical analysis
         const technical = calculateTechnicalScore(batch[idx])
+        const fallbackMacro = calculateMacroScore(batch[idx].symbol, macroSnapshot)
         allScores.push({
           symbol: batch[idx].symbol,
           exchange: batch[idx].exchange,
-          totalScore: technical.score, // Only technical score
-          tier: technical.score >= 75 ? 'HIGH_CONVICTION' : technical.score >= 60 ? 'MODERATE' : 'WATCH',
+          totalScore: technical.score + fallbackMacro.score, // Technical + macro
+          tier: (technical.score + fallbackMacro.score) >= 75 ? 'HIGH_CONVICTION' : (technical.score + fallbackMacro.score) >= 60 ? 'MODERATE' : 'WATCH',
           technical: {
             score: technical.score,
             breakdown: technical.breakdown,
@@ -373,14 +514,16 @@ export async function batchCalculateMasterScores(
           },
           fundamental: {
             score: 0,
-            breakdown: { pe: 0, roe: 0, debt: 0, marketCap: 0 },
+            tier: 'FAIL' as const,
+            data: null as any,
             reasoning: 'Fundamentals unavailable'
           },
           intelligence: {
             score: 0,
-            breakdown: { analystScore: 0, targetUpsideScore: 0, newsScore: 0 },
+            breakdown: { analystScore: 0, targetUpsideScore: 0, newsSentimentScore: 0 },
             reasoning: []
           },
+          macro: fallbackMacro,
           tradePlan: generateTradePlan(batch[idx], capitalAvailable),
           reasoning: technical.signals.slice(0, 3),
           timestamp: new Date()

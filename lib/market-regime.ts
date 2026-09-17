@@ -25,15 +25,15 @@ export interface RegimeAnalysis {
   niftyChangePercent: number
   
   // Technical indicators
-  sma20: number
-  sma50: number
-  sma200: number
+  sma20: number | null   // null = not enough history
+  sma50: number | null
+  sma200: number | null
   rsi: number
   
   // Regime signals
-  priceVsSma20: 'ABOVE' | 'BELOW'
-  priceVsSma50: 'ABOVE' | 'BELOW'
-  priceVsSma200: 'ABOVE' | 'BELOW'
+  priceVsSma20: 'ABOVE' | 'BELOW' | 'N/A'
+  priceVsSma50: 'ABOVE' | 'BELOW' | 'N/A'
+  priceVsSma200: 'ABOVE' | 'BELOW' | 'N/A'
   
   // Trend analysis
   trendStrength: number  // 0-100
@@ -68,8 +68,9 @@ export interface HistoricalBar {
 /**
  * Calculate Simple Moving Average
  */
-function calculateSMA(prices: number[], period: number): number {
-  if (prices.length < period) return prices[prices.length - 1] || 0
+function calculateSMA(prices: number[], period: number): number | null {
+  // Not enough history: report unavailable instead of faking it with the last close
+  if (prices.length < period) return null
   const slice = prices.slice(-period)
   return slice.reduce((a, b) => a + b, 0) / period
 }
@@ -192,9 +193,13 @@ export function analyzeMarketRegime(
   const trendStrength = calculateTrendStrength(closes, 14)
   
   // Price vs SMAs
-  const priceVsSma20 = price > sma20 ? 'ABOVE' : 'BELOW'
-  const priceVsSma50 = price > sma50 ? 'ABOVE' : 'BELOW'
-  const priceVsSma200 = price > sma200 ? 'ABOVE' : 'BELOW'
+  const vs = (sma: number | null) => (sma === null ? 'N/A' : price > sma ? 'ABOVE' : 'BELOW') as 'ABOVE' | 'BELOW' | 'N/A'
+  const priceVsSma20 = vs(sma20)
+  const priceVsSma50 = vs(sma50)
+  const priceVsSma200 = vs(sma200)
+  for (const [name, sma, period] of [['SMA20', sma20, 20], ['SMA50', sma50, 50], ['SMA200', sma200, 200]] as const) {
+    if (sma === null) warnings.push(`⚠️ ${name} unavailable (${closes.length} bars, need ${period}) — excluded from regime score`)
+  }
   
   // Volatility
   const volatilityPercent = (atr / price) * 100
@@ -206,25 +211,30 @@ export function analyzeMarketRegime(
   
   // Trend direction
   let trendDirection: 'UP' | 'DOWN' | 'FLAT' = 'FLAT'
-  if (sma20 > sma50 && price > sma20) trendDirection = 'UP'
-  else if (sma20 < sma50 && price < sma20) trendDirection = 'DOWN'
+  if (sma20 !== null && sma50 !== null) {
+    if (sma20 > sma50 && price > sma20) trendDirection = 'UP'
+    else if (sma20 < sma50 && price < sma20) trendDirection = 'DOWN'
+  }
   
   // === REGIME SCORING ===
   let bullScore = 0
   let bearScore = 0
   
   // Price vs SMAs (major factor)
+  // Unavailable SMAs (N/A) add to neither side
   if (priceVsSma20 === 'ABOVE') { bullScore += 15; signals.push('Price above SMA20') }
-  else { bearScore += 15; signals.push('Price below SMA20') }
+  else if (priceVsSma20 === 'BELOW') { bearScore += 15; signals.push('Price below SMA20') }
   
   if (priceVsSma50 === 'ABOVE') { bullScore += 20; signals.push('Price above SMA50') }
-  else { bearScore += 20; signals.push('Price below SMA50') }
+  else if (priceVsSma50 === 'BELOW') { bearScore += 20; signals.push('Price below SMA50') }
   
   if (priceVsSma200 === 'ABOVE') { bullScore += 25; signals.push('Price above SMA200 (long-term bull)') }
-  else { bearScore += 25; signals.push('Price below SMA200 (long-term bear)') }
+  else if (priceVsSma200 === 'BELOW') { bearScore += 25; signals.push('Price below SMA200 (long-term bear)') }
   
   // SMA alignment (golden cross / death cross)
-  if (sma20 > sma50 && sma50 > sma200) {
+  if (sma20 === null || sma50 === null || sma200 === null) {
+    // alignment needs all three
+  } else if (sma20 > sma50 && sma50 > sma200) {
     bullScore += 20
     signals.push('SMAs in bullish alignment (20>50>200)')
   } else if (sma20 < sma50 && sma50 < sma200) {

@@ -6,19 +6,22 @@ import crypto from 'crypto'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { db } from '@/db'
 import { analystReports, users } from '@/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, and } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { addServerLog } from '../logs/route'
+// addServerLog was in the deleted logs route; inline a no-op so call-sites compile
+function addServerLog(_msg: string) { console.log(_msg) }
 
-// Use dynamic import for pdf-parse to avoid build issues
-let pdfParse: any = null
-
-async function getPdfParse() {
-  if (!pdfParse) {
-    pdfParse = (await import('pdf-parse')).default
+// Use dynamic import for pdf-parse to avoid build issues (v2 API: PDFParse class)
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const { PDFParse } = await import('pdf-parse')
+  const parser = new PDFParse({ data: new Uint8Array(buffer) })
+  try {
+    const result = await parser.getText()
+    return result.text
+  } finally {
+    await parser.destroy()
   }
-  return pdfParse
 }
 
 // Initialize Gemini AI (you'll add your API key to .env.local)
@@ -34,40 +37,14 @@ export async function POST(request: NextRequest) {
   try {
     addServerLog('📥 === NEW UPLOAD REQUEST ===')
     
-    // 1. Check authentication (with test mode for development)
-    let userId = await getAuthenticatedUserIdCompat()
-    
+    // 1. Check authentication
+    const userId = await getAuthenticatedUserIdCompat()
+
     if (!userId) {
-      // Test mode: Use a default test user if not authenticated in development
-      if (process.env.NODE_ENV === 'development') {
-        addServerLog('⚠️ Using test mode - creating/finding test user')
-        
-        // Get or create a test user
-        const testUser = await db.select({ id: users.id })
-          .from(users)
-          .where(eq(users.kiteUserId, 'TEST_USER'))
-          .limit(1)
-        
-        if (testUser.length > 0) {
-          userId = testUser[0].id
-          addServerLog(`✅ Using test user ID: ${userId}`)
-        } else {
-          // Create test user
-          const [newUser] = await db.insert(users).values({
-            kiteUserId: 'TEST_USER',
-            kiteAccessToken: 'test_token',
-            email: 'test@example.com',
-          }).returning({ id: users.id })
-          
-          userId = newUser.id
-          addServerLog(`✅ Created test user with ID: ${userId}`)
-        }
-      } else {
-        return NextResponse.json({
-          success: false,
-          error: 'Not authenticated'
-        }, { status: 401 })
-      }
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required'
+      }, { status: 401 })
     }
 
     // 2. Get form data
@@ -121,9 +98,7 @@ export async function POST(request: NextRequest) {
       
       // Method 1: Try pdf-parse first (fast but sometimes incomplete)
       try {
-        const pdf = await getPdfParse()
-        const pdfData = await pdf(buffer)
-        fullText = pdfData.text
+        fullText = await extractPdfText(buffer)
         addServerLog(`📝 pdf-parse: Extracted ${fullText.length} characters`)
         
         // If we got very little text, the PDF might have images or complex layout
@@ -440,31 +415,13 @@ function parseHDFCReport(text: string) {
 // GET endpoint to fetch reports
 export async function GET(request: NextRequest) {
   try {
-    let userId = await getAuthenticatedUserIdCompat()
-    
+    const userId = await getAuthenticatedUserIdCompat()
+
     if (!userId) {
-      // Test mode: Use test user in development
-      if (process.env.NODE_ENV === 'development') {
-        const testUser = await db.select({ id: users.id })
-          .from(users)
-          .where(eq(users.kiteUserId, 'TEST_USER'))
-          .limit(1)
-        
-        if (testUser.length > 0) {
-          userId = testUser[0].id
-        } else {
-          // No test user found, and we're not authenticated
-          return NextResponse.json({
-            success: false,
-            error: 'Not authenticated'
-          }, { status: 401 })
-        }
-      } else {
-        return NextResponse.json({
-          success: false,
-          error: 'Not authenticated'
-        }, { status: 401 })
-      }
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication required'
+      }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -473,16 +430,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
 
     // Build query
-    let queryBuilder = db.select().from(analystReports)
-      .where(eq(analystReports.userId, userId))
-    
+    const conditions = [eq(analystReports.userId, userId)] as any[]
     if (symbol) {
-      queryBuilder = queryBuilder.where(eq(analystReports.symbol, symbol.toUpperCase()))
+      conditions.push(eq(analystReports.symbol, symbol.toUpperCase()))
     }
-    
     if (type) {
-      queryBuilder = queryBuilder.where(eq(analystReports.type, type))
+      conditions.push(eq(analystReports.type, type))
     }
+    let queryBuilder = db.select().from(analystReports)
+      .where(and(...conditions))
 
     const reports = await queryBuilder
       .orderBy(desc(analystReports.reportDate))

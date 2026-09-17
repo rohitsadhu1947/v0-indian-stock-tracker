@@ -8,7 +8,7 @@ import { db } from '@/db'
 import { positions } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getCachedPositions, setCachedPositions, invalidatePositionsCache } from '@/lib/data-cache'
+import logger from '@/lib/logger'
 
 /**
  * GET /api/positions
@@ -26,19 +26,6 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
     
-    // 🚀 Check cache first
-    const cached = getCachedPositions(userId)
-    if (cached) {
-      console.log(`⚡ Cache HIT: Positions for user ${userId} (${cached.length} items)`)
-      return NextResponse.json({
-        success: true,
-        positions: cached,
-        cached: true
-      })
-    }
-
-    // Cache miss - fetch from database
-    console.log(`📡 Cache MISS: Fetching positions from database for user ${userId}`)
     const userPositions = await db.select()
       .from(positions)
       .where(and(
@@ -63,18 +50,11 @@ export async function GET(request: NextRequest) {
       exitTime: pos.exitTime
     }))
 
-    // Cache the result
-    setCachedPositions(userId, positionsData)
-    
-    console.log(`✅ Fetched and cached ${userPositions.length} active positions for user ${userId}`)
-    
-    return NextResponse.json({
-      success: true,
-      positions: positionsData,
-      cached: false
-    })
+    logger.debug('Fetched positions', { userId, count: userPositions.length })
+
+    return NextResponse.json({ success: true, positions: positionsData })
   } catch (error) {
-    console.error('❌ Error fetching positions:', error)
+    logger.error('Error fetching positions', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch positions',
@@ -134,18 +114,11 @@ export async function POST(request: NextRequest) {
       entryTime: new Date() // ✅ Fix: Explicitly set entry time
     }).returning()
     
-    // Invalidate cache
-    invalidatePositionsCache(userId)
-    
-    console.log(`✅ Created position for ${symbol} (user ${userId})`)
-    
-    return NextResponse.json({
-      success: true,
-      message: `Position created for ${symbol}`,
-      position: newPosition
-    })
+    logger.info('Created position', { userId, symbol })
+
+    return NextResponse.json({ success: true, message: `Position created for ${symbol}`, position: newPosition })
   } catch (error) {
-    console.error('❌ Error creating position:', error)
+    logger.error('Error creating position', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to create position'
@@ -205,15 +178,11 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 })
     }
     
-    console.log(`✅ Updated position ${positionId}`)
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Position updated',
-      position: updatedPosition
-    })
+    logger.debug('Updated position', { positionId })
+
+    return NextResponse.json({ success: true, message: 'Position updated', position: updatedPosition })
   } catch (error) {
-    console.error('❌ Error updating position:', error)
+    logger.error('Error updating position', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to update position'
@@ -255,9 +224,6 @@ export async function DELETE(request: NextRequest) {
       ))
       .returning()
     
-    // Invalidate cache
-    invalidatePositionsCache(userId)
-    
     if (!closedPosition) {
       return NextResponse.json({
         success: false,
@@ -265,14 +231,11 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 })
     }
     
-    console.log(`✅ Closed position ${positionId}`)
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Position closed'
-    })
+    logger.info('Closed position', { positionId })
+
+    return NextResponse.json({ success: true, message: 'Position closed' })
   } catch (error) {
-    console.error('❌ Error closing position:', error)
+    logger.error('Error closing position', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to close position'
