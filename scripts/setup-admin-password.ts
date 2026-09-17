@@ -47,7 +47,7 @@ async function main() {
   }
 
   // Dynamic imports so dotenv loads first
-  const bcrypt = await import('bcrypt')
+  const bcrypt = await import('bcryptjs')
   const { db } = await import('../db')
   const { users } = await import('../db/schema')
   const { eq } = await import('drizzle-orm')
