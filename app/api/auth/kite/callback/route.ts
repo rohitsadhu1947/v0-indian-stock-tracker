@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { users, sessions, brokerConnections } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { signSessionToken, getCurrentUser } from '@/lib/multi-user-auth';
+import { nextKiteTokenExpiry } from '@/lib/broker/token-expiry';
 
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours (unified across all cookies)
 
@@ -35,7 +36,7 @@ async function upsertKiteConnection(userId: number, session: KiteSession, apiKey
         brokerUserId: session.user_id,
         isActive: true,
         lastConnected: new Date(),
-        tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        tokenExpiry: nextKiteTokenExpiry(),
         updatedAt: new Date(),
       })
       .where(eq(brokerConnections.id, existingConn.id));
@@ -50,7 +51,7 @@ async function upsertKiteConnection(userId: number, session: KiteSession, apiKey
       isActive: true,
       isPrimary: true,
       lastConnected: new Date(),
-      tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      tokenExpiry: nextKiteTokenExpiry(),
     });
   }
 }
@@ -83,7 +84,7 @@ async function loginKnownKiteUser(session: KiteSession, apiKey: string): Promise
   await db.insert(sessions).values({
     userId: user.id,
     accessToken: session.access_token,
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    expiresAt: nextKiteTokenExpiry(),
   });
 
   try {

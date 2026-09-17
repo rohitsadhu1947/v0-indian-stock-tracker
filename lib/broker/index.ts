@@ -13,12 +13,13 @@
 import { cookies } from 'next/headers'
 import { db } from '@/db'
 import { users, brokerConnections } from '@/db/schema'
-import { eq, and, isNotNull, desc } from 'drizzle-orm'
+import { eq, and, isNotNull, desc, inArray } from 'drizzle-orm'
 import { BrokerManager } from './manager'
 import { KiteBrokerClient } from './kite-client'
 import { AngelBrokerClient } from './angel-client'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getBrokerDefinition } from './registry'
+import { isBrokerTokenUsable } from './token-expiry'
 import logger from '@/lib/logger'
 
 // Re-export all types and classes
@@ -112,6 +113,9 @@ function createClientFromConnection(
  * 3. kite_access_token cookie (legacy Kite OAuth users)
  * 4. users.masterKiteToken for admin's Kite token (legacy email-user bridge)
  *
+ * Expired tokens (past tokenExpiry, or Kite tokens issued before the daily
+ * 06:00 IST flush) are skipped so resolution falls through to a working one.
+ *
  * @param userId - Optional user ID to scope broker connections to
  * @returns Configured BrokerManager with available broker clients
  */
@@ -139,6 +143,10 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
         .orderBy(desc(brokerConnections.isPrimary))
 
       for (const conn of userConnections) {
+        if (!isBrokerTokenUsable(conn)) {
+          logger.info('Skipping expired broker token', { brokerId: conn.brokerId, userId })
+          continue
+        }
         const result = createClientFromConnection(conn as any, apiKey)
         if (result) {
           manager.register(result.client, result.isPrimary)
@@ -179,13 +187,12 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
           .from(brokerConnections)
           .where(and(
             eq(brokerConnections.isActive, true),
-            // drizzle doesn't have `in` as a simple function, use multiple conditions
+            inArray(brokerConnections.userId, adminIdsToCheck)
           ))
           .orderBy(desc(brokerConnections.isPrimary))
 
-        // Filter to admin connections only
         for (const conn of adminConnections) {
-          if (!adminIdsToCheck.includes(conn.userId)) continue
+          if (!isBrokerTokenUsable(conn)) continue
           const result = createClientFromConnection(conn as any, apiKey)
           if (result) {
             manager.register(result.client, result.isPrimary)
@@ -236,7 +243,11 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
       .orderBy(desc(users.lastLogin))
       .limit(1)
 
-    if (adminUser?.masterKiteToken) {
+    // masterKiteToken is refreshed on every Kite login, alongside lastLogin
+    if (
+      adminUser?.masterKiteToken &&
+      isBrokerTokenUsable({ brokerId: 'kite', lastConnected: adminUser.lastLogin })
+    ) {
       const client = new KiteBrokerClient({
         apiKey,
         accessToken: adminUser.masterKiteToken,
