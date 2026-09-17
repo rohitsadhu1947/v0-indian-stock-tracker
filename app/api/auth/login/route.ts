@@ -1,11 +1,12 @@
 /**
  * POST /api/auth/login
  * 
- * Login with email/password or Kite user ID
+ * Login with email/password.
+ * (Kite users sign in through the Kite OAuth flow: /api/auth/kite/login)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { loginWithEmail, loginWithKite } from '@/lib/multi-user-auth'
+import { loginWithEmail } from '@/lib/multi-user-auth'
 import { loginRateLimit } from '@/lib/rate-limit'
 import logger from '@/lib/logger'
 
@@ -18,23 +19,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { email, password, kiteUserId } = body
-    
-    let result
-    
-    // Legacy Kite login
-    if (kiteUserId) {
-      result = await loginWithKite(kiteUserId)
-    }
-    // Email/password login
-    else if (email && password) {
-      result = await loginWithEmail(email, password)
-    } else {
+    const { email, password } = body
+
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Missing credentials: provide either (email + password) or kiteUserId' },
+        { error: 'Missing credentials: provide email and password' },
         { status: 400 }
       )
     }
+
+    const result = await loginWithEmail(email, password)
     
     if (!result.success) {
       return NextResponse.json(

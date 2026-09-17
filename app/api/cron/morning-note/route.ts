@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { db } from '@/db'
 import { userPreferences } from '@/db/schema'
 import { eq } from 'drizzle-orm'
@@ -34,20 +35,25 @@ const NIFTY_INSTRUMENT_TOKEN = 256265
 
 export async function GET(request: NextRequest) {
   try {
-    // ── Auth: Vercel CRON_SECRET or manual trigger ────────────────────────
+    // ── Auth: Vercel CRON_SECRET (scheduler) or an admin session (manual) ─
+    // Fails closed: without CRON_SECRET configured, only admins can trigger it.
     const cronSecret = process.env.CRON_SECRET
-    const authHeader = request.headers.get('authorization')
+    const authHeader = Buffer.from(request.headers.get('authorization') || '')
+    const expected = Buffer.from(cronSecret ? `Bearer ${cronSecret}` : '')
+    const isScheduler =
+      !!cronSecret &&
+      authHeader.length === expected.length &&
+      timingSafeEqual(authHeader, expected)
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Allow if no CRON_SECRET is set (dev mode) or if it's a manual trigger with valid session
-      const { getAuthenticatedUserIdCompat } = await import('@/lib/multi-user-auth')
-      const userId = await getAuthenticatedUserIdCompat()
-      if (!userId) {
+    if (isScheduler) {
+      logger.info('Morning note cron triggered by scheduler')
+    } else {
+      const { getCurrentUser } = await import('@/lib/multi-user-auth')
+      const user = await getCurrentUser()
+      if (!user || user.role !== 'admin') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-      logger.info('Morning note cron triggered manually', { userId })
-    } else {
-      logger.info('Morning note cron triggered by scheduler')
+      logger.info('Morning note cron triggered manually', { userId: user.id })
     }
 
     // ── Phase 1: Fetch all data sources in parallel ──────────────────────

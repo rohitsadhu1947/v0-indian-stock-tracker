@@ -340,50 +340,6 @@ export async function loginWithEmail(
   }
 }
 
-/**
- * Legacy Kite login support (for backward compatibility)
- */
-export async function loginWithKite(kiteUserId: string): Promise<LoginResult> {
-  // Find user by Kite user ID
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.kiteUserId, kiteUserId))
-    .limit(1)
-  
-  if (!user) {
-    return {
-      success: false,
-      error: 'Kite user not found. Please use email/password login.',
-    }
-  }
-  
-  if (user.status !== 'active') {
-    return {
-      success: false,
-      error: 'Account is suspended or pending activation',
-    }
-  }
-  
-  await createSession(user.id)
-  
-  return {
-    success: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
-      kiteUserId: user.kiteUserId,
-      masterKiteToken: user.masterKiteToken,
-      masterKiteUserId: user.masterKiteUserId,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin,
-    },
-  }
-}
-
 // ============================================================================
 // USER PERMISSIONS
 // ============================================================================

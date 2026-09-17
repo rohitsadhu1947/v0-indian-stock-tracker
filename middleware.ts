@@ -106,16 +106,12 @@ export async function middleware(request: NextRequest) {
       request.cookies.get('auth_session')?.value
 
     if (!token || !(await verifyTokenInMiddleware(token))) {
-      // Also allow if they have a valid kite_access_token (legacy Kite-only auth)
-      const kiteToken = request.cookies.get('kite_access_token')?.value
-      if (!kiteToken) {
-        return addSecurityHeaders(
-          NextResponse.json(
-            { error: 'Authentication required' },
-            { status: 401 }
-          )
+      return addSecurityHeaders(
+        NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
         )
-      }
+      )
     }
 
     return addSecurityHeaders(NextResponse.next())
@@ -126,9 +122,8 @@ export async function middleware(request: NextRequest) {
     const token =
       request.cookies.get('auth_user_id')?.value ||
       request.cookies.get('auth_session')?.value
-    const kiteToken = request.cookies.get('kite_access_token')?.value
 
-    if (!token && !kiteToken) {
+    if (!token || !(await verifyTokenInMiddleware(token))) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('from', pathname)
       return addSecurityHeaders(NextResponse.redirect(loginUrl))
