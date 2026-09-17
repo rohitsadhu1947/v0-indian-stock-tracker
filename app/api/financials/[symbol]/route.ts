@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials, annualFinancials, companyInfo } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * DELETE /api/financials/[symbol]
@@ -12,6 +13,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const symbol = params.symbol.toUpperCase()
     
@@ -53,6 +59,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const symbol = params.symbol.toUpperCase()
     

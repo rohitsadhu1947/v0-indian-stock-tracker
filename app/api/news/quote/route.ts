@@ -3,6 +3,7 @@ import Parser from 'rss-parser';
 import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal, type SentimentResult, type AggregateSentiment } from '@/lib/sentiment-utils';
 import { db } from '@/db'
 import { newsData } from '@/db/schema'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 // Disable caching for this API route
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,11 @@ const parser = new Parser({
  * GET /api/news/quote?symbol=TCS&exchange=NSE
  */
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');

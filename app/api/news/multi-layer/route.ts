@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal, getDayTradingSignal, type AggregateSentiment, type DayTradingSignal } from '@/lib/sentiment-utils';
 import { getSectorInfo, buildSectorNewsQuery, buildMacroNewsQuery, MACRO_NEWS_KEYWORDS } from '@/lib/sector-mapping';
+import { analyzeNewsSentiment, type GeminiSentimentResult } from '@/lib/gemini-sentiment';
+import { detectGeopoliticalEvents, getGeopoliticalImpactForStock, type GeopoliticalSnapshot } from '@/lib/geopolitical-monitor';
 import type { NewsItem } from '../quote/route';
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +31,8 @@ export interface MultiLayerNews {
     sentiment: any;
     affectedFactors: string[];
   } | null;
+  geminiSentiment?: GeminiSentimentResult;
+  geopolitical?: GeopoliticalSnapshot;
   combinedSentiment: {
     overall: string;
     score: number;
@@ -42,6 +47,11 @@ export interface MultiLayerNews {
 }
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
   const exchange = searchParams.get('exchange');
@@ -75,8 +85,55 @@ export async function GET(request: NextRequest) {
       macroNews = await fetchMacroNews(sectorInfo);
     }
 
-    // Calculate combined sentiment
-    const combinedSentiment = calculateCombinedSentiment(stockNews, sectorNews, macroNews, sectorInfo);
+    // Layer 4: Gemini AI sentiment (contextual, understands nuance)
+    console.log(`\n🤖 LAYER 4: Running Gemini AI sentiment analysis...`);
+    let geminiSentiment: GeminiSentimentResult | undefined;
+    try {
+      const allHeadlines = [
+        ...stockNews.news.map(n => n.title),
+        ...(sectorNews?.news || []).map(n => n.title).slice(0, 5),
+        ...(macroNews?.news || []).map(n => n.title).slice(0, 3),
+      ];
+
+      if (allHeadlines.length > 0) {
+        geminiSentiment = await analyzeNewsSentiment(allHeadlines, {
+          symbol: symbol.toUpperCase(),
+          sector: sectorInfo?.sector,
+          industry: sectorInfo?.industry,
+        });
+        console.log(`   ✅ Gemini: ${geminiSentiment.category} (score: ${geminiSentiment.sentiment}, confidence: ${geminiSentiment.confidence}%, source: ${geminiSentiment.source})`);
+      }
+    } catch (error: any) {
+      console.log(`   ⚠️ Gemini sentiment failed: ${error.message}`);
+    }
+
+    // Layer 5: Geopolitical event detection
+    console.log(`\n🌍 LAYER 5: Scanning for geopolitical events...`);
+    let geopolitical: GeopoliticalSnapshot | undefined;
+    try {
+      const macroHeadlines = [
+        ...(macroNews?.news || []).map(n => n.title),
+        ...(sectorNews?.news || []).map(n => n.title).slice(0, 5),
+      ];
+
+      if (macroHeadlines.length > 0) {
+        geopolitical = await detectGeopoliticalEvents(macroHeadlines);
+        if (geopolitical.events.length > 0) {
+          console.log(`   ✅ Detected ${geopolitical.events.length} geopolitical events (risk: ${geopolitical.overallRisk})`);
+          const stockImpact = getGeopoliticalImpactForStock(symbol.toUpperCase(), geopolitical);
+          if (stockImpact.relevantEvents.length > 0) {
+            console.log(`   ⚠️ ${stockImpact.relevantEvents.length} events impact ${symbol} (score: ${stockImpact.impactScore})`);
+          }
+        } else {
+          console.log(`   ✅ No geopolitical events detected`);
+        }
+      }
+    } catch (error: any) {
+      console.log(`   ⚠️ Geopolitical detection failed: ${error.message}`);
+    }
+
+    // Calculate combined sentiment (enhanced with Gemini + geopolitical)
+    const combinedSentiment = calculateCombinedSentiment(stockNews, sectorNews, macroNews, sectorInfo, geminiSentiment, geopolitical ? getGeopoliticalImpactForStock(symbol.toUpperCase(), geopolitical) : undefined);
 
     // Calculate day trading signal (more aggressive for intraday)
     const dayTradingSignal = getDayTradingSignal(
@@ -90,6 +147,8 @@ export async function GET(request: NextRequest) {
     console.log(`   Stock Sentiment: ${stockNews.sentiment.aggregate.overall}`);
     if (sectorNews) console.log(`   Sector Sentiment: ${sectorNews.sentiment.aggregate.overall}`);
     if (macroNews) console.log(`   Macro Sentiment: ${macroNews.sentiment.aggregate.overall}`);
+    if (geminiSentiment) console.log(`   🤖 Gemini: ${geminiSentiment.category} (${geminiSentiment.source})`);
+    if (geopolitical?.events.length) console.log(`   🌍 Geopolitical: ${geopolitical.events.length} events (${geopolitical.overallRisk} risk)`);
     console.log(`   ⚡ COMBINED: ${combinedSentiment.overall} (${combinedSentiment.tradingSignal.signal})`);
     console.log(`   📊 DAY TRADING: ${dayTradingSignal.signal} (${dayTradingSignal.confidence}% confidence, ${dayTradingSignal.timeframe})`);
 
@@ -100,6 +159,8 @@ export async function GET(request: NextRequest) {
       stockNews,
       sectorNews,
       macroNews,
+      geminiSentiment: geminiSentiment || null,
+      geopolitical: geopolitical || null,
       combinedSentiment,
       dayTradingSignal
     });
@@ -282,25 +343,44 @@ async function fetchMacroNews(sectorInfo: any) {
 
 /**
  * Calculate combined sentiment across all layers
+ * Now enhanced with Gemini AI sentiment and geopolitical impact
  */
-function calculateCombinedSentiment(stockNews: any, sectorNews: any, macroNews: any, sectorInfo: any) {
-  // Weights for different layers
-  const WEIGHTS = {
-    stock: 0.5,    // 50% weight to stock-specific news
-    sector: 0.3,   // 30% weight to sector news
-    macro: 0.2     // 20% weight to macro news
-  };
+function calculateCombinedSentiment(
+  stockNews: any,
+  sectorNews: any,
+  macroNews: any,
+  sectorInfo: any,
+  geminiSentiment?: GeminiSentimentResult,
+  geopoliticalImpact?: { impactScore: number; relevantEvents: any[]; warnings: string[] }
+) {
+  // Weights for different layers (adjusted when Gemini available)
+  const hasGemini = geminiSentiment && geminiSentiment.source === 'gemini'
+  const WEIGHTS = hasGemini
+    ? { stock: 0.25, sector: 0.15, macro: 0.15, gemini: 0.35, geopolitical: 0.10 }
+    : { stock: 0.45, sector: 0.25, macro: 0.20, gemini: 0, geopolitical: 0.10 }
 
   // Extract scores
   const stockScore = stockNews.sentiment.aggregate.score || 0;
   const sectorScore = sectorNews?.sentiment.aggregate.score || 0;
   const macroScore = macroNews?.sentiment.aggregate.score || 0;
 
+  // Gemini score normalized to same scale as bag-of-words (-5 to +5 ish)
+  const geminiScore = geminiSentiment
+    ? (geminiSentiment.sentiment / 100) * 3  // Map -100..+100 to -3..+3
+    : 0;
+
+  // Geopolitical impact normalized
+  const geoScore = geopoliticalImpact
+    ? (geopoliticalImpact.impactScore / 100) * 2  // Map -100..+100 to -2..+2
+    : 0;
+
   // Calculate weighted score
   const combinedScore = (
     stockScore * WEIGHTS.stock +
     sectorScore * WEIGHTS.sector +
-    macroScore * WEIGHTS.macro
+    macroScore * WEIGHTS.macro +
+    geminiScore * WEIGHTS.gemini +
+    geoScore * WEIGHTS.geopolitical
   );
 
   // Determine overall sentiment
@@ -338,6 +418,23 @@ function calculateCombinedSentiment(stockNews: any, sectorNews: any, macroNews: 
     reasoning += ` Macro factors (${sectorInfo.macroFactors[0]}) are favorable.`;
   } else if (macroSentiment === 'NEGATIVE' && sectorInfo) {
     reasoning += ` Macro headwinds from ${sectorInfo.macroFactors[0]}.`;
+  }
+
+  // Add Gemini AI insights
+  if (geminiSentiment && geminiSentiment.source === 'gemini') {
+    const geminiLabel = geminiSentiment.category.replace('_', ' ').toLowerCase()
+    if (geminiSentiment.keyFactors.length > 0) {
+      reasoning += ` AI analysis: ${geminiLabel} — ${geminiSentiment.keyFactors[0]}.`
+    }
+    if (geminiSentiment.risks.length > 0) {
+      reasoning += ` Key risk: ${geminiSentiment.risks[0]}.`
+    }
+  }
+
+  // Add geopolitical context
+  if (geopoliticalImpact && geopoliticalImpact.relevantEvents.length > 0) {
+    const topEvent = geopoliticalImpact.relevantEvents[0]
+    reasoning += ` ⚠️ Geopolitical: ${topEvent.title} (${topEvent.severity} severity).`
   }
 
   // Generate trading signal based on combined analysis

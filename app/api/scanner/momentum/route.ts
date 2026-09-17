@@ -4,6 +4,10 @@ import { getUserBrokerManager } from '@/lib/broker'
 import type { InstrumentData } from '@/lib/broker'
 import { db } from '@/db'
 import { patternAnalysis } from '@/db/schema'
+import { analyzeMarketRegime, type HistoricalBar } from '@/lib/market-regime'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { scannerRateLimit } from '@/lib/rate-limit'
+import logger from '@/lib/logger'
 
 /**
  * GET /api/scanner/momentum
@@ -16,8 +20,16 @@ import { patternAnalysis } from '@/db/schema'
  * - minScore: Minimum momentum score (default 60)
  */
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
+  const rl = await scannerRateLimit(request, userId)
+  if (!rl.ok) return rl.response
+
   try {
-    console.log(`🔍 Starting momentum scan at ${new Date().toISOString()}`)
+    logger.info('Starting momentum scan', { userId })
 
     // 1. Check authentication and get broker client
     const manager = await getUserBrokerManager()
@@ -297,6 +309,64 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // 5.5 Fetch NIFTY 50 regime (real market trend detection)
+    let niftyRegime: { regime: string; positionSizeMultiplier: number; confidence: number } | undefined
+    try {
+      console.log(`\n📊 Analyzing NIFTY 50 market regime...`)
+      // Find NIFTY 50 instrument
+      const niftyInst = instruments.find(
+        (inst: InstrumentData) => inst.tradingsymbol === 'NIFTY 50' && inst.exchange === 'NSE'
+      ) || instruments.find(
+        (inst: InstrumentData) => inst.tradingsymbol === 'NIFTY50' || inst.name?.includes('NIFTY 50')
+      )
+
+      if (niftyInst) {
+        const to = new Date()
+        const from = new Date(Date.now() - 250 * 24 * 60 * 60 * 1000) // ~1 year for SMA200
+        const niftyCandlesRaw = await client.getHistoricalData({
+          instrumentToken: niftyInst.instrumentToken,
+          interval: 'day',
+          from,
+          to,
+          symbol: 'NIFTY 50',
+          exchange: 'NSE'
+        })
+
+        if (niftyCandlesRaw && niftyCandlesRaw.length >= 50) {
+          const bars: HistoricalBar[] = niftyCandlesRaw.map((c: any) => ({
+            date: new Date(c.date),
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume
+          }))
+          const regime = analyzeMarketRegime(bars)
+          niftyRegime = {
+            regime: regime.regime,
+            positionSizeMultiplier: regime.positionSizeMultiplier,
+            confidence: regime.confidence
+          }
+          console.log(`✅ NIFTY regime: ${regime.regime} (confidence: ${regime.confidence}%, multiplier: ${regime.positionSizeMultiplier}x)`)
+          console.log(`   NIFTY price: ${regime.niftyPrice} | RSI: ${regime.rsi.toFixed(1)} | Trend: ${regime.trendDirection}`)
+        } else {
+          console.log(`⚠️ Insufficient NIFTY candles (${niftyCandlesRaw?.length || 0}) — defaulting to SIDEWAYS`)
+        }
+      } else {
+        console.log(`⚠️ NIFTY 50 instrument not found — trying index instruments...`)
+        // Try fetching from NSE indices
+        const niftyIdxInst = instruments.find(
+          (inst: InstrumentData) => inst.tradingsymbol === 'NIFTY 50' || inst.tradingsymbol === 'NIFTY50'
+        )
+        if (!niftyIdxInst) {
+          console.log(`⚠️ NIFTY 50 not found in any instrument list — defaulting to SIDEWAYS`)
+        }
+      }
+    } catch (regimeError: any) {
+      console.error(`⚠️ Failed to analyze NIFTY regime (non-fatal):`, regimeError.message)
+      // Continue without regime data — scanner will default to SIDEWAYS
+    }
+
     // 6. Run momentum scanner with more relaxed filters
     console.log(`\n📊 Running momentum scanner on ${stocksData.length} stocks...`)
     const scanResult = await scanForMomentumSignals(stocksData, capital, {
@@ -304,7 +374,8 @@ export async function GET(request: NextRequest) {
       maxPrice: 5000,
       minVolume: 50000, // Reduced from 100k to 50k
       maxPositions,
-      customStocks // Pass custom stocks to scanner
+      customStocks, // Pass custom stocks to scanner
+      niftyRegime  // Pass real NIFTY regime instead of hardcoded 'UP'
     })
 
     console.log(`✅ Scan complete: ${scanResult.signalsFound} signals found, sentiment: ${scanResult.marketSentiment}`)

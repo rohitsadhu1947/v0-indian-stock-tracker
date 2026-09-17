@@ -14,6 +14,7 @@ import {
   calculatePortfolioCorrelationScore,
   type PriceData
 } from '@/lib/correlation-matrix'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -26,6 +27,11 @@ const DEFAULT_SYMBOLS = [
 ]
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📊 === CORRELATION MATRIX API CALLED ===')
 

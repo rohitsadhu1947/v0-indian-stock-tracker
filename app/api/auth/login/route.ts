@@ -4,13 +4,18 @@
  * Login with email/password or Kite user ID
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { loginWithEmail, loginWithKite } from '@/lib/multi-user-auth'
+import { loginRateLimit } from '@/lib/rate-limit'
+import logger from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const rl = await loginRateLimit(request)
+  if (!rl.ok) return rl.response
+
   try {
     const body = await request.json()
     const { email, password, kiteUserId } = body
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
       message: 'Login successful',
     })
   } catch (error: any) {
-    console.error('Login error:', error)
+    logger.error('Login error', { error: error.message })
     return NextResponse.json(
       { error: 'Login failed' },
       { status: 500 }

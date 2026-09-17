@@ -8,6 +8,7 @@ import { analystReports, userPreferences } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 import { sendNewsPopAlert, type TelegramConfig } from '@/lib/telegram-alerts';
+import { getMacroSnapshot } from '@/lib/macro-intelligence';
 
 // Disable caching
 export const dynamic = 'force-dynamic';
@@ -205,12 +206,17 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Found ${Object.keys(reportsBySymbol).length} analyst reports`);
 
-    // 9. Calculate master scores (includes fundamentals + intelligence)
+    // 9. Calculate master scores (includes fundamentals + intelligence + macro)
     console.log(`\n🎯 Calculating master scores for ${newsPops.length} signals...`);
+    let macroSnapshot = null;
+    try {
+      macroSnapshot = await getMacroSnapshot();
+    } catch { /* non-fatal */ }
     const masterScores = await batchCalculateMasterScores(
       newsPops,
       reportsBySymbol,
-      capital
+      capital,
+      macroSnapshot
     );
 
     console.log(`✅ Calculated ${masterScores.length} master scores`);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials, companyInfo } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * POST /api/financials/upload-table
@@ -17,6 +18,11 @@ import { eq, and } from 'drizzle-orm'
  * Body: { symbol: string, data: string (tab-separated table) }
  */
 export async function POST(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { symbol, data } = body
@@ -41,23 +47,23 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse header row to get quarter names
-    const headerCells = lines[0].split('\t').map(c => c.trim())
+    const headerCells = lines[0].split('\t').map((c: any) => c.trim())
     const quarters = headerCells.slice(1) // Skip "Indicator" column
     
     console.log(`📅 Found ${quarters.length} quarters: ${quarters.slice(0, 4).join(', ')}...`)
     
     // Parse quarter names to get proper quarter/fiscalYear
-    const quarterInfo = quarters.map(q => parseQuarterName(q))
+    const quarterInfo = quarters.map((q: any) => parseQuarterName(q))
     
     // Build a map of indicator -> values
     const indicatorMap: Record<string, (number | null)[]> = {}
     
     for (let i = 1; i < lines.length; i++) {
-      const cells = lines[i].split('\t').map(c => c.trim())
+      const cells = lines[i].split('\t').map((c: any) => c.trim())
       if (cells.length < 2) continue
       
       const indicator = normalizeIndicatorName(cells[0])
-      const values = cells.slice(1).map(v => parseNumber(v))
+      const values = cells.slice(1).map((v: any) => parseNumber(v))
       
       indicatorMap[indicator] = values
     }
@@ -134,7 +140,7 @@ export async function POST(request: NextRequest) {
       success: true,
       symbol: upperSymbol,
       results,
-      quartersProcessed: quarterInfo.filter(q => q.quarter).map(q => `${q.quarter} ${q.fiscalYear}`)
+      quartersProcessed: quarterInfo.filter((q: any) => q.quarter).map((q: any) => `${q.quarter} ${q.fiscalYear}`)
     })
     
   } catch (error: any) {

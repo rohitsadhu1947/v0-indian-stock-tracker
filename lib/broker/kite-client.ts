@@ -80,7 +80,7 @@ export class KiteBrokerClient implements BrokerClient {
     try {
       const rawData = await this.kc.getHistoricalData(
         params.instrumentToken,
-        params.interval,
+        params.interval as any,
         params.from,
         params.to
       )
@@ -126,7 +126,7 @@ export class KiteBrokerClient implements BrokerClient {
    */
   async getInstruments(exchange?: string): Promise<InstrumentData[]> {
     try {
-      const exchangeArg = exchange ? [exchange] : undefined
+      const exchangeArg = exchange ? [exchange] as any : undefined
       const rawInstruments = await this.kc.getInstruments(exchangeArg)
 
       if (!rawInstruments || !Array.isArray(rawInstruments)) {

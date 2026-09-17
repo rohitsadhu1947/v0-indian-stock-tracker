@@ -9,15 +9,16 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import https from 'https'
-import { 
-  categorizeEvents, 
+import {
+  categorizeEvents,
   generateSampleEvents,
   filterWatchlistEvents,
   getTodayAlerts,
   getEventEmoji,
   getEventColor,
-  type CorporateEvent 
+  type CorporateEvent
 } from '@/lib/event-calendar'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -273,6 +274,11 @@ function parseIndianDate(dateStr: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📅 === EVENT CALENDAR API CALLED ===')
     

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { KiteConnect } from 'kiteconnect';
 
 export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.KITE_API_KEY;
-    
+
     if (!apiKey) {
       return NextResponse.json(
         { error: 'API key not configured' },
@@ -12,11 +11,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const kc = new KiteConnect({ api_key: apiKey });
-    
-    // Generate login URL
-    const loginUrl = kc.getLoginURL();
-    
+    // Build login URL manually instead of using kc.getLoginURL()
+    // This gives us control over parameters and logging
+    const loginUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${apiKey}`;
+
+    console.log(`🔗 Kite login redirect → ${loginUrl}`);
+    console.log(`📌 Expected callback: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3006'}/api/auth/kite/callback`);
+
     // Redirect to Zerodha login page
     return NextResponse.redirect(loginUrl);
   } catch (error) {
@@ -27,4 +28,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

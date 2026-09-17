@@ -48,8 +48,14 @@ registerBroker({
   getOAuthUrl: (state?: string) => {
     const apiKey = process.env.KITE_API_KEY
     if (!apiKey) throw new Error('KITE_API_KEY not configured')
+    // Use redirect_params (Kite's documented way to pass custom params through OAuth)
+    // Kite appends redirect_params as query params to the callback URL
     const base = `https://kite.zerodha.com/connect/login?v=3&api_key=${apiKey}`
-    return state ? `${base}&state=${encodeURIComponent(state)}` : base
+    if (state) {
+      const redirectParams = encodeURIComponent(`state=${state}`)
+      return `${base}&redirect_params=${redirectParams}`
+    }
+    return base
   },
   createClient: (config: BrokerConnectionConfig) => {
     const apiKey = config.apiKey || process.env.KITE_API_KEY

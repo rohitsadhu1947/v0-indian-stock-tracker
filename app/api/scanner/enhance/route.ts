@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enhanceSignals, EnhancementContext } from '@/lib/signal-enhancer'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * POST /api/scanner/enhance
@@ -11,6 +12,11 @@ import { enhanceSignals, EnhancementContext } from '@/lib/signal-enhancer'
  * Returns: EnhancedSignal[]
  */
 export async function POST(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     const body = await request.json()
     const { signals } = body

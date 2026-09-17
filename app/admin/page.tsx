@@ -63,6 +63,9 @@ function AdminDashboard() {
   const [availableBrokers, setAvailableBrokers] = useState<AvailableBroker[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showManualToken, setShowManualToken] = useState(false)
+  const [manualToken, setManualToken] = useState('')
+  const [manualTokenStatus, setManualTokenStatus] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newUser, setNewUser] = useState({
     email: '',
@@ -230,6 +233,28 @@ function AdminDashboard() {
       await fetchBrokerConnections()
     } catch (err: any) {
       setError(err.message)
+    }
+  }
+
+  async function handleManualToken() {
+    if (!manualToken || manualToken.length < 10) {
+      setManualTokenStatus('Token must be at least 10 characters')
+      return
+    }
+    setManualTokenStatus('Generating session...')
+    try {
+      const res = await fetch('/api/auth/kite/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_token: manualToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      setManualTokenStatus(`Connected as ${data.user_id}. Reloading...`)
+      setManualToken('')
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err: any) {
+      setManualTokenStatus(`Error: ${err.message}`)
     }
   }
 
@@ -509,6 +534,60 @@ function AdminDashboard() {
                   )
                 })}
               </div>
+            </div>
+
+            {/* Manual Token Entry — Fallback when Kite redirect is broken */}
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-white">Manual Token Entry</h2>
+                <button
+                  onClick={() => setShowManualToken(!showManualToken)}
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  {showManualToken ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Use this if the Kite redirect loop is not working. Open Kite login in a new tab, complete login, then paste the <code className="bg-gray-700 px-1 rounded">request_token</code> from the redirect URL.
+              </p>
+              {showManualToken && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <a
+                      href="/api/auth/kite/login"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      1. Open Kite Login ↗
+                    </a>
+                  </div>
+                  <p className="text-gray-500 text-xs">
+                    After login, copy the <code className="bg-gray-700 px-1 rounded">request_token</code> value from the URL bar (the part after <code className="bg-gray-700 px-1 rounded">request_token=</code>)
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                      placeholder="Paste request_token here..."
+                      className="flex-1 px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                      onClick={handleManualToken}
+                      disabled={!manualToken}
+                      className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      2. Submit Token
+                    </button>
+                  </div>
+                  {manualTokenStatus && (
+                    <p className={`text-sm ${manualTokenStatus.startsWith('Error') ? 'text-red-400' : manualTokenStatus.includes('Connected') ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {manualTokenStatus}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

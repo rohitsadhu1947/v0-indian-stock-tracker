@@ -95,9 +95,7 @@ export async function simulateMasterScoreStrategy(
       sortinoRatio: 0,
       profitFactor: 0,
       avgRiskReward: 0,
-      startDate: config.startDate,
-      endDate: config.endDate
-    }
+    } as unknown as BacktestResult
   }
   
   // Simulate day by day
@@ -292,7 +290,7 @@ export async function simulateMasterScoreStrategy(
       const reward = t.exitPrice - t.entryPrice
       return sum + (risk > 0 ? reward / risk : 0)
     }, 0) / trades.length : 0,
-    profitFactor: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
+    profitFactor: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999.99 : 0,
     finalCapital: currentCapital,
     peakCapital,
     avgCapitalDeployed: trades.length > 0 ? trades.reduce((sum, t) => sum + (t.entryPrice * t.quantity), 0) / trades.length : 0,

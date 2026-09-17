@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db'
 import { quarterlyFinancials, companyInfo } from '@/db/schema'
 import { desc, sql } from 'drizzle-orm'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * GET /api/financials/list
@@ -9,6 +10,11 @@ import { desc, sql } from 'drizzle-orm'
  * Get all stocks with uploaded financial data
  */
 export async function GET() {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     // Get distinct symbols with their quarter counts
     const stocksData = await db.select({

@@ -11,6 +11,7 @@ import { analystReports, userPreferences } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { sendNewSignalAlert, type TelegramConfig } from '@/lib/telegram-alerts'
+import { getMacroSnapshot } from '@/lib/macro-intelligence'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -144,10 +145,20 @@ export async function GET(request: NextRequest) {
     console.log(`   Passing ${momentumSignals.length} signals to master scorer:`)
     console.log(`   ${momentumSignals.map((s: any) => s.symbol).join(', ')}`)
     
+    // Fetch macro snapshot (cached, non-blocking)
+    let macroSnapshot = null
+    try {
+      macroSnapshot = await getMacroSnapshot()
+      console.log(`🌍 Macro: ${macroSnapshot.overallSentiment} (score: ${macroSnapshot.sentimentScore})`)
+    } catch (macroErr) {
+      console.log(`⚠️ Macro data unavailable (non-fatal)`)
+    }
+
     const masterScores = await batchCalculateMasterScores(
       momentumSignals,
       reportsBySymbol,
-      capitalAvailable
+      capitalAvailable,
+      macroSnapshot
     )
 
     console.log(`✅ Calculated ${masterScores.length} master scores`)
@@ -155,7 +166,7 @@ export async function GET(request: NextRequest) {
     // DEBUG: Log all scores to see what we're getting
     console.log('\n📊 ACTUAL SCORES:')
     masterScores.forEach(score => {
-      console.log(`  ${score.symbol}: ${score.totalScore}/100 (T:${score.technical.score} F:${score.fundamental.score} I:${score.intelligence.score})`)
+      console.log(`  ${score.symbol}: ${score.totalScore}/100 (T:${score.technical.score} F:${score.fundamental.score} I:${score.intelligence.score} M:${score.macro?.score || 0})`)
     })
     
     // Check if custom symbols are present

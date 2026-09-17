@@ -25,7 +25,7 @@ interface AnalystReport {
   }
 }
 
-export default function ResearchTab(): React.JSX.Element {
+export default function ResearchTab(): JSX.Element {
   const [reports, setReports] = useState<AnalystReport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCachedHistorical, cacheHistorical } from '@/lib/cache-helpers';
 import { getUserBrokerManager } from '@/lib/broker';
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     // Get broker manager scoped to current user (falls back to admin's broker)
     const manager = await getUserBrokerManager()
@@ -88,10 +94,11 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching historical data:', error);
 
-    // Handle token expiry
-    if (error.message && error.message.includes('Token')) {
+    // Handle token expiry — Kite returns various error messages for expired/invalid tokens
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('token') || msg.includes('access_token') || msg.includes('api_key') || msg.includes('session')) {
       return NextResponse.json(
-        { error: 'Session expired. Please login again.', code: 'TOKEN_EXPIRED' },
+        { error: 'Broker token expired. Reconnect Zerodha to resume market data.', code: 'TOKEN_EXPIRED' },
         { status: 401 }
       );
     }

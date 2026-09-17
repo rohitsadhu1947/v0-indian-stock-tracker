@@ -12,7 +12,7 @@ import SmartMoneyCard from './SmartMoneyCard'
 import CorrelationMatrix from './CorrelationMatrix'
 import { SignalWarnings, SignalsSummary } from './SignalWarnings'
 import type { MasterScore } from '@/lib/master-scorer'
-import type { NewsPop } from '@/lib/news-pop-scanner'
+import type { NewsPopSignal } from '@/lib/news-pop-scanner'
 import type { EnhancedSignal } from '@/lib/signal-enhancer'
 
 interface TradeNowTabProps {
@@ -21,7 +21,7 @@ interface TradeNowTabProps {
   openPositions: number
   maxPositions: number
   todayPnL: number
-  onExecuteTrade: (signal: MasterScore | NewsPop, tradeType: 'MOMENTUM' | 'NEWS_POP') => void
+  onExecuteTrade: (signal: MasterScore | NewsPopSignal, tradeType: 'MOMENTUM' | 'NEWS_POP') => void
 }
 
 export default function TradeNowTab({
@@ -37,7 +37,7 @@ export default function TradeNowTab({
   const [highConviction, setHighConviction] = useState<MasterScore[]>([])
   const [moderate, setModerate] = useState<MasterScore[]>([])
   const [watch, setWatch] = useState<MasterScore[]>([]) // NEW: Watch tier
-  const [newsPops, setNewsPops] = useState<NewsPop[]>([])
+  const [newsPops, setNewsPops] = useState<NewsPopSignal[]>([])
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null)
   const [marketSentiment, setMarketSentiment] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
   const [autoRefresh, setAutoRefresh] = useState(false)
@@ -213,7 +213,7 @@ export default function TradeNowTab({
       {newsPops.length > 0 && (
         <NewsAlertsSection
           newsPops={newsPops}
-          onExecute={(pop) => onExecuteTrade(pop, 'NEWS_POP')}
+          onExecute={(pop: any) => onExecuteTrade(pop, 'NEWS_POP')}
         />
       )}
 
@@ -234,7 +234,7 @@ export default function TradeNowTab({
         title="🔥 HIGH CONVICTION"
         subtitle="All stars aligned - Strong technical + Quality fundamental + Analyst support"
         signals={highConviction}
-        onExecute={(signal) => onExecuteTrade(signal, 'MOMENTUM')}
+        onExecute={(signal: any) => onExecuteTrade(signal, 'MOMENTUM')}
         accentColor="#10B981"
         isLoading={isLoading}
         emptyMessage="No high conviction signals found. Try lowering filters or scan a broader universe."
@@ -246,7 +246,7 @@ export default function TradeNowTab({
         title="✅ MODERATE"
         subtitle="Good setups - 2-3 factors strong"
         signals={moderate}
-        onExecute={(signal) => onExecuteTrade(signal, 'MOMENTUM')}
+        onExecute={(signal: any) => onExecuteTrade(signal, 'MOMENTUM')}
         accentColor="#3B82F6"
         isLoading={isLoading}
         emptyMessage="No moderate signals found."
@@ -259,7 +259,7 @@ export default function TradeNowTab({
         title="👀 WATCH"
         subtitle="Decent setups but missing one factor. Monitor closely."
         signals={watch}
-        onExecute={(signal) => onExecuteTrade(signal, 'MOMENTUM')}
+        onExecute={(signal: any) => onExecuteTrade(signal, 'MOMENTUM')}
         accentColor="#F59E0B"
         isLoading={isLoading}
         emptyMessage="No watch signals found."
@@ -269,7 +269,7 @@ export default function TradeNowTab({
 
       {/* Custom Stock Input */}
       <CustomStockInput
-        onAnalyze={async (symbol, exchange) => {
+        onAnalyze={async (symbol: any, exchange: any) => {
           console.log('🔍 Analyzing custom stock:', symbol, exchange)
           setIsLoading(true)
           setError(null)
@@ -390,7 +390,7 @@ function MarketContextBanner({ sentiment, lastScanTime, onRefresh, isLoading, au
     NEUTRAL: { emoji: '➡️', color: '#F59E0B', text: 'NEUTRAL' }
   }
   
-  const config = sentimentConfig[sentiment]
+  const config = sentimentConfig[sentiment as keyof typeof sentimentConfig]
   
   return (
     <div style={{
@@ -567,7 +567,7 @@ function NewsAlertsSection({ newsPops, onExecute }: any) {
             🔇 No breaking news detected. Monitoring for volume spikes...
           </div>
         ) : (
-          newsPops.map((pop: NewsPop, index: number) => (
+          newsPops.map((pop: NewsPopSignal, index: number) => (
             <div key={`${pop.symbol}-${index}`} style={{ marginBottom: index < newsPops.length - 1 ? '15px' : 0 }}>
               <NewsPopCard
                 pop={pop}
@@ -742,7 +742,7 @@ function CustomStockInput({ onAnalyze }: any) {
  * News Pop Card Component
  * Displays news-driven volume/price spike alerts
  */
-function NewsPopCard({ pop, rank, onExecute }: { pop: NewsPop, rank: number, onExecute: () => void }) {
+function NewsPopCard({ pop, rank, onExecute }: { pop: any, rank: number, onExecute: () => void }) {
   const urgencyColor = pop.urgency === 'HIGH' ? '#EF4444' : '#F59E0B'
   const urgencyBg = pop.urgency === 'HIGH' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'
 
@@ -807,7 +807,7 @@ function NewsPopCard({ pop, rank, onExecute }: { pop: NewsPop, rank: number, onE
           <strong>Triggers:</strong>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {pop.triggers.map((trigger, i) => (
+          {pop.triggers.map((trigger: any, i: any) => (
             <span key={i} style={{
               background: 'rgba(251, 191, 36, 0.2)',
               padding: '4px 10px',

@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const stateParam = searchParams.get('state'); // "user:{userId}" for user-initiated connections
 
+    console.log(`🔄 Kite callback received — status: ${status}, hasToken: ${!!requestToken}, state: ${stateParam || 'none'}`);
+
     if (status === 'error' || !requestToken) {
+      console.error(`❌ Kite callback failed — status: ${status}, requestToken missing: ${!requestToken}`);
       return NextResponse.redirect(
         new URL('/?error=authentication_failed', request.url)
       );
@@ -25,6 +28,7 @@ export async function GET(request: NextRequest) {
     const apiSecret = process.env.KITE_API_SECRET;
 
     if (!apiKey || !apiSecret) {
+      console.error('❌ Kite callback — KITE_API_KEY or KITE_API_SECRET not configured');
       return NextResponse.redirect(
         new URL('/?error=configuration_error', request.url)
       );
@@ -33,7 +37,9 @@ export async function GET(request: NextRequest) {
     const kc = new KiteConnect({ api_key: apiKey });
 
     // Generate session using request token
+    console.log(`🔑 Generating Kite session with request token...`);
     const session = await kc.generateSession(requestToken, apiSecret);
+    console.log(`✅ Kite session generated for user: ${session.user_id}`);
 
     // Store access token in secure HTTP-only cookie
     const cookieStore = await cookies();
@@ -50,15 +56,17 @@ export async function GET(request: NextRequest) {
 
     // 🗄️ DATABASE INTEGRATION: Save user and session to database
     console.log('💾 Saving authentication to database...');
-    
+
+    // Hoist userId so it's accessible in the user-initiated connection block below
+    let userId: number | undefined;
+
     try {
       // 1. Check if user exists, create or update
       const existingUsers = await db.select()
         .from(users)
         .where(eq(users.kiteUserId, session.user_id))
         .limit(1);
-      
-      let userId: number;
+
       
       if (existingUsers.length > 0) {
         // Update existing user's last login AND master_kite_token
@@ -213,10 +221,146 @@ export async function GET(request: NextRequest) {
     // Default: redirect to admin broker settings (legacy admin flow)
     return NextResponse.redirect(new URL('/admin?tab=brokers', request.url));
   } catch (error: any) {
-    console.error('Error in authentication callback:', error);
+    console.error('❌ Kite callback FAILED:', error.message || error);
+    console.error('❌ Full error:', JSON.stringify({ name: error.name, message: error.message, status: error.status, stack: error.stack?.split('\n')[0] }));
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(error.message || 'authentication_failed')}`, request.url)
     );
+  }
+}
+
+/**
+ * POST /api/auth/kite/callback
+ * Manual request_token entry fallback — for when Kite's redirect is broken.
+ * Accepts { request_token } in body, generates session, returns JSON (no redirect).
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const requestToken = body.request_token
+
+    if (!requestToken || requestToken.length < 10) {
+      return NextResponse.json(
+        { error: 'Valid request_token is required (min 10 chars)' },
+        { status: 400 }
+      )
+    }
+
+    const apiKey = process.env.KITE_API_KEY
+    const apiSecret = process.env.KITE_API_SECRET
+
+    if (!apiKey || !apiSecret) {
+      return NextResponse.json(
+        { error: 'KITE_API_KEY or KITE_API_SECRET not configured' },
+        { status: 500 }
+      )
+    }
+
+    const kc = new KiteConnect({ api_key: apiKey })
+    console.log(`🔑 [Manual] Generating Kite session with request token...`)
+    const session = await kc.generateSession(requestToken, apiSecret)
+    console.log(`✅ [Manual] Kite session generated for user: ${session.user_id}`)
+
+    // Set cookies
+    const cookieStore = await cookies()
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: COOKIE_MAX_AGE,
+      path: '/',
+    }
+
+    cookieStore.set('kite_access_token', session.access_token, cookieOptions)
+    cookieStore.set('kite_user_id', session.user_id || '', cookieOptions)
+
+    // Save to DB (same logic as GET handler)
+    let userId: number | undefined
+    try {
+      const existingUsers = await db.select()
+        .from(users)
+        .where(eq(users.kiteUserId, session.user_id))
+        .limit(1)
+
+      if (existingUsers.length > 0) {
+        await db.update(users)
+          .set({
+            lastLogin: new Date(),
+            masterKiteToken: session.access_token,
+            masterKiteUserId: session.user_id,
+          })
+          .where(eq(users.kiteUserId, session.user_id))
+        userId = existingUsers[0].id
+      } else {
+        const [newUser] = await db.insert(users).values({
+          kiteUserId: session.user_id,
+          email: session.user_name ? `${session.user_name}@kite.trade` : `user_${session.user_id}@kite.local`,
+          passwordHash: 'kite_auth_only',
+          name: session.user_name || null,
+          role: 'admin',
+          status: 'active',
+          masterKiteToken: session.access_token,
+          masterKiteUserId: session.user_id,
+        }).returning()
+        userId = newUser.id
+      }
+
+      await db.delete(sessions).where(eq(sessions.userId, userId))
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      await db.insert(sessions).values({ userId, accessToken: session.access_token, expiresAt })
+
+      const sessionToken = signSessionToken(userId)
+      cookieStore.set('auth_user_id', sessionToken, cookieOptions)
+
+      // Upsert broker connection
+      const [existingConn] = await db
+        .select({ id: brokerConnections.id })
+        .from(brokerConnections)
+        .where(and(eq(brokerConnections.userId, userId), eq(brokerConnections.brokerId, 'kite')))
+        .limit(1)
+
+      if (existingConn) {
+        await db.update(brokerConnections)
+          .set({
+            accessToken: session.access_token,
+            brokerUserId: session.user_id,
+            isActive: true,
+            lastConnected: new Date(),
+            tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            updatedAt: new Date(),
+          })
+          .where(eq(brokerConnections.id, existingConn.id))
+      } else {
+        await db.insert(brokerConnections).values({
+          userId,
+          brokerId: 'kite',
+          displayName: 'Zerodha Kite',
+          accessToken: session.access_token,
+          apiKey: apiKey,
+          brokerUserId: session.user_id,
+          isActive: true,
+          isPrimary: true,
+          lastConnected: new Date(),
+          tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+      }
+
+      console.log(`✅ [Manual] Session + broker connection saved for user ${session.user_id}`)
+    } catch (dbError) {
+      console.error('❌ [Manual] Database save failed (non-fatal):', dbError)
+    }
+
+    return NextResponse.json({
+      success: true,
+      user_id: session.user_id,
+      message: 'Kite session created successfully. Reload the page.',
+    })
+  } catch (error: any) {
+    console.error('❌ [Manual] Kite callback FAILED:', error.message || error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to generate Kite session' },
+      { status: 400 }
+    )
   }
 }
 

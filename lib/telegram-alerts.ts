@@ -11,6 +11,8 @@
  * 5. Enable alerts in the app
  */
 
+import logger from '@/lib/logger'
+
 export interface TelegramConfig {
   botToken: string
   chatId: string
@@ -72,14 +74,53 @@ async function sendTelegramMessage(
     const data = await response.json()
     
     if (!data.ok) {
-      console.error('❌ Telegram API error:', data)
+      logger.error('Telegram API error', { data })
       return false
     }
 
-    console.log('✅ Telegram message sent successfully')
+    logger.debug('Telegram message sent')
     return true
   } catch (error: any) {
-    console.error('❌ Failed to send Telegram message:', error.message)
+    logger.error('Failed to send Telegram message', { error: error.message })
+    return false
+  }
+}
+
+/**
+ * Send a document (PDF, etc.) via Telegram
+ */
+export async function sendTelegramDocument(
+  botToken: string,
+  chatId: string,
+  fileBuffer: Buffer,
+  filename: string,
+  caption?: string,
+): Promise<boolean> {
+  try {
+    const formData = new FormData()
+    formData.append('chat_id', chatId)
+    formData.append('document', new Blob([new Uint8Array(fileBuffer)]), filename)
+    if (caption) {
+      formData.append('caption', caption)
+      formData.append('parse_mode', 'HTML')
+    }
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!data.ok) {
+      logger.error('Telegram sendDocument error', { data })
+      return false
+    }
+
+    logger.info('Telegram document sent', { filename })
+    return true
+  } catch (error: any) {
+    logger.error('Failed to send Telegram document', { error: error.message })
     return false
   }
 }
@@ -501,6 +542,190 @@ ${briefing.todaySignals} high-conviction setups found
 }
 
 /**
+ * Alert: Macro / Geopolitical alert
+ * Sent when significant global macro changes affect Indian markets
+ */
+export async function sendMacroAlert(
+  config: TelegramConfig,
+  macro: {
+    alertType: 'MACRO_SHIFT' | 'GEOPOLITICAL' | 'KILL_SWITCH' | 'VIX_SPIKE'
+    headline: string
+    details: string[]
+    severity: 'HIGH' | 'CRITICAL'
+    affectedSectors?: string[]
+    actionRequired: string
+  }
+): Promise<boolean> {
+  if (!config.enabled || !config.botToken || !config.chatId) {
+    return false
+  }
+
+  const typeEmoji: Record<string, string> = {
+    'MACRO_SHIFT': '🌍',
+    'GEOPOLITICAL': '⚔️',
+    'KILL_SWITCH': '🛑',
+    'VIX_SPIKE': '🌊',
+  }
+
+  const emoji = typeEmoji[macro.alertType] || '⚠️'
+  const severityBadge = macro.severity === 'CRITICAL' ? '🔴 CRITICAL' : '🟠 HIGH'
+
+  const sectorsLine = macro.affectedSectors && macro.affectedSectors.length > 0
+    ? `\n<b>Affected Sectors:</b> ${macro.affectedSectors.join(', ')}`
+    : ''
+
+  const detailsBlock = macro.details
+    .slice(0, 4)
+    .map(d => `• ${d}`)
+    .join('\n')
+
+  const message = `
+${emoji} <b>${macro.alertType.replace('_', ' ')}: ${severityBadge}</b>
+
+<b>${macro.headline}</b>
+
+${detailsBlock}
+${sectorsLine}
+
+<b>⚡ ACTION:</b> ${macro.actionRequired}
+
+<i>⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</i>
+`.trim()
+
+  return sendTelegramMessage(config.botToken, config.chatId, message)
+}
+
+/**
+ * Alert: Kill switch triggered — portfolio protection activated
+ */
+export async function sendKillSwitchAlert(
+  config: TelegramConfig,
+  killSwitch: {
+    reason: string
+    portfolioDrawdown?: number
+    dailyLoss?: number
+    consecutiveSLs?: number
+    vixLevel?: number
+    action: string
+  }
+): Promise<boolean> {
+  if (!config.enabled || !config.botToken || !config.chatId) {
+    return false
+  }
+
+  const statsLines: string[] = []
+  if (killSwitch.portfolioDrawdown !== undefined) {
+    statsLines.push(`Portfolio Drawdown: ${killSwitch.portfolioDrawdown.toFixed(1)}%`)
+  }
+  if (killSwitch.dailyLoss !== undefined) {
+    statsLines.push(`Today's Loss: ${formatINR(killSwitch.dailyLoss)}`)
+  }
+  if (killSwitch.consecutiveSLs !== undefined) {
+    statsLines.push(`Consecutive Stop-Losses: ${killSwitch.consecutiveSLs}`)
+  }
+  if (killSwitch.vixLevel !== undefined) {
+    statsLines.push(`India VIX: ${killSwitch.vixLevel.toFixed(1)}`)
+  }
+
+  const message = `
+🛑 <b>KILL SWITCH ACTIVATED</b>
+
+<b>⚠️ ${killSwitch.reason}</b>
+
+${statsLines.map(l => `• ${l}`).join('\n')}
+
+<b>🔒 ACTION TAKEN:</b> ${killSwitch.action}
+
+<i>💡 New entries are HALTED until conditions improve.
+Manual override available in Settings.</i>
+
+<i>⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</i>
+`.trim()
+
+  return sendTelegramMessage(config.botToken, config.chatId, message)
+}
+
+/**
+ * Enhanced signal alert with macro context
+ * Use this instead of sendNewSignalAlert when macro data is available
+ */
+export async function sendEnhancedSignalAlert(
+  config: TelegramConfig,
+  signal: {
+    symbol: string
+    exchange: string
+    totalScore: number
+    tier: string
+    entryPrice: number
+    stopLoss: number
+    target1: number
+    target2: number
+    positionSize: number
+    capitalRequired: number
+    riskAmount: number
+    reasons: string[]
+    // Macro context (new)
+    macroSentiment?: string
+    macroScore?: number
+    adjustedPositionSize?: number
+    macroWarnings?: string[]
+    geopoliticalRisk?: string
+  }
+): Promise<boolean> {
+  if (!config.enabled || !config.botToken || !config.chatId) {
+    return false
+  }
+
+  const emoji = signal.tier === 'HIGH_CONVICTION' ? '🔥' : signal.tier === 'MODERATE' ? '✅' : '👀'
+  const riskReward = ((signal.target1 - signal.entryPrice) / (signal.entryPrice - signal.stopLoss)).toFixed(2)
+
+  // Macro context block
+  let macroBlock = ''
+  if (signal.macroSentiment || signal.macroWarnings?.length) {
+    const macroLines: string[] = []
+    if (signal.macroSentiment) {
+      const macroEmoji = signal.macroScore && signal.macroScore > 0 ? '🟢' : signal.macroScore && signal.macroScore < 0 ? '🔴' : '🟡'
+      macroLines.push(`${macroEmoji} Macro: ${signal.macroSentiment.replace(/_/g, ' ')}`)
+    }
+    if (signal.adjustedPositionSize && signal.adjustedPositionSize !== signal.positionSize) {
+      macroLines.push(`📏 Position adjusted: ${signal.positionSize} → ${signal.adjustedPositionSize} shares`)
+    }
+    if (signal.macroWarnings) {
+      signal.macroWarnings.slice(0, 2).forEach(w => macroLines.push(`⚠️ ${w}`))
+    }
+    if (signal.geopoliticalRisk && signal.geopoliticalRisk !== 'LOW') {
+      macroLines.push(`🌍 Geopolitical risk: ${signal.geopoliticalRisk}`)
+    }
+    macroBlock = `\n<b>🌍 MACRO CONTEXT:</b>\n${macroLines.join('\n')}\n`
+  }
+
+  const message = `
+${emoji} <b>NEW SIGNAL: ${signal.symbol}</b>
+
+<b>Score:</b> ${signal.totalScore}/100 (${signal.tier})
+<b>Exchange:</b> ${signal.exchange}
+${macroBlock}
+<b>📊 TRADE PLAN:</b>
+Entry: ${formatINR(signal.entryPrice)}
+Stop Loss: ${formatINR(signal.stopLoss)} (${(((signal.stopLoss - signal.entryPrice) / signal.entryPrice) * 100).toFixed(2)}%)
+Target 1: ${formatINR(signal.target1)} (${(((signal.target1 - signal.entryPrice) / signal.entryPrice) * 100).toFixed(2)}%)
+Target 2: ${formatINR(signal.target2)} (${(((signal.target2 - signal.entryPrice) / signal.entryPrice) * 100).toFixed(2)}%)
+
+<b>Position Size:</b> ${signal.adjustedPositionSize || signal.positionSize} shares
+<b>Capital Required:</b> ${formatINR(signal.capitalRequired)}
+<b>Max Risk:</b> ${formatINR(signal.riskAmount)}
+<b>Risk:Reward:</b> 1:${riskReward}
+
+<b>💡 WHY THIS TRADE?</b>
+${signal.reasons.slice(0, 3).map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+<i>⏰ ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</i>
+`.trim()
+
+  return sendTelegramMessage(config.botToken, config.chatId, message)
+}
+
+/**
  * Get Telegram chat ID from bot token (for setup)
  */
 export async function getTelegramChatId(botToken: string): Promise<{ chatId: string; firstName: string } | null> {
@@ -523,7 +748,7 @@ export async function getTelegramChatId(botToken: string): Promise<{ chatId: str
 
     return { chatId, firstName }
   } catch (error: any) {
-    console.error('❌ Failed to get chat ID:', error.message)
+    logger.error('Failed to get Telegram chat ID', { error: error.message })
     return null
   }
 }

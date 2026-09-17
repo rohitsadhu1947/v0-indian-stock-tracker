@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth';
 
 // NIFTY 500 stocks (popular intraday stocks)
 // In production, this would be fetched from Kite instruments list
@@ -40,16 +41,12 @@ const NIFTY_500_SYMBOLS = [
 ];
 
 export async function GET(request: NextRequest) {
-  try {
-    const cookieStore = cookies();
-    const accessToken = cookieStore.get('kite_access_token')?.value;
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
 
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Not authenticated. Please login first.' },
-        { status: 401 }
-      );
-    }
+  try {
 
     // In production, fetch instruments from Kite API
     // For now, return the curated list

@@ -3,6 +3,7 @@ import { convertToYahooSymbol, type FundamentalData } from '@/lib/fundamentals-u
 import https from 'https';
 import { db } from '@/db'
 import { fundamentalData as fundamentalDataTable } from '@/db/schema'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 // Disable caching for this API route during development
 export const dynamic = 'force-dynamic';
@@ -128,8 +129,13 @@ async function saveFundamentalDataToDB(symbol: string, exchange: string, fundDat
  * Fetches comprehensive fundamental data for a stock from Yahoo Finance
  */
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   console.log('🚀 === FUNDAMENTALS API CALLED ===');
-  
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const symbol = searchParams.get('symbol');
@@ -221,7 +227,6 @@ export async function GET(request: NextRequest) {
           industry: fallback?.industry,
           
           // Use chart for current prices
-          currentPrice: meta.regularMarketPrice,
           fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
           fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
           
@@ -394,10 +399,9 @@ export async function GET(request: NextRequest) {
     if (error.message?.includes('No data found') || error.message?.includes('Not Found')) {
       return NextResponse.json(
         { 
-          error: `Symbol "${symbol}" not found on Yahoo Finance`,
+          error: `Symbol not found on Yahoo Finance`,
           suggestion: 'Try different exchange (NSE/BSE) or verify symbol spelling',
-          details: error.message,
-          yahooSymbol: convertToYahooSymbol(symbol, exchange)
+          details: error.message
         },
         { status: 404 }
       );

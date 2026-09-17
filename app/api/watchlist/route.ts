@@ -8,7 +8,7 @@ import { db } from '@/db'
 import { watchlists } from '@/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
-import { getCachedWatchlist, setCachedWatchlist, invalidateWatchlistCache } from '@/lib/data-cache'
+import logger from '@/lib/logger'
 
 /**
  * GET /api/watchlist
@@ -26,21 +26,8 @@ export async function GET(request: NextRequest) {
       }, { status: 401 })
     }
     
-    // 🚀 Check cache first
-    const cached = getCachedWatchlist(userId)
-    if (cached) {
-      console.log(`⚡ Cache HIT: Watchlist for user ${userId} (${cached.length} items)`)
-      return NextResponse.json({
-        success: true,
-        watchlist: cached,
-        cached: true
-      })
-    }
-
-    // Cache miss - fetch from database
-    console.log(`📡 Cache MISS: Fetching watchlist from database for user ${userId}`)
     const userWatchlist = await db.select().from(watchlists).where(eq(watchlists.userId, userId))
-    
+
     const watchlistData = userWatchlist.map(item => ({
       symbol: item.symbol,
       exchange: item.exchange,
@@ -48,23 +35,15 @@ export async function GET(request: NextRequest) {
       addedAt: item.addedAt
     }))
 
-    // Cache the result
-    setCachedWatchlist(userId, watchlistData)
-    
-    console.log(`✅ Fetched and cached ${userWatchlist.length} watchlist items for user ${userId}`)
-    
+    logger.debug('Fetched watchlist', { userId, count: userWatchlist.length })
+
     return NextResponse.json({
       success: true,
-      watchlist: watchlistData,
-      cached: false
+      watchlist: watchlistData
     })
   } catch (error) {
-    console.error('❌ Error fetching watchlist:', error)
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch watchlist',
-      watchlist: []
-    }, { status: 500 })
+    logger.error('Error fetching watchlist', { error: String(error) })
+    return NextResponse.json({ success: false, error: 'Failed to fetch watchlist', watchlist: [] }, { status: 500 })
   }
 }
 
@@ -119,18 +98,15 @@ export async function POST(request: NextRequest) {
       instrumentToken
     }).returning()
     
-    // Invalidate cache
-    invalidateWatchlistCache(userId)
-    
-    console.log(`✅ Added ${symbol} to watchlist for user ${userId}`)
-    
+    logger.info('Added to watchlist', { userId, symbol })
+
     return NextResponse.json({
       success: true,
       message: `Added ${symbol} to watchlist`,
       item: newItem
     })
   } catch (error) {
-    console.error('❌ Error adding to watchlist:', error)
+    logger.error('Error adding to watchlist', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to add to watchlist'
@@ -172,17 +148,11 @@ export async function DELETE(request: NextRequest) {
         eq(watchlists.exchange, exchange)
       ))
     
-    // Invalidate cache
-    invalidateWatchlistCache(userId)
-    
-    console.log(`✅ Removed ${symbol} from watchlist for user ${userId}`)
-    
-    return NextResponse.json({
-      success: true,
-      message: `Removed ${symbol} from watchlist`
-    })
+    logger.info('Removed from watchlist', { userId, symbol })
+
+    return NextResponse.json({ success: true, message: `Removed ${symbol} from watchlist` })
   } catch (error) {
-    console.error('❌ Error removing from watchlist:', error)
+    logger.error('Error removing from watchlist', { error: String(error) })
     return NextResponse.json({
       success: false,
       error: 'Failed to remove from watchlist'

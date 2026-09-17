@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserBrokerManager } from '@/lib/broker'
 import { analyzeMarketRegime, getRegimeColor, getRegimeEmoji, type HistoricalBar } from '@/lib/market-regime'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,6 +20,11 @@ let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export async function GET(request: NextRequest) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('\n📊 === MARKET REGIME API CALLED ===')
 

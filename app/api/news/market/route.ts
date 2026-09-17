@@ -4,6 +4,7 @@ import { NewsItem } from '../quote/route';
 import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal } from '@/lib/sentiment-utils';
 import { db } from '@/db'
 import { newsData } from '@/db/schema'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 // Disable caching for this API route
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,11 @@ const parser = new Parser({
  * GET /api/news/market
  */
 export async function GET() {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
     console.log('📰 === MARKET NEWS API CALLED ===');
 

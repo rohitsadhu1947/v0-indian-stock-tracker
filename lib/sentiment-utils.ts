@@ -1,3 +1,4 @@
+// @ts-ignore - no type declarations available for 'sentiment'
 import Sentiment from 'sentiment';
 
 // Initialize sentiment analyzer

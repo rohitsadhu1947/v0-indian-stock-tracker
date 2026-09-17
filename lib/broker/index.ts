@@ -19,6 +19,7 @@ import { KiteBrokerClient } from './kite-client'
 import { AngelBrokerClient } from './angel-client'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getBrokerDefinition } from './registry'
+import logger from '@/lib/logger'
 
 // Re-export all types and classes
 export { BrokerManager } from './manager'
@@ -96,7 +97,7 @@ function createClientFromConnection(
       return { client: client as any, isPrimary: conn.isPrimary }
     }
   } catch (err: any) {
-    console.warn(`⚠️  Could not create client for broker ${conn.brokerId}:`, err.message)
+    logger.warn('Could not create broker client', { brokerId: conn.brokerId, error: err.message })
   }
 
   return null
@@ -119,7 +120,7 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
   const apiKey = process.env.KITE_API_KEY
 
   if (!apiKey) {
-    console.warn('⚠️  KITE_API_KEY not set — Kite broker will not be available')
+    logger.warn('KITE_API_KEY not set — Kite broker unavailable')
     return manager
   }
 
@@ -138,10 +139,10 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
         .orderBy(desc(brokerConnections.isPrimary))
 
       for (const conn of userConnections) {
-        const result = createClientFromConnection(conn, apiKey)
+        const result = createClientFromConnection(conn as any, apiKey)
         if (result) {
           manager.register(result.client, result.isPrimary)
-          console.log(`✅ Loaded ${conn.brokerId} broker for user ${userId}`)
+          logger.info('Loaded broker', { brokerId: conn.brokerId, userId })
         }
       }
 
@@ -150,7 +151,7 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
       }
     } catch (error: any) {
       if (!error.message?.includes('does not exist') && !error.message?.includes('relation')) {
-        console.warn(`⚠️  Error reading broker_connections for user ${userId}:`, error.message)
+        logger.warn('Error reading broker_connections', { userId, error: error.message })
       }
     }
   }
@@ -185,10 +186,10 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
         // Filter to admin connections only
         for (const conn of adminConnections) {
           if (!adminIdsToCheck.includes(conn.userId)) continue
-          const result = createClientFromConnection(conn, apiKey)
+          const result = createClientFromConnection(conn as any, apiKey)
           if (result) {
             manager.register(result.client, result.isPrimary)
-            console.log(`✅ Fallback: using admin's ${conn.brokerId} broker (user ${conn.userId})`)
+            logger.info('Fallback: using admin broker', { brokerId: conn.brokerId, adminUserId: conn.userId })
           }
         }
 
@@ -199,7 +200,7 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
     }
   } catch (error: any) {
     if (!error.message?.includes('does not exist') && !error.message?.includes('relation')) {
-      console.warn('⚠️  Error reading admin broker_connections:', error.message)
+      logger.warn('Error reading admin broker_connections', { error: error.message })
     }
   }
 
@@ -213,7 +214,7 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
     if (kiteToken) {
       const client = new KiteBrokerClient({ apiKey, accessToken: kiteToken })
       manager.register(client, true)
-      console.log('⚠️  Legacy: using Kite token from cookie (user should re-authenticate)')
+      logger.warn('Legacy: using Kite token from cookie (user should re-authenticate)')
       return manager
     }
   } catch {
@@ -241,16 +242,14 @@ export async function getBrokerManager(userId?: number): Promise<BrokerManager> 
         accessToken: adminUser.masterKiteToken,
       })
       manager.register(client, true)
-      console.log(
-        `⚠️  Legacy: using masterKiteToken from admin (${adminUser.kiteUserId})`
-      )
+      logger.warn('Legacy: using masterKiteToken from admin', { kiteUserId: adminUser.kiteUserId })
       return manager
     }
   } catch (error: any) {
-    console.error('❌ Error reading admin masterKiteToken:', error.message)
+    logger.error('Error reading admin masterKiteToken', { error: error.message })
   }
 
-  console.log('❌ No broker connections found')
+  logger.warn('No broker connections found')
   return manager
 }
 

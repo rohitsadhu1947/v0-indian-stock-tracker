@@ -4,6 +4,7 @@ import { quarterlyFinancials } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getUserBrokerManager } from '@/lib/broker'
 import type { BrokerClient, InstrumentData } from '@/lib/broker'
+import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 
 /**
  * GET /api/earnings/pre-analysis/[symbol]
@@ -15,6 +16,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
+  const userId = await getAuthenticatedUserIdCompat()
+  if (!userId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   const symbol = params.symbol.toUpperCase()
 
   console.log(`\n📊 Starting Pre-Earnings Analysis for ${symbol}...`)
