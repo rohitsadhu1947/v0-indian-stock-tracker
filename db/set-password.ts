@@ -3,7 +3,7 @@
  * Usage: npx tsx db/set-password.ts <email> <password>
  */
 import postgres from 'postgres'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import * as dotenv from 'dotenv'
 
 dotenv.config({ path: '.env.local' })

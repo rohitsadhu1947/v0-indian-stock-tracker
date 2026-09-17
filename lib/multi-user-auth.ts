@@ -10,7 +10,7 @@
  * - Data isolation helpers
  */
 
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 import { db } from '@/db'

@@ -11,7 +11,7 @@ vi.mock('next/headers', () => ({
 vi.mock('@/db', () => ({ db: {} }))
 vi.mock('@/db/schema', () => ({ users: {}, userPermissions: {} }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
-vi.mock('bcrypt', () => ({
+vi.mock('bcryptjs', () => ({
   default: {
     hash: vi.fn(),
     compare: vi.fn(),
