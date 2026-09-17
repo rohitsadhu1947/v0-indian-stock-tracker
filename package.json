@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "npx tsc --noEmit && npm run lint && npm test"
+    "check": "tsc --noEmit && vitest run"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

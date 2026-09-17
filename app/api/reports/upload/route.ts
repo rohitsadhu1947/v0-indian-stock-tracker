@@ -12,14 +12,16 @@ import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 // addServerLog was in the deleted logs route; inline a no-op so call-sites compile
 function addServerLog(_msg: string) { console.log(_msg) }
 
-// Use dynamic import for pdf-parse to avoid build issues
-let pdfParse: any = null
-
-async function getPdfParse() {
-  if (!pdfParse) {
-    pdfParse = (await import('pdf-parse')).default
+// Use dynamic import for pdf-parse to avoid build issues (v2 API: PDFParse class)
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  const { PDFParse } = await import('pdf-parse')
+  const parser = new PDFParse({ data: new Uint8Array(buffer) })
+  try {
+    const result = await parser.getText()
+    return result.text
+  } finally {
+    await parser.destroy()
   }
-  return pdfParse
 }
 
 // Initialize Gemini AI (you'll add your API key to .env.local)
@@ -96,9 +98,7 @@ export async function POST(request: NextRequest) {
       
       // Method 1: Try pdf-parse first (fast but sometimes incomplete)
       try {
-        const pdf = await getPdfParse()
-        const pdfData = await pdf(buffer)
-        fullText = pdfData.text
+        fullText = await extractPdfText(buffer)
         addServerLog(`📝 pdf-parse: Extracted ${fullText.length} characters`)
         
         // If we got very little text, the PDF might have images or complex layout
