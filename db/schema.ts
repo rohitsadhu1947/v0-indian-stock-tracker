@@ -272,7 +272,9 @@ export const screenerResults = pgTable('screener_results', {
 export const tradeHistory = pgTable('trade_history', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id).notNull(),
-  positionId: integer('position_id').references(() => positions.id),
+  // No FK: may reference paper_positions.id or positions.id — see `source`
+  positionId: integer('position_id'),
+  source: text('source').default('paper').notNull(), // 'paper' | 'live'
   symbol: text('symbol').notNull(),
   exchange: text('exchange').notNull(),
   entryPrice: real('entry_price').notNull(),
