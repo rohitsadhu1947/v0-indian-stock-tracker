@@ -23,6 +23,7 @@ interface MarketStore {
   momentumCapital: number
   momentumMaxPositions: number
   momentumMinScore: number
+  momentumProfile: 'swing' | 'intraday'
   customStocksInput: string
   isQuickScan: boolean
 
@@ -46,6 +47,7 @@ interface MarketStore {
   setMomentumCapital: (capital: number) => void
   setMomentumMaxPositions: (max: number) => void
   setMomentumMinScore: (min: number) => void
+  setMomentumProfile: (profile: 'swing' | 'intraday') => void
   setCustomStocksInput: (input: string) => void
   setIsQuickScan: (quick: boolean) => void
   setUniverseScans: (scans: any[]) => void
@@ -71,6 +73,7 @@ export const useMarketStore = create<MarketStore>()((set) => ({
   momentumCapital: 300000,
   momentumMaxPositions: 5,
   momentumMinScore: 45,
+  momentumProfile: 'swing',
   customStocksInput: '',
   isQuickScan: true,
 
@@ -92,6 +95,7 @@ export const useMarketStore = create<MarketStore>()((set) => ({
   setMomentumCapital: (capital) => set({ momentumCapital: capital }),
   setMomentumMaxPositions: (max) => set({ momentumMaxPositions: max }),
   setMomentumMinScore: (min) => set({ momentumMinScore: min }),
+  setMomentumProfile: (profile) => set({ momentumProfile: profile }),
   setCustomStocksInput: (input) => set({ customStocksInput: input }),
   setIsQuickScan: (quick) => set({ isQuickScan: quick }),
   setUniverseScans: (scans) => set({ universeScans: scans }),
