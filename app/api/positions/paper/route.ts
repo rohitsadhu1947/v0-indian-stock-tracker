@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { paperPositions } from '@/db/schema'
+import { calculatePnl, validateLevels } from '@/lib/paper-trading'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { getDataUserId } from '@/lib/multi-user-auth'
 import { eq, and, desc } from 'drizzle-orm'
@@ -54,6 +55,13 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Levels must sit on the correct side of entry, else the position exits
+    // on the next price tick (a SHORT with a long-side stop, for example).
+    const levelCheck = validateLevels({ positionType, entryPrice, stopLoss, target1, target2 })
+    if (!levelCheck.valid) {
+      return NextResponse.json({ error: levelCheck.error }, { status: 400 })
     }
 
     // Store full signal data as JSONB (includes rsi, volumeRatio, reasons, warnings, etc.)
@@ -195,9 +203,12 @@ export async function PATCH(request: NextRequest) {
     let pnlPercent = existingPosition.pnlPercent
 
     if (currentPrice) {
-      const priceChange = currentPrice - existingPosition.entryPrice
-      pnl = priceChange * existingPosition.quantity
-      pnlPercent = (priceChange / existingPosition.entryPrice) * 100
+      ;({ pnl, pnlPercent } = calculatePnl({
+        positionType: existingPosition.positionType,
+        entryPrice: existingPosition.entryPrice,
+        currentPrice,
+        quantity: existingPosition.quantity,
+      }))
     }
 
     // Update position

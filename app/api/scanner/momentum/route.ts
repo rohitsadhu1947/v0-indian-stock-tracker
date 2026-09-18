@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { scanForMomentumSignals, NIFTY_500_SYMBOLS } from '@/lib/momentum-scanner'
+import { getProfile, DEFAULT_PROFILE } from '@/lib/trade-profiles'
 import { getUserBrokerManager } from '@/lib/broker'
 import type { InstrumentData } from '@/lib/broker'
 import { db } from '@/db'
@@ -16,7 +17,8 @@ import logger from '@/lib/logger'
  *
  * Query params:
  * - capital: Available capital (default 300000 = ₹3L)
- * - maxPositions: Max concurrent positions (default 5)
+ * - maxPositions: Max concurrent positions (default: from the trade profile)
+ * - profile: Trade profile — 'swing' (10-15% targets, default) or 'intraday'
  * - minScore: Minimum momentum score (default 60)
  */
 export async function GET(request: NextRequest) {
@@ -44,7 +46,10 @@ export async function GET(request: NextRequest) {
     // 2. Get query params
     const { searchParams } = new URL(request.url)
     const capital = parseInt(searchParams.get('capital') || '300000')
-    const maxPositions = parseInt(searchParams.get('maxPositions') || '5')
+    // Profile decides targets, stop width, hold time and sizing — the same
+    // definition the backtester uses (lib/trade-profiles.ts)
+    const profile = getProfile(searchParams.get('profile') || DEFAULT_PROFILE)
+    const maxPositions = parseInt(searchParams.get('maxPositions') || String(profile.maxPositions))
     const minScore = parseInt(searchParams.get('minScore') || '45') // Lower default from 60 to 45
     const customStocksParam = searchParams.get('customStocks') || ''
     const isQuickScan = searchParams.get('quickScan') === 'true'
@@ -59,7 +64,7 @@ export async function GET(request: NextRequest) {
       console.log(`📝 Custom stocks requested: ${customStocks.join(', ')}`)
     }
 
-    console.log(`🔍 Starting ${isQuickScan ? 'QUICK' : 'FULL'} momentum scan (capital: ₹${capital.toLocaleString()}, maxPositions: ${maxPositions}, minScore: ${minScore})...`)
+    console.log(`🔍 Starting ${isQuickScan ? 'QUICK' : 'FULL'} momentum scan (profile: ${profile.id}, capital: ₹${capital.toLocaleString()}, maxPositions: ${maxPositions}, minScore: ${minScore})...`)
 
     // 3. Get instrument tokens for NIFTY 500 stocks + custom stocks
     const instruments = await client.getInstruments('NSE')
@@ -375,7 +380,8 @@ export async function GET(request: NextRequest) {
       minVolume: 50000, // Reduced from 100k to 50k
       maxPositions,
       customStocks, // Pass custom stocks to scanner
-      niftyRegime  // Pass real NIFTY regime instead of hardcoded 'UP'
+      niftyRegime,  // Pass real NIFTY regime instead of hardcoded 'UP'
+      profile
     })
 
     console.log(`✅ Scan complete: ${scanResult.signalsFound} signals found, sentiment: ${scanResult.marketSentiment}`)
@@ -424,6 +430,14 @@ export async function GET(request: NextRequest) {
         ...scanResult,
         signals: filteredSignals,
         signalsFound: filteredSignals.length
+      },
+      profile: {
+        id: profile.id,
+        label: profile.label,
+        target1Pct: profile.target1Pct * 100,
+        target2Pct: profile.target2Pct * 100,
+        maxStopPct: profile.maxStopPct * 100,
+        maxHoldDays: profile.maxHoldDays,
       },
       timestamp: new Date().toISOString()
     })

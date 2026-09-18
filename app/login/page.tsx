@@ -3,12 +3,19 @@
 /**
  * Login Page
  *
- * Email/password authentication only.
- * Broker connections (Kite, Groww, etc.) are managed in Admin settings.
+ * Email/password sign-in, plus Zerodha Kite sign-in for accounts whose Kite
+ * ID is linked to a user. Other broker connections are managed in Settings.
  */
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+const CALLBACK_ERRORS: Record<string, string> = {
+  kite_account_not_registered:
+    'That Zerodha account is not linked to a user here. Sign in with email and password, then connect Kite from Settings.',
+  session_mismatch: 'Session expired during the Kite redirect. Please sign in and try again.',
+  authentication_failed: 'Zerodha sign-in failed. Please try again.',
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,6 +24,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+
+  // Errors redirected back from the Kite OAuth callback.
+  // Read from location rather than useSearchParams, which would force the
+  // whole page into a Suspense boundary at build time.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error')
+    if (code) setError(CALLBACK_ERRORS[code] || 'Sign-in failed. Please try again.')
+  }, [])
 
   // Check if already logged in (use unified session)
   useEffect(() => {
@@ -150,6 +165,26 @@ export default function LoginPage() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
+
+          {/* Zerodha Kite sign-in: the button used to live on the dashboard,
+              which now requires a session, so it was unreachable when logged out. */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-700" />
+              <span className="text-xs text-gray-500 uppercase tracking-wide">or</span>
+              <div className="flex-1 h-px bg-gray-700" />
+            </div>
+
+            <a
+              href="/api/auth/kite/login"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Sign in with Zerodha Kite
+            </a>
+            <p className="mt-2 text-xs text-gray-500 text-center">
+              Also refreshes your Kite data access, which expires at 6:00 AM IST daily.
+            </p>
+          </div>
         </div>
 
         {/* Footer */}

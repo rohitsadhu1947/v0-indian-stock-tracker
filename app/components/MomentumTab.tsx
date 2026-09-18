@@ -20,6 +20,8 @@ export default memo(function MomentumTab() {
     momentumMaxPositions,
     setMomentumMaxPositions,
     momentumMinScore,
+    momentumProfile,
+    setMomentumProfile,
     setMomentumMinScore,
     customStocksInput,
     setCustomStocksInput,
@@ -73,7 +75,8 @@ export default memo(function MomentumTab() {
         capital: momentumCapital.toString(),
         maxPositions: momentumMaxPositions.toString(),
         minScore: momentumMinScore.toString(),
-        quickScan: isQuickScan.toString()
+        quickScan: isQuickScan.toString(),
+        profile: momentumProfile
       })
 
       // Add custom stocks if provided
@@ -1012,6 +1015,33 @@ export default memo(function MomentumTab() {
             />
             <div style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '5px' }}>
               Simultaneous trades
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              📐 Trade Profile
+            </label>
+            <select
+              value={momentumProfile}
+              onChange={(e) => setMomentumProfile(e.target.value as 'swing' | 'intraday')}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '1em',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}
+            >
+              <option value="swing">Swing — +10% / +15% targets, up to 45d</option>
+              <option value="intraday">Intraday — +1.5% / +2.5%, up to 7d</option>
+            </select>
+            <div style={{ fontSize: '0.85em', opacity: 0.6, marginTop: '5px' }}>
+              {momentumProfile === 'swing'
+                ? 'Reward ≈ 2x risk (stop capped at 6%)'
+                : '⚠️ Risks ~2.5-3% to make 1.5%'}
             </div>
           </div>
 
