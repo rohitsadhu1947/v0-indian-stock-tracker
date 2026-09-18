@@ -7,6 +7,14 @@
  * EDGE: Systematic momentum + volume confirmation + clean technical structure
  */
 
+import {
+  getProfile,
+  calculateTradeLevels,
+  calculateTradeSize,
+  type TradeProfile,
+  type TradeProfileId,
+} from './trade-profiles'
+
 export interface MomentumSignal {
   symbol: string
   exchange: string
@@ -235,74 +243,6 @@ function determineSignal(momentumScore: number, rsi: number, volumeRatio: number
 }
 
 /**
- * Calculate entry and exit levels
- */
-function calculateLevels(
-  current: number,
-  atr: number,
-  sma5: number
-): {
-  entryPrice: number
-  stopLoss: number
-  target1: number
-  target2: number
-} {
-  // Entry: Current price (market order) or wait for pullback to SMA5
-  const entryPrice = current
-  
-  // Stop-loss: Below SMA5 OR 1.5 ATR, whichever is tighter
-  const atrStop = current - (1.5 * atr)
-  const smaStop = sma5 * 0.98 // 2% below SMA5
-  const stopLoss = Math.max(atrStop, smaStop)
-  
-  // Targets: 1.5% and 2.5%
-  const target1 = entryPrice * 1.015 // 1.5%
-  const target2 = entryPrice * 1.025 // 2.5%
-  
-  return { entryPrice, stopLoss, target1, target2 }
-}
-
-/**
- * Calculate position size based on capital and risk
- */
-function calculatePositionSize(
-  capital: number,
-  entryPrice: number,
-  stopLoss: number,
-  riskPercent: number = 1.5 // Max 1.5% risk per trade
-): {
-  positionSize: number
-  capitalRequired: number
-  riskAmount: number
-} {
-  // Max risk amount
-  const riskAmount = capital * (riskPercent / 100)
-  
-  // Risk per share
-  const riskPerShare = entryPrice - stopLoss
-  if (riskPerShare <= 0) return { positionSize: 0, capitalRequired: 0, riskAmount: 0 }
-
-  // Position size
-  let positionSize = Math.floor(safeDivide(riskAmount, riskPerShare, 0))
-  
-  // Capital required
-  let capitalRequired = positionSize * entryPrice
-  
-  // Don't use more than 33% of capital per trade (diversification)
-  const maxCapitalPerTrade = capital * 0.33
-  if (capitalRequired > maxCapitalPerTrade) {
-    capitalRequired = maxCapitalPerTrade
-    positionSize = Math.floor(safeDivide(capitalRequired, entryPrice, 0))
-  }
-  
-  return {
-    positionSize,
-    capitalRequired,
-    riskAmount: positionSize * (entryPrice - stopLoss)
-  }
-}
-
-/**
  * Generate reasons for the signal
  */
 function generateReasons(
@@ -430,6 +370,8 @@ export async function scanForMomentumSignals(
     minVolume?: number
     maxPositions?: number
     customStocks?: string[] // Add custom stocks parameter
+    /** Trade profile: decides targets, stop width, hold time and sizing. */
+    profile?: TradeProfileId | TradeProfile
     niftyRegime?: {
       regime: string           // STRONG_BULL, BULL, SIDEWAYS, BEAR, STRONG_BEAR
       positionSizeMultiplier: number
@@ -441,10 +383,15 @@ export async function scanForMomentumSignals(
     minPrice = 50,
     maxPrice = 5000,
     minVolume = 100000,
-    maxPositions = 5,
+    maxPositions,
     customStocks = [], // Default to empty array
-    niftyRegime
+    niftyRegime,
+    profile: profileOption
   } = options
+
+  // One definition of levels/sizing, shared with the backtester (lib/trade-profiles.ts)
+  const profile = typeof profileOption === 'object' ? profileOption : getProfile(profileOption)
+  const positionsCap = maxPositions ?? profile.maxPositions
   
   const signals: MomentumSignal[] = []
   let strongBuyCount = 0
@@ -535,20 +482,20 @@ export async function scanForMomentumSignals(
         console.log(`🔍 Custom stock ${stock.symbol}: Low quality signal (force analyzing anyway)`)
       }
       
-      // Calculate levels
-      const { entryPrice, stopLoss, target1, target2 } = calculateLevels(
-        stock.current,
+      // Calculate levels from the trade profile (targets, ATR stop, caps)
+      const { entryPrice, stopLoss, target1, target2 } = calculateTradeLevels({
+        entryPrice: stock.current,
         atr,
-        sma5
-      )
-      
-      // Calculate position size
-      const { positionSize, capitalRequired, riskAmount } = calculatePositionSize(
+        profile,
+      })
+
+      // Calculate position size (risk-based, capped by profile)
+      const { quantity: positionSize, capitalRequired, riskAmount } = calculateTradeSize({
         capital,
         entryPrice,
         stopLoss,
-        1.5 // 1.5% max risk per trade
-      )
+        profile,
+      })
       
       // Generate reasons and warnings
       const reasons = generateReasons(
@@ -642,7 +589,7 @@ export async function scanForMomentumSignals(
   signals.sort((a, b) => b.momentumScore - a.momentumScore)
   
   // Limit to top signals
-  const topSignals = signals.slice(0, maxPositions * 3) // Show 3x max positions
+  const topSignals = signals.slice(0, positionsCap * 3) // Show 3x max positions
   
   // Calculate market context (simplified)
   const avgMomentum = topSignals.length > 0
@@ -693,7 +640,7 @@ export async function scanForMomentumSignals(
     marketSentiment,
     niftyTrend,
     recommendedCapitalAllocation,
-    maxPositions
+    maxPositions: positionsCap
   }
   
   console.log(`✅ Found ${topSignals.length} momentum signals (${strongBuyCount} STRONG_BUY, ${buyCount} BUY)`)

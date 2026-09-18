@@ -34,3 +34,6 @@ public/uploads/reports/*.pdf
 error.log
 Reports/
 .vercel
+
+# backtest bar cache
+.cache/
