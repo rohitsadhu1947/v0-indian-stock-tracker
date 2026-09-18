@@ -438,9 +438,14 @@ function calculateCombinedSentiment(
   }
 
   // Generate trading signal based on combined analysis
+  const positiveCount = (stockNews.sentiment.aggregate.positive || 0) + (sectorNews?.sentiment.aggregate.positive || 0)
+  const negativeCount = (stockNews.sentiment.aggregate.negative || 0) + (sectorNews?.sentiment.aggregate.negative || 0)
+  const directionalCount = positiveCount + negativeCount
+
   const aggregate = {
     overall,
     score: combinedScore,
+    balance: directionalCount > 0 ? (positiveCount - negativeCount) / directionalCount : 0,
     positive: (stockNews.sentiment.aggregate.positive || 0) + (sectorNews?.sentiment.aggregate.positive || 0),
     negative: (stockNews.sentiment.aggregate.negative || 0) + (sectorNews?.sentiment.aggregate.negative || 0),
     neutral: (stockNews.sentiment.aggregate.neutral || 0) + (sectorNews?.sentiment.aggregate.neutral || 0),

@@ -23,6 +23,12 @@ export interface IntelligenceScore {
     newsSentimentScore: number  // 0-12 (increased - real-time data!)
   }
   reasoning: string[]
+  /** False when there is no analyst report AND no news — the score is then
+   *  meaningless and callers should exclude it rather than treat it as a
+   *  low-but-real reading. */
+  available: boolean
+  /** Which inputs actually produced a score. */
+  inputs: { analystReport: boolean; news: boolean }
 }
 
 /**
@@ -144,11 +150,20 @@ function calculateNewsSentimentScore(sentimentScore: number): { score: number, r
  */
 export function calculateIntelligenceScore(
   analystReport: AnalystReport | null,
-  newsSentiment: number = 0
+  newsSentiment: number = 0,
+  options: { newsAvailable?: boolean } = {}
 ): IntelligenceScore {
+  // Default true keeps older callers working; master-scorer passes the real flag.
+  const newsAvailable = options.newsAvailable !== false
+
   const analystResult = calculateAnalystScore(analystReport)
   const upsideResult = calculateUpsideScore(analystReport)
-  const sentimentResult = calculateNewsSentimentScore(newsSentiment)
+
+  // No news at all is NOT the same as neutral news: neutral used to award 6/12
+  // (5/25 after scaling), which is why every stock showed "intelligence 5".
+  const sentimentResult = newsAvailable
+    ? calculateNewsSentimentScore(newsSentiment)
+    : { score: 0, reason: '⚪ No news found for this stock' }
 
   const totalScore = analystResult.score + upsideResult.score + sentimentResult.score
 
@@ -168,7 +183,9 @@ export function calculateIntelligenceScore(
       targetUpsideScore: upsideResult.score,
       newsSentimentScore: sentimentResult.score
     },
-    reasoning
+    reasoning,
+    available: analystReport !== null || newsAvailable,
+    inputs: { analystReport: analystReport !== null, news: newsAvailable },
   }
 }
 

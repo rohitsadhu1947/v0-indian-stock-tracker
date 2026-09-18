@@ -70,6 +70,33 @@ const customWords = {
   'risk': -1,
   'volatile': -1,
   'uncertainty': -2,
+
+  // Inflections and Indian-market phrasing. The base-form-only list missed
+  // most real headlines: "ratings downgraded", "brokerages turn cautious",
+  // "shares surged", "profit booking" all scored zero.
+  'bull': 2, 'bulls': 2, 'rallies': 3, 'rallied': 3, 'surged': 3, 'surges': 3,
+  'soared': 3, 'soars': 3, 'gains': 2, 'gained': 2, 'profits': 2, 'rises': 2,
+  'rose': 2, 'jumped': 2, 'jumps': 2, 'upgraded': 2, 'upgrades': 2,
+  'outperformed': 3, 'outperforms': 3, 'beats': 2, 'exceeded': 2, 'exceeds': 2,
+  'boosted': 2, 'boosts': 2, 'improved': 2, 'improves': 2, 'multibagger': 3,
+  'breakouts': 2, 'zoom': 3, 'zooms': 3, 'zoomed': 3, 'spike': 2, 'spikes': 2,
+  'climbs': 2, 'climbed': 2, 'advance': 2, 'advances': 2, 'bullishness': 3,
+  'optimistic': 2, 'optimism': 2, 'robust': 2, 'expansion': 2, 'accumulate': 2,
+  'overweight': 2, 'target price': 1, 'dividend': 1, 'bonus': 1, 'order win': 3,
+  'wins': 2, 'won': 2, 'approval': 2, 'approved': 2, 'launch': 1,
+
+  'bears': -3, 'crashed': -4, 'crashes': -4, 'plunged': -3, 'plunges': -3,
+  'tumbled': -3, 'tumbles': -3, 'falls': -2, 'fell': -2, 'losses': -2,
+  'declines': -2, 'declined': -2, 'drops': -2, 'dropped': -2, 'weakness': -2,
+  'weaker': -2, 'misses': -2, 'missed': -2, 'downgraded': -3, 'downgrades': -3,
+  'cautious': -2, 'caution': -2, 'concerns': -2, 'fears': -2, 'cuts': -2,
+  'slashed': -3, 'slashes': -3, 'slides': -2, 'slid': -2, 'slumped': -3,
+  'slumps': -3, 'warns': -2, 'warned': -2, 'risks': -1, 'volatility': -1,
+  'selloff': -3, 'sell-off': -3, 'profit booking': -2, 'muted': -2,
+  'subdued': -2, 'sluggish': -2, 'underweight': -2, 'probe': -2, 'fraud': -4,
+  'penalty': -2, 'fine': -1, 'lawsuit': -2, 'default': -3, 'downtrend': -2,
+  'pressure': -1, 'drag': -2, 'drags': -2, 'dragged': -2, 'halt': -2,
+  'recall': -2, 'resign': -2, 'resigned': -2, 'layoff': -2, 'layoffs': -2,
 };
 
 // Register custom words with the analyzer
@@ -103,17 +130,22 @@ export function analyzeSentiment(text: string): SentimentResult {
   let emoji: string;
   let color: string;
   
-  // Thresholds for classification
-  const positiveThreshold = 0.5;
-  const negativeThreshold = -0.5;
+  // Classify on the RAW valence sum, not `comparative` (= raw / word count).
+  // Headlines are 10-20 words, so comparative tops out around 0.4; the old
+  // 0.5 threshold could never be met and every article came back NEUTRAL.
+  // Measured over 75 live headlines: |raw| >= 2 marks a genuine directional
+  // headline ("shares surge 2%" = +7, "shares crash 7.5%" = -5), while +-1 is
+  // incidental wording.
+  const positiveThreshold = 2;
+  const negativeThreshold = -2;
   
-  if (result.comparative > positiveThreshold) {
+  if (result.score >= positiveThreshold) {
     label = 'POSITIVE';
-    emoji = result.comparative > 2 ? '🚀' : result.comparative > 1 ? '📈' : '😊';
+    emoji = result.score >= 7 ? '🚀' : result.score >= 4 ? '📈' : '😊';
     color = '#00ff64'; // Green
-  } else if (result.comparative < negativeThreshold) {
+  } else if (result.score <= negativeThreshold) {
     label = 'NEGATIVE';
-    emoji = result.comparative < -2 ? '💥' : result.comparative < -1 ? '📉' : '😟';
+    emoji = result.score <= -7 ? '💥' : result.score <= -4 ? '📉' : '😟';
     color = '#ff0064'; // Red
   } else {
     label = 'NEUTRAL';
@@ -141,7 +173,14 @@ export function analyzeSentiment(text: string): SentimentResult {
  */
 export interface AggregateSentiment {
   overall: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
-  score: number;          // Average comparative score
+  score: number;          // Average comparative score (tiny: divided by word count)
+  /**
+   * Balance of positive vs negative ARTICLES, -1..1.
+   * Use this for scoring: `score` is a per-word average that lands inside any
+   * sensible neutral band for almost every headline, which pinned the
+   * intelligence score to its neutral value.
+   */
+  balance: number;
   positive: number;       // Count of positive articles
   negative: number;       // Count of negative articles
   neutral: number;        // Count of neutral articles
@@ -156,6 +195,7 @@ export function calculateAggregateSentiment(sentiments: SentimentResult[]): Aggr
     return {
       overall: 'NEUTRAL',
       score: 0,
+      balance: 0,
       positive: 0,
       negative: 0,
       neutral: 0,
@@ -174,6 +214,10 @@ export function calculateAggregateSentiment(sentiments: SentimentResult[]): Aggr
   
   // Calculate average score
   const avgScore = sentiments.reduce((sum, s) => sum + s.comparative, 0) / total;
+
+  // Article balance: how one-sided the coverage is, ignoring neutral filler.
+  const directional = positive + negative;
+  const balance = directional > 0 ? (positive - negative) / directional : 0;
   
   // Determine overall sentiment
   let overall: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
@@ -214,6 +258,7 @@ export function calculateAggregateSentiment(sentiments: SentimentResult[]): Aggr
   return {
     overall,
     score: avgScore,
+    balance,
     positive,
     negative,
     neutral,

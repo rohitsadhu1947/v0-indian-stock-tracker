@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/check-exits",
-      "schedule": "*/15 4-10 * * 1-5"
+      "schedule": "55 9 * * 1-5"
     }
   ]
 }

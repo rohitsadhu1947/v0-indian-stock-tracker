@@ -7,6 +7,7 @@
 import type { MomentumSignal } from './momentum-scanner'
 import { getFundamentals, calculateFundamentalScore, type FundamentalData, type FundamentalScore } from './fundamental-api'
 import { calculateIntelligenceScore, convertDbReportToAnalystReport, type AnalystReport, type IntelligenceScore } from './intelligence-scorer'
+import { fetchStockNews } from './stock-news'
 import type { MacroSnapshot } from './macro-intelligence'
 import { getMacroImpactForStock } from './macro-intelligence'
 
@@ -319,58 +320,46 @@ export async function calculateMasterScore(
   // 3. Calculate Intelligence Score (25 points, was 30) with REAL news sentiment
   const analystReportConverted = analystReport ? convertDbReportToAnalystReport(analystReport) : null
   
-  // Fetch actual news sentiment for the stock
-  let actualNewsSentiment = newsSentiment // Use provided value as fallback
-  
+  // Fetch news directly. This used to call our own /api/news/quote over HTTP,
+  // which auth middleware rejected with 401 every time, so sentiment was
+  // always "neutral" and intelligence was pinned at its floor.
+  let actualNewsSentiment = newsSentiment
+  let newsAvailable = false
+
   try {
-    // Fetch stock-specific news with pre-calculated sentiment
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'
-    const newsResponse = await fetch(`${baseUrl}/api/news/quote?symbol=${signal.symbol}&limit=20`, {
-      next: { revalidate: 300 } // Cache for 5 minutes
-    })
-    
-    if (newsResponse.ok) {
-      const newsData = await newsResponse.json()
-      
-      // API returns "news" not "articles", and pre-calculates sentiment
-      if (newsData.success && newsData.news && newsData.news.length > 0) {
-        // Use the pre-calculated aggregate sentiment from the API
-        if (newsData.sentiment?.aggregate?.score !== undefined) {
-          actualNewsSentiment = newsData.sentiment.aggregate.score
-          const overall = newsData.sentiment.aggregate.overall || 'NEUTRAL'
-          const posCount = newsData.sentiment.aggregate.positive || 0
-          const negCount = newsData.sentiment.aggregate.negative || 0
-          console.log(`📰 ${signal.symbol}: ${newsData.news.length} news items, sentiment: ${overall} (${posCount}+ ${negCount}-) score: ${actualNewsSentiment.toFixed(2)}`)
-        } else {
-          // Fallback: manually analyze if API didn't include sentiment
-          const { analyzeSentiment, calculateAggregateSentiment } = await import('./sentiment-utils')
-          const sentiments = newsData.news.slice(0, 10).map((article: any) => 
-            analyzeSentiment(article.title)
-          )
-          const aggregate = calculateAggregateSentiment(sentiments)
-          actualNewsSentiment = aggregate.score
-          console.log(`📰 ${signal.symbol}: Analyzed ${sentiments.length} news articles, sentiment: ${actualNewsSentiment.toFixed(2)}`)
-        }
-      } else {
-        console.log(`📰 ${signal.symbol}: No news found, using neutral sentiment`)
-      }
+    const stockNews = await fetchStockNews(signal.symbol, signal.exchange || 'NSE', 20)
+    newsAvailable = stockNews.available
+    if (stockNews.available) {
+      // `balance` (share of positive vs negative articles) rather than `score`
+      // (a per-word average that is ~0 for nearly every headline)
+      actualNewsSentiment = stockNews.sentiment.aggregate.balance
+      console.log(`📰 ${signal.symbol}: ${stockNews.news.length} items from ${stockNews.sources.join(', ')}, sentiment ${stockNews.sentiment.aggregate.overall} balance ${actualNewsSentiment.toFixed(2)} (${stockNews.sentiment.aggregate.positive}+/${stockNews.sentiment.aggregate.negative}-)`)
     } else {
-      console.log(`📰 ${signal.symbol}: News API returned ${newsResponse.status}, using neutral sentiment`)
+      console.log(`📰 ${signal.symbol}: no news found`)
     }
-  } catch (error) {
-    console.log(`⚠️ ${signal.symbol}: Failed to fetch news, using default sentiment`)
-    // Continue with default/provided sentiment
+  } catch (error: any) {
+    console.log(`⚠️ ${signal.symbol}: news fetch failed — ${error.message}`)
   }
-  
-  let intelligence = calculateIntelligenceScore(analystReportConverted, actualNewsSentiment)
+
+  let intelligence = calculateIntelligenceScore(analystReportConverted, actualNewsSentiment, { newsAvailable })
   // Scale from 0-30 to 0-25
   intelligence = { ...intelligence, score: Math.round((intelligence.score / 30) * 25) }
 
   // 4. Calculate Macro Alignment Score (15 points) — NEW
   const macro = calculateMacroScore(signal.symbol, macroSnapshot)
 
-  // 5. Calculate Total Score (35 + 25 + 25 + 15 = 100)
-  const totalScore = technical.score + fundamental.score + intelligence.score + macro.score
+  // 5. Total score over the components that actually have data.
+  // Intelligence with neither an analyst report nor news is excluded and its
+  // 25 points are redistributed, instead of silently contributing a fixed 5.
+  const components = [
+    { score: technical.score, weight: 35, available: true },
+    { score: fundamental.score, weight: 25, available: true },
+    { score: intelligence.score, weight: 25, available: intelligence.available },
+    { score: macro.score, weight: 15, available: !!macroSnapshot },
+  ]
+  const availableWeight = components.filter(c => c.available).reduce((sum, c) => sum + c.weight, 0)
+  const rawScore = components.filter(c => c.available).reduce((sum, c) => sum + c.score, 0)
+  const totalScore = availableWeight > 0 ? Math.round((rawScore / availableWeight) * 100) : 0
 
   // 6. Determine Tier
   let tier: MasterScore['tier']
@@ -521,7 +510,9 @@ export async function batchCalculateMasterScores(
           intelligence: {
             score: 0,
             breakdown: { analystScore: 0, targetUpsideScore: 0, newsSentimentScore: 0 },
-            reasoning: []
+            reasoning: [],
+            available: false,
+            inputs: { analystReport: false, news: false },
           },
           macro: fallbackMacro,
           tradePlan: generateTradePlan(batch[idx], capitalAvailable),
