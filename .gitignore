@@ -37,3 +37,7 @@ Reports/
 
 # backtest bar cache
 .cache/
+
+# research data (Kite bars)
+research/bars/
+research/idx/
