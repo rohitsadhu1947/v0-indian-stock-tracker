@@ -1,7 +1,7 @@
 /**
  * Fill the daily_bars table used by the portfolio engine.
  *
- *   node --env-file=.env.local scripts/backfill-daily-bars.mjs [--days=420] [--bars-dir=DIR] [--idx-dir=DIR]
+ *   node --env-file=.env.local scripts/backfill-daily-bars.mjs [--days=420] [--bars-dir=DIR] [--idx-dir=DIR] [--indices-only]
  *
  * For every NIFTY 500 stock and the engine's indices it keeps the most recent
  * `--days` trading days. Data comes from JSON files if a directory is given
@@ -18,6 +18,7 @@ const arg = (name, fallback) => process.argv.find(a => a.startsWith(`--${name}=`
 const DAYS = Number(arg('days', '420'))
 const BARS_DIR = arg('bars-dir')
 const IDX_DIR = arg('idx-dir')
+const INDICES_ONLY = process.argv.includes('--indices-only')
 
 // Keep in sync with lib/portfolio/config.ts INDEX_INSTRUMENTS
 const INDICES = [
@@ -25,6 +26,7 @@ const INDICES = [
   { barSymbol: 'IDX:NIFTY 200', token: 264457, file: 'NIFTY_200' },
   { barSymbol: 'IDX:NIFTY500MOMENTM50', token: 409609, file: 'NIFTY500MOMENTM50' },
   { barSymbol: 'IDX:NIFTY500 LOWVOL50', token: 417801, file: 'NIFTY500_LOWVOL50' },
+  { barSymbol: 'IDX:NIFTY500 VALUE 50', token: 409353, file: 'NIFTY500_VALUE_50' },
 ]
 
 const universeSrc = readFileSync('lib/portfolio/universe.ts', 'utf8')
@@ -101,7 +103,7 @@ for (const idx of INDICES) {
   console.log(`${idx.barSymbol.padEnd(26)} ${await upsert(idx.barSymbol, rows)} bars`)
 }
 
-for (const [i, symbol] of STOCKS.entries()) {
+for (const [i, symbol] of (INDICES_ONLY ? [] : STOCKS).entries()) {
   const f = BARS_DIR && `${BARS_DIR}/${symbol}.json`
   let rows
   if (f && existsSync(f)) rows = JSON.parse(readFileSync(f, 'utf8'))

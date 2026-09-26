@@ -79,15 +79,23 @@ describe('sleeve allocation', () => {
   const up = { invested: true, close: 110, sma200: 100, distancePct: 10, asOf: '2026-09-25' }
   const down = { invested: false, close: 90, sma200: 100, distancePct: -10, asOf: '2026-09-25' }
 
-  it('balanced and aggressive ignore the trend', () => {
-    expect(allocateSleeves('balanced', down)).toMatchObject({ momentum: 0.5, lowvol: 0.5, cash: 0 })
-    expect(allocateSleeves('aggressive', down)).toMatchObject({ momentum: 1, lowvol: 0, cash: 0 })
+  it('maps each mode to its sleeves when the trend filter is off', () => {
+    expect(allocateSleeves('growth', down, false)).toMatchObject({ momentum: 1, lowvol: 0, value: 0, cash: 0 })
+    expect(allocateSleeves('defensive', down, false)).toMatchObject({ momentum: 0, lowvol: 1, value: 0, cash: 0 })
+    const mf = allocateSleeves('multifactor', down, false)
+    expect(mf.momentum + mf.lowvol + mf.value).toBeCloseTo(1)
+    expect(mf.momentum).toBeCloseTo(1 / 3)
   })
 
-  it('defensive goes to cash below the 200-day average and when data is missing', () => {
-    expect(allocateSleeves('defensive', up)).toMatchObject({ momentum: 0.5, lowvol: 0.5, cash: 0 })
-    expect(allocateSleeves('defensive', down)).toMatchObject({ momentum: 0, lowvol: 0, cash: 1 })
-    expect(allocateSleeves('defensive', null)).toMatchObject({ cash: 1 })
+  it('goes to cash in a downtrend only when the trend filter is on', () => {
+    expect(allocateSleeves('multifactor', up, true)).toMatchObject({ cash: 0 })
+    expect(allocateSleeves('multifactor', down, true)).toMatchObject({ momentum: 0, lowvol: 0, value: 0, cash: 1 })
+    expect(allocateSleeves('growth', down, false).cash).toBe(0)
+  })
+
+  it('holds cash with the filter on when trend data is missing', () => {
+    expect(allocateSleeves('defensive', null, true).cash).toBe(1)
+    expect(allocateSleeves('defensive', null, false).cash).toBe(0)
   })
 })
 

@@ -56,6 +56,7 @@ export interface BookPlan {
 export interface MonthlyPlan {
   asOf: string
   mode: RiskMode
+  trendFilter: boolean
   modeInfo: (typeof MODES)[RiskMode]
   regime: TrendRegime | null
   allocation: SleeveAllocation
@@ -101,19 +102,22 @@ async function planBook(params: {
 export async function buildMonthlyPlan(params: {
   userId: number
   mode: RiskMode
+  trendFilter?: boolean
   capital?: number
   client: BrokerClient | null
 }): Promise<MonthlyPlan> {
   const { userId, mode, client } = params
+  const trendFilter = params.trendFilter ?? false
   const capital = params.capital ?? DEFAULT_CAPITAL
 
   const [freshness, regime] = await Promise.all([dataFreshness(), currentRegime()])
-  const allocation = allocateSleeves(mode, regime)
+  const allocation = allocateSleeves(mode, regime, trendFilter)
 
   // Core: index funds
   const core = coreTargets(allocation)
+  const sleeveName = { momentum: 'momentum', lowvol: 'low-volatility', value: 'value' } as const
   const coreNotes = core.unfunded.map(s =>
-    `The ${s === 'momentum' ? 'momentum' : 'low-volatility'} fund is not configured yet, so its ${Math.round(allocation[s] * 100)}% target has no orders.`)
+    `The ${sleeveName[s]} fund is not configured yet, so its ${Math.round(allocation[s] * 100)}% target has no orders.`)
 
   // Satellite: stock momentum, same trend rule as the chosen mode
   const bars = await loadBars(UNIVERSE_SYMBOLS, sinceDate(420))
@@ -138,6 +142,7 @@ export async function buildMonthlyPlan(params: {
   return {
     asOf: freshness.latestDate ?? istDate(),
     mode,
+    trendFilter,
     modeInfo: MODES[mode],
     regime,
     allocation,
@@ -161,12 +166,15 @@ export async function executeRebalance(params: {
   userId: number
   kind: BookKind
   mode: RiskMode
+  trendFilter?: boolean
   capital?: number
   client: BrokerClient | null
   force?: boolean
 }) {
   const capital = params.capital ?? DEFAULT_CAPITAL
-  const plan = await buildMonthlyPlan({ userId: params.userId, mode: params.mode, capital, client: params.client })
+  const plan = await buildMonthlyPlan({
+    userId: params.userId, mode: params.mode, trendFilter: params.trendFilter, capital, client: params.client,
+  })
   const book = plan[params.kind]
 
   if (!book.rebalance.due && !params.force) throw new RebalanceRefused(book.rebalance.reason)
@@ -202,6 +210,7 @@ export async function executeRebalance(params: {
     holdings: state.holdings,
     details: {
       mode: params.mode,
+      trendFilter: plan.trendFilter,
       regime: plan.regime,
       allocation: plan.allocation,
       priceSource: source,

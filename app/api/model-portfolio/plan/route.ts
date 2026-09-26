@@ -1,5 +1,5 @@
 /**
- * GET /api/model-portfolio/plan?mode=balanced&capital=300000
+ * GET /api/model-portfolio/plan?mode=multifactor&trend=1&capital=300000
  *
  * This month's plan for both paper books: market regime, sleeve allocation,
  * stock-momentum ranking, and the buy/sell orders that would rebalance each
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const plan = await buildMonthlyPlan({
       userId,
       mode: parseMode(sp.get('mode')),
+      trendFilter: sp.get('trend') === '1',
       capital: parseCapital(sp.get('capital')),
       client: await brokerClientFor(userId),
     })

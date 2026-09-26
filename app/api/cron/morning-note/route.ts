@@ -25,7 +25,6 @@ import { generateMorningNotePDF } from '@/lib/morning-note-pdf'
 import { sendTelegramDocument } from '@/lib/telegram-alerts'
 import { getUserBrokerManager } from '@/lib/broker'
 import type { CandleData } from '@/lib/broker'
-import { generateRecommendations } from '@/lib/recommendation-engine'
 import logger from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -80,20 +79,18 @@ export async function GET(request: NextRequest) {
       logger.warn('Broker not available for cron — skipping historical data')
     }
 
-    const [macroResult, fiidiiResult, newsResult, recsResult] = await Promise.allSettled([
+    const [macroResult, fiidiiResult, newsResult] = await Promise.allSettled([
       getMacroSnapshot(),
       fetchFIIDIIData(),
       fetchNewsHeadlines(),
-      generateRecommendations().catch(err => {
-        logger.warn('Recommendation engine failed', { error: err.message })
-        return null
-      }),
     ])
 
     const macro = macroResult.status === 'fulfilled' ? macroResult.value : null
     let fiidiiData = fiidiiResult.status === 'fulfilled' ? fiidiiResult.value : []
     const headlines = newsResult.status === 'fulfilled' ? newsResult.value : []
-    const recommendations = recsResult.status === 'fulfilled' ? recsResult.value : null
+    // Stock picks were removed: they came from the macro sector engine, which
+    // ignored company prices and fundamentals and was never tested.
+    const recommendations = null
 
     // Real FII/DII only — the note shows "Institutional flow data unavailable" otherwise
     const hasRealFII = fiidiiData.length > 0 && fiidiiData.some(d => d.fiiNetValue !== 0 || d.diiNetValue !== 0)
