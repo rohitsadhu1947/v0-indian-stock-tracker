@@ -143,6 +143,14 @@ export default function RecommendationEngine() {
 
   return (
     <div style={{ padding: '0' }}>
+      {/* This view ranks stocks only by macro sensitivity (crude, rupee, yields):
+          it uses no prices, valuations or technicals and was never backtested. */}
+      <div style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.5)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.9em' }}>
+        <strong>Macro context, not a buy list.</strong> These rankings come only from how each sector reacts to crude oil,
+        the rupee and bond yields. They use no prices, valuations or chart data and have not been tested for returns.
+        For tested, rules-based picks use the <strong>Monthly Plan</strong> tab.
+      </div>
+
       {/* Market Pulse Header */}
       <MarketPulse context={report.marketContext} onRefresh={() => fetchRecommendations(true)} isLoading={isLoading} />
 
@@ -168,7 +176,7 @@ export default function RecommendationEngine() {
           marginBottom: '15px',
         }}>
           <h3 style={{ margin: 0, fontSize: '1.2em', fontWeight: 700 }}>
-            🎯 Today&apos;s Top Picks
+            🌐 Macro-favoured stocks today
           </h3>
           <span style={{
             fontSize: '0.75em', color: 'rgba(255,255,255,0.4)',

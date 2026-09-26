@@ -27,6 +27,7 @@ const FundamentalsTab = lazy(() => import('./components/FundamentalsTab'))
 const MarketTab = lazy(() => import('./components/MarketTab'))
 const MomentumTab = lazy(() => import('./components/MomentumTab'))
 const PortfolioAnalyst = lazy(() => import('./components/PortfolioAnalyst'))
+const MonthlyPlanTab = lazy(() => import('./components/MonthlyPlanTab'))
 
 export default function StockTracker() {
   // ── Auth store ────────────────────────────────────────────────────────────
@@ -639,6 +640,17 @@ export default function StockTracker() {
 
       <div className="tabs">
         <button
+          className={`tab ${activeTab === 'plan' ? 'active' : ''}`}
+          onClick={() => setActiveTab('plan')}
+          style={{
+            background: activeTab === 'plan' ? 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' : undefined,
+            fontWeight: activeTab === 'plan' ? 'bold' : undefined,
+            color: activeTab === 'plan' ? '#fff' : undefined,
+          }}
+        >
+          🧭 Monthly Plan
+        </button>
+        <button
           className={`tab ${activeTab === 'recommendations' ? 'active' : ''}`}
           onClick={() => setActiveTab('recommendations')}
           style={{
@@ -647,7 +659,7 @@ export default function StockTracker() {
             color: activeTab === 'recommendations' ? '#fff' : undefined,
           }}
         >
-          🎯 Top Picks
+          🌐 Macro View
         </button>
         <button
           className={`tab ${activeTab === 'portfolio' ? 'active' : ''}`}
@@ -727,6 +739,8 @@ export default function StockTracker() {
           📁 Data
         </button>
       </div>
+
+      {activeTab === 'plan' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Monthly Plan"><MonthlyPlanTab /></TabErrorBoundary></Suspense>}
 
       {activeTab === 'recommendations' && <TabErrorBoundary tabName="Recommendations"><RecommendationEngine /></TabErrorBoundary>}
 

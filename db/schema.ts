@@ -3,7 +3,7 @@
  * Using Drizzle ORM with Neon PostgreSQL
  */
 
-import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex, varchar } from 'drizzle-orm/pg-core'
+import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex, varchar, doublePrecision, date } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // ============================================
@@ -743,3 +743,61 @@ export const companyInfo = pgTable('company_info', {
   nifty50Idx: index('company_info_nifty50_idx').on(table.isNifty50),
 }))
 
+
+// ============================================================================
+// PORTFOLIO ENGINE (monthly factor portfolios, see lib/portfolio)
+// ============================================================================
+
+/**
+ * One end-of-day bar per symbol. Stocks use their NSE symbol; indices are
+ * prefixed "IDX:" (e.g. "IDX:NIFTY 200"). Filled by the daily cron from a
+ * single batched quote call; `provisional` bars were captured before the close
+ * and are finalised the next session from the quote's previous-close field.
+ */
+export const dailyBars = pgTable('daily_bars', {
+  symbol: text('symbol').notNull(),
+  date: date('date').notNull(),
+  open: doublePrecision('open').notNull(),
+  high: doublePrecision('high').notNull(),
+  low: doublePrecision('low').notNull(),
+  close: doublePrecision('close').notNull(),
+  volume: doublePrecision('volume').notNull(),
+  provisional: boolean('provisional').default(false).notNull(),
+}, (table) => ({
+  symbolDateIdx: uniqueIndex('daily_bars_symbol_date_idx').on(table.symbol, table.date),
+  dateIdx: index('daily_bars_date_idx').on(table.date),
+}))
+
+/**
+ * A paper model portfolio. `kind` is 'core' (factor index funds) or
+ * 'satellite' (stock momentum). One of each per user.
+ */
+export const modelPortfolios = pgTable('model_portfolios', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  kind: text('kind').notNull(),
+  mode: text('mode').notNull(),
+  startingCapital: doublePrecision('starting_capital').notNull(),
+  cash: doublePrecision('cash').notNull(),
+  holdings: jsonb('holdings').notNull(), // { [symbol]: { qty, avgPrice } }
+  lastRebalance: date('last_rebalance'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userKindIdx: uniqueIndex('model_portfolios_user_kind_idx').on(table.userId, table.kind),
+}))
+
+/** Rebalances and daily value snapshots, for the equity curve and audit trail. */
+export const modelPortfolioEvents = pgTable('model_portfolio_events', {
+  id: serial('id').primaryKey(),
+  portfolioId: integer('portfolio_id').references(() => modelPortfolios.id).notNull(),
+  date: date('date').notNull(),
+  type: text('type').notNull(), // 'rebalance' | 'snapshot'
+  value: doublePrecision('value').notNull(),
+  cash: doublePrecision('cash').notNull(),
+  holdings: jsonb('holdings').notNull(),
+  details: jsonb('details'), // orders/fills/regime/ranking for rebalances
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  portfolioDateIdx: index('model_portfolio_events_portfolio_date_idx').on(table.portfolioId, table.date),
+}))

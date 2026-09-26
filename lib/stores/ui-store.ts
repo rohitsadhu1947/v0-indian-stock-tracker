@@ -3,6 +3,7 @@ import type { CombinedIntelligence } from '@/lib/combined-intelligence'
 import type { FundamentalData, FundamentalScore } from '@/lib/fundamentals-utils'
 
 export type ActiveTab =
+  | 'plan'
   | 'recommendations'
   | 'intraday'
   | 'universe'
@@ -62,7 +63,7 @@ interface UIStore {
 }
 
 export const useUIStore = create<UIStore>()((set) => ({
-  activeTab: 'recommendations',
+  activeTab: 'plan',
   isLoading: false,
   error: null,
 
