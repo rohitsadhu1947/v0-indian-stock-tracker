@@ -27,6 +27,7 @@ const MarketTab = lazy(() => import('./components/MarketTab'))
 const MomentumTab = lazy(() => import('./components/MomentumTab'))
 const PortfolioAnalyst = lazy(() => import('./components/PortfolioAnalyst'))
 const MonthlyPlanTab = lazy(() => import('./components/MonthlyPlanTab'))
+const StockCheckTab = lazy(() => import('./components/StockCheckTab'))
 
 export default function StockTracker() {
   // ── Auth store ────────────────────────────────────────────────────────────
@@ -650,6 +651,17 @@ export default function StockTracker() {
           🧭 Monthly Plan
         </button>
         <button
+          className={`tab ${activeTab === 'stockcheck' ? 'active' : ''}`}
+          onClick={() => setActiveTab('stockcheck')}
+          style={{
+            background: activeTab === 'stockcheck' ? 'linear-gradient(135deg, #0891b2 0%, #2563eb 100%)' : undefined,
+            fontWeight: activeTab === 'stockcheck' ? 'bold' : undefined,
+            color: activeTab === 'stockcheck' ? '#fff' : undefined,
+          }}
+        >
+          🔍 Stock Check
+        </button>
+        <button
           className={`tab ${activeTab === 'portfolio' ? 'active' : ''}`}
           onClick={() => setActiveTab('portfolio')}
           style={{
@@ -727,6 +739,8 @@ export default function StockTracker() {
           📁 Data
         </button>
       </div>
+
+      {activeTab === 'stockcheck' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Stock Check"><StockCheckTab /></TabErrorBoundary></Suspense>}
 
       {activeTab === 'plan' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Monthly Plan"><MonthlyPlanTab /></TabErrorBoundary></Suspense>}
 
