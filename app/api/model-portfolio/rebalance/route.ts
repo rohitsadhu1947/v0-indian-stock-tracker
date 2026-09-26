@@ -1,6 +1,6 @@
 /**
  * POST /api/model-portfolio/rebalance
- * Body: { kind: 'core' | 'satellite', mode, capital?, force? }
+ * Body: { kind: 'core' | 'satellite', mode, trendFilter?, capital?, force? }
  *
  * Executes this month's orders on the paper book at current prices, with
  * slippage and Indian delivery charges. Refuses when the book was already
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       userId,
       kind: body.kind,
       mode: parseMode(body.mode),
+      trendFilter: body.trendFilter === true,
       capital: parseCapital(body.capital),
       client: await brokerClientFor(userId),
       force: body.force === true,

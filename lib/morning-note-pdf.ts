@@ -381,7 +381,7 @@ export async function generateMorningNotePDF(note: MorningNote): Promise<Buffer>
     }
 
     if (recs.intraday.length === 0 && recs.swing.length === 0 && recs.mediumTerm.length === 0) {
-      y = paragraph(doc, 'No high-conviction stock recommendations for today. Market conditions do not favor directional bets — wait for clarity before deploying capital.', y, W, X)
+      y = paragraph(doc, 'This note no longer lists individual stock picks. The previous picks came from macro sector rules that ignored company prices and fundamentals, and were never tested. See the Monthly Plan in the app for rules-based holdings.', y, W, X)
     }
     y += 10
 

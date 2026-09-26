@@ -6,48 +6,89 @@
  * see research/factor_indices.py on the research/factor-study branch.
  */
 
-export type RiskMode = 'aggressive' | 'balanced' | 'defensive'
+export type RiskMode = 'growth' | 'multifactor' | 'defensive'
+export type Sleeve = 'momentum' | 'lowvol' | 'value'
+
+interface PeriodStats { cagrPct: number; maxDrawdownPct: number }
+interface ModeReference {
+  /** Jun 2013 to Sep 2026. Pre-launch years of some indices are NSE back-calculations. */
+  full: PeriodStats
+  /** After NSE launched its momentum index: cannot have been fitted with hindsight. */
+  since2020: PeriodStats
+  since2022: PeriodStats
+}
 
 export interface ModeDefinition {
   id: RiskMode
   label: string
   /** Share of the invested book in each sleeve. */
-  sleeves: { momentum: number; lowvol: number }
-  /** Move the whole book to cash when NIFTY 200 closes below its 200-day average. */
-  trendFilter: boolean
-  /** Historical reference from the NSE factor-index study (not a forecast). */
-  reference: { cagrPct: number; maxDrawdownPct: number; volPct: number }
+  sleeves: Record<Sleeve, number>
+  /** Historical reference, price return, before tax (not a forecast). */
+  reference: ModeReference
+  /** Same mode with the NIFTY 200 trend filter switched on. */
+  referenceWithTrendFilter: ModeReference
   description: string
 }
 
+// Numbers from research/modes.py on NSE factor indices (price return, monthly rebalance, 0.225% cost per side).
 export const MODES: Record<RiskMode, ModeDefinition> = {
-  aggressive: {
-    id: 'aggressive',
-    label: 'Aggressive',
-    sleeves: { momentum: 1, lowvol: 0 },
-    trendFilter: false,
-    reference: { cagrPct: 19.3, maxDrawdownPct: -38.0, volPct: 20.7 },
-    description: '100% momentum. Highest long-run return, deepest falls (2018 -11.6%, 2022 -8.3%, 2025 -7.9%).',
+  growth: {
+    id: 'growth',
+    label: 'Growth',
+    sleeves: { momentum: 1, lowvol: 0, value: 0 },
+    reference: {
+      full: { cagrPct: 19.3, maxDrawdownPct: -38.0 },
+      since2020: { cagrPct: 21.6, maxDrawdownPct: -31.1 },
+      since2022: { cagrPct: 10.2, maxDrawdownPct: -31.1 },
+    },
+    referenceWithTrendFilter: {
+      full: { cagrPct: 17.3, maxDrawdownPct: -23.2 },
+      since2020: { cagrPct: 19.4, maxDrawdownPct: -22.8 },
+      since2022: { cagrPct: 8.2, maxDrawdownPct: -22.8 },
+    },
+    description: 'Momentum only. Strongest long-run record, but no better than the broad market since 2022 and the deepest falls.',
   },
-  balanced: {
-    id: 'balanced',
-    label: 'Balanced',
-    sleeves: { momentum: 0.5, lowvol: 0.5 },
-    trendFilter: false,
-    reference: { cagrPct: 16.5, maxDrawdownPct: -31.6, volPct: 16.5 },
-    description: '50% momentum, 50% low volatility. The two tend to lose in different years.',
+  multifactor: {
+    id: 'multifactor',
+    label: 'Multi-factor',
+    sleeves: { momentum: 1 / 3, lowvol: 1 / 3, value: 1 / 3 },
+    reference: {
+      full: { cagrPct: 16.7, maxDrawdownPct: -43.7 },
+      since2020: { cagrPct: 22.4, maxDrawdownPct: -22.8 },
+      since2022: { cagrPct: 15.0, maxDrawdownPct: -22.8 },
+    },
+    referenceWithTrendFilter: {
+      full: { cagrPct: 14.8, maxDrawdownPct: -22.7 },
+      since2020: { cagrPct: 19.5, maxDrawdownPct: -16.9 },
+      since2022: { cagrPct: 12.0, maxDrawdownPct: -16.9 },
+    },
+    description: 'Equal thirds momentum, low volatility and value. These lose in different years, so bad years are softer.',
   },
   defensive: {
     id: 'defensive',
     label: 'Defensive',
-    sleeves: { momentum: 0.5, lowvol: 0.5 },
-    trendFilter: true,
-    reference: { cagrPct: 14.2, maxDrawdownPct: -16.3, volPct: 12.4 },
-    description: 'Balanced, but moves to cash while NIFTY 200 is below its 200-day average.',
+    sleeves: { momentum: 0, lowvol: 1, value: 0 },
+    reference: {
+      full: { cagrPct: 13.4, maxDrawdownPct: -27.8 },
+      since2020: { cagrPct: 15.6, maxDrawdownPct: -15.4 },
+      since2022: { cagrPct: 12.0, maxDrawdownPct: -15.4 },
+    },
+    referenceWithTrendFilter: {
+      full: { cagrPct: 11.0, maxDrawdownPct: -15.1 },
+      since2020: { cagrPct: 12.3, maxDrawdownPct: -15.1 },
+      since2022: { cagrPct: 8.4, maxDrawdownPct: -12.7 },
+    },
+    description: 'Low volatility only. Lowest return, but it reduced losses in every period tested.',
   },
 }
 
-export const DEFAULT_MODE: RiskMode = 'balanced'
+export const DEFAULT_MODE: RiskMode = 'multifactor'
+
+/** Benchmarks shown next to the modes (same source and periods). */
+export const BENCHMARK_REFERENCE = {
+  nifty50: { full: { cagrPct: 10.8, maxDrawdownPct: -36.9 }, since2020: { cagrPct: 12.2, maxDrawdownPct: -17.0 }, since2022: { cagrPct: 5.7, maxDrawdownPct: -16.2 } },
+  nifty500EqualWeight: { full: { cagrPct: 15.2, maxDrawdownPct: -56.5 }, since2020: { cagrPct: 21.3, maxDrawdownPct: -23.7 }, since2022: { cagrPct: 12.8, maxDrawdownPct: -23.7 } },
+}
 
 /** Kite instrument tokens for the indices the engine reads. */
 export const INDEX_INSTRUMENTS = {
@@ -55,6 +96,7 @@ export const INDEX_INSTRUMENTS = {
   NIFTY_200: { token: 264457, quoteKey: 'NSE:NIFTY 200', barSymbol: 'IDX:NIFTY 200' },
   MOMENTUM_50: { token: 409609, quoteKey: 'NSE:NIFTY500MOMENTM50', barSymbol: 'IDX:NIFTY500MOMENTM50' },
   LOWVOL_50: { token: 417801, quoteKey: 'NSE:NIFTY500 LOWVOL50', barSymbol: 'IDX:NIFTY500 LOWVOL50' },
+  VALUE_50: { token: 409353, quoteKey: 'NSE:NIFTY500 VALUE 50', barSymbol: 'IDX:NIFTY500 VALUE 50' },
 } as const
 
 /**
@@ -63,9 +105,10 @@ export const INDEX_INSTRUMENTS = {
  * trades enough volume. `null` means "not yet verified": the plan then shows
  * the sleeve as a target weight without buy/sell orders.
  */
-export const SLEEVE_FUNDS: Record<'momentum' | 'lowvol' | 'cash', string | null> = {
+export const SLEEVE_FUNDS: Record<Sleeve | 'cash', string | null> = {
   momentum: null,
   lowvol: null,
+  value: null,
   cash: null,
 }
 

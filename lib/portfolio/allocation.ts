@@ -3,54 +3,61 @@
  * rebalance calendar.
  */
 
-import { MODES, SLEEVE_FUNDS, type RiskMode } from './config'
+import { MODES, SLEEVE_FUNDS, type RiskMode, type Sleeve } from './config'
 import type { TrendRegime } from './regime'
 
 export interface SleeveAllocation {
   momentum: number
   lowvol: number
+  value: number
   cash: number
   reason: string
 }
 
-export function allocateSleeves(mode: RiskMode, regime: TrendRegime | null): SleeveAllocation {
-  const def = MODES[mode]
+const SLEEVES: Sleeve[] = ['momentum', 'lowvol', 'value']
 
-  if (def.trendFilter) {
-    if (!regime) {
-      return { momentum: 0, lowvol: 0, cash: 1, reason: 'Trend data unavailable: staying in cash until it is.' }
-    }
+/**
+ * Sleeve weights for a mode. With the trend filter on, the whole book moves to
+ * cash while NIFTY 200 is below its 200-day average (or when that cannot be
+ * determined).
+ */
+export function allocateSleeves(mode: RiskMode, regime: TrendRegime | null, trendFilter: boolean): SleeveAllocation {
+  const def = MODES[mode]
+  const cash = (reason: string): SleeveAllocation => ({ momentum: 0, lowvol: 0, value: 0, cash: 1, reason })
+
+  if (trendFilter) {
+    if (!regime) return cash('Trend data unavailable: the trend filter holds cash until it is.')
     if (!regime.invested) {
-      return {
-        momentum: 0, lowvol: 0, cash: 1,
-        reason: `NIFTY 200 is ${Math.abs(regime.distancePct).toFixed(1)}% below its 200-day average: defensive mode holds cash.`,
-      }
+      return cash(`NIFTY 200 is ${Math.abs(regime.distancePct).toFixed(1)}% below its 200-day average: the trend filter holds cash.`)
     }
   }
 
   return {
-    momentum: def.sleeves.momentum,
-    lowvol: def.sleeves.lowvol,
+    ...def.sleeves,
     cash: 0,
-    reason: def.trendFilter
+    reason: trendFilter
       ? `NIFTY 200 is ${regime!.distancePct.toFixed(1)}% above its 200-day average: fully invested.`
-      : `${def.label} mode is always invested.`,
+      : 'Trend filter off: always invested.',
   }
 }
 
 /** Sleeve weights mapped onto fund symbols. Unverified funds are left out. */
 export function coreTargets(alloc: SleeveAllocation): {
   targets: Record<string, number>
-  unfunded: Array<'momentum' | 'lowvol' | 'cash'>
+  unfunded: Sleeve[]
 } {
   const targets: Record<string, number> = {}
-  const unfunded: Array<'momentum' | 'lowvol' | 'cash'> = []
-  for (const sleeve of ['momentum', 'lowvol', 'cash'] as const) {
+  const unfunded: Sleeve[] = []
+  for (const sleeve of SLEEVES) {
     const w = alloc[sleeve]
     if (w <= 0) continue
     const fund = SLEEVE_FUNDS[sleeve]
     if (fund) targets[fund] = (targets[fund] ?? 0) + w
-    else if (sleeve !== 'cash') unfunded.push(sleeve) // cash without a fund just stays as cash
+    else unfunded.push(sleeve)
+  }
+  // Cash goes into a liquid fund when one is configured, else stays as cash
+  if (alloc.cash > 0 && SLEEVE_FUNDS.cash) {
+    targets[SLEEVE_FUNDS.cash] = (targets[SLEEVE_FUNDS.cash] ?? 0) + alloc.cash
   }
   return { targets, unfunded }
 }

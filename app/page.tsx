@@ -15,7 +15,6 @@ import SettingsTab from './components/SettingsTab'
 import BacktestTab from './components/BacktestTab'
 // MacroDashboard merged into MarketTab
 import RiskDashboard from './components/RiskDashboard'
-import RecommendationEngine from './components/RecommendationEngine'
 import { generateTradingSignal } from '@/lib/market-utils'
 import { fetchStockQuote } from '@/lib/stock-fetcher'
 import { TabErrorBoundary } from './components/TabErrorBoundary'
@@ -651,17 +650,6 @@ export default function StockTracker() {
           🧭 Monthly Plan
         </button>
         <button
-          className={`tab ${activeTab === 'recommendations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('recommendations')}
-          style={{
-            background: activeTab === 'recommendations' ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)' : undefined,
-            fontWeight: activeTab === 'recommendations' ? 'bold' : undefined,
-            color: activeTab === 'recommendations' ? '#fff' : undefined,
-          }}
-        >
-          🌐 Macro View
-        </button>
-        <button
           className={`tab ${activeTab === 'portfolio' ? 'active' : ''}`}
           onClick={() => setActiveTab('portfolio')}
           style={{
@@ -742,7 +730,6 @@ export default function StockTracker() {
 
       {activeTab === 'plan' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Monthly Plan"><MonthlyPlanTab /></TabErrorBoundary></Suspense>}
 
-      {activeTab === 'recommendations' && <TabErrorBoundary tabName="Recommendations"><RecommendationEngine /></TabErrorBoundary>}
 
       {activeTab === 'portfolio' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Portfolio"><PortfolioAnalyst /></TabErrorBoundary></Suspense>}
 
