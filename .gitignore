@@ -37,3 +37,6 @@ Reports/
 
 # backtest bar cache
 .cache/
+
+# local market-data research store (NSE archive files, SQLite)
+/data/
