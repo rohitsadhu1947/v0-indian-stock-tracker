@@ -4,6 +4,7 @@ import type { FundamentalData, FundamentalScore } from '@/lib/fundamentals-utils
 
 export type ActiveTab =
   | 'plan'
+  | 'stockcheck'
   | 'intraday'
   | 'universe'
   | 'fundamentals'

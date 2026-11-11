@@ -5,7 +5,8 @@
  *
  * For every NIFTY 500 stock and the engine's indices it keeps the most recent
  * `--days` trading days. Data comes from JSON files if a directory is given
- * (research downloads: stocks as [date,o,h,l,c,v], indices as [date,close]),
+ * (stocks as [date,o,h,l,c,v], indices as [date,close]; dates must be India
+ * dates: the early research downloads were one day early),
  * otherwise from Kite historical data (needs today's Kite login).
  * Safe to re-run: rows are upserted.
  */
@@ -44,6 +45,11 @@ async function kite() {
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
+// Kite stamps daily bars at 00:00 IST. toISOString() converts that to 18:30 UTC
+// on the PREVIOUS day, which labelled every bar one day early. Label bars by
+// their India date.
+const istDate = d => new Date(new Date(d).getTime() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
+
 async function fromKite(token) {
   const k = await kite()
   const from = new Date(Date.now() - Math.ceil(DAYS * 1.5) * 86400000)
@@ -53,7 +59,7 @@ async function fromKite(token) {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const raw = await k.getHistoricalData(token, 'day', start, end)
-        for (const b of raw) rows.push([new Date(b.date).toISOString().slice(0, 10), b.open, b.high, b.low, b.close, b.volume ?? 0])
+        for (const b of raw) rows.push([istDate(b.date), b.open, b.high, b.low, b.close, b.volume ?? 0])
         break
       } catch (e) {
         if (/Token|api_key/.test(e.message)) throw e
