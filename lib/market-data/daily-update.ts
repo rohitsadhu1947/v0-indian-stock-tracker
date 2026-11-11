@@ -235,7 +235,8 @@ async function loadDay(
       if (prev == null || prev < 5 || alreadyAdjusted.has(b.symbol) || !tracked.has(b.symbol)) continue
       const gap = b.open / prev
       const factor = factorFromGap(gap)
-      if (!factor) continue
+      // A freak opening print reverses within the session; a corporate action does not
+      if (!factor || Math.abs(Math.log(b.close / prev / gap)) > 0.25) continue
       const note = `not in NSE's corporate-action file; open was ${gap.toFixed(3)}x the previous close`
       await tx.execute(sql`
         update daily_bars set

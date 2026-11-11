@@ -12,7 +12,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { gzipSync } from 'zlib'
 import {
-  deliveryUrl, extractPrBundle, extractSingleCsv, fetchArchiveFile, indexCloseUrl, legacyBhavcopyUrl, prBundleUrl,
+  deliveryUrl, ETF_LIST_URL, extractPrBundle, extractSingleCsv, fetchArchiveFile, indexCloseUrl, legacyBhavcopyUrl,
+  prBundleUrl, SYMBOL_CHANGES_URL,
 } from '../../lib/market-data/nse-archive'
 
 const arg = (name: string, fallback: string) =>
@@ -112,6 +113,13 @@ async function main() {
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, worker))
   writeFileSync(MANIFEST, JSON.stringify(manifest))
+
+  // Reference lists NSE keeps current: symbol renames and exchange-traded funds
+  for (const [url, name] of [[SYMBOL_CHANGES_URL, 'symbolchange.csv'], [ETF_LIST_URL, 'eq_etfseclist.csv']]) {
+    const file = await withRetry(() => fetchArchiveFile(url)).catch(() => null)
+    if (file) writeFileSync(`${ROOT}/${name}`, file)
+    else console.error(`Could not refresh ${name}; keeping the previous copy`)
+  }
   const total = Object.values(manifest).filter(s => s === 'ok').length
   console.log(`Done: ${ok} new trading days, ${failed} failed. ${total} trading days on disk.`)
   if (failed) process.exitCode = 1

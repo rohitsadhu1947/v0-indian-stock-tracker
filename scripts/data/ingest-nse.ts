@@ -59,6 +59,21 @@ const lastCapital = db.prepare('select face_value, shares from share_capital whe
 const insCapital = db.prepare('insert or replace into share_capital (symbol, date, face_value, shares) values (?, ?, ?, ?)')
 const markDone = db.prepare('insert or replace into ingested_days (date) values (?)')
 
+const insName = db.prepare(`insert into security_names (symbol, name, last_seen) values (?, ?, ?)
+  on conflict (symbol) do update set name = excluded.name, last_seen = excluded.last_seen where excluded.last_seen >= security_names.last_seen`)
+
+// One-off for stores built before names were kept: `--names` reads every price file again for names only
+if (process.argv.includes('--names')) {
+  db.exec('begin')
+  for (const day of Object.keys(manifest).filter(d => manifest[d] === 'ok').sort()) {
+    const pd = read(`data/nse/raw/${day.slice(0, 4)}/${day.replaceAll('-', '')}.pd.csv.gz`)
+    for (const b of pd ? parsePriceFile(pd).equities : []) if (b.name) insName.run(b.symbol, b.name, toDateInt(day))
+  }
+  db.exec('commit')
+  console.log(`Names stored for ${(db.prepare('select count(*) n from security_names').get() as { n: number }).n} symbols`)
+  process.exit(0)
+}
+
 const insSkip = db.prepare('insert or replace into skipped_days (date, reason) values (?, ?)')
 
 /** Closes of the latest session already stored, to check the next day chains to it. */
@@ -127,6 +142,7 @@ for (const [i, day] of days.entries()) {
 
   db.exec('begin')
   for (const b of equities) {
+    if (b.name) insName.run(b.symbol, b.name, date)
     insBar.run(b.symbol, date, b.series, Number.isFinite(b.prevClose) ? b.prevClose : null,
       b.open, b.high, b.low, b.close, b.volume, b.value, b.trades, delivered.get(b.symbol) ?? null)
   }

@@ -47,6 +47,7 @@ export function extractSingleCsv(zip: Uint8Array): string | null {
 }
 
 export const SYMBOL_CHANGES_URL = `${BASE}/content/equities/symbolchange.csv`
+export const ETF_LIST_URL = `${BASE}/content/equities/eq_etfseclist.csv`
 
 /** Fetch an archive file. Returns null when NSE has no file for that day (holiday). */
 export async function fetchArchiveFile(url: string, timeoutMs = 30000): Promise<Uint8Array | null> {

@@ -4,6 +4,7 @@ import {
   parsePriceFile, parseSymbolChanges,
 } from '../market-data/nse-parse'
 import { applyAdjustments, factorFromGap, resolveEvents, resolveUnannounced, type RawPriceBar } from '../market-data/adjust'
+import { parseEtfList, securityKind } from '../market-data/classify'
 import { SymbolMap } from '../market-data/series'
 import { lastAtOrBefore, monthEnds, universeAsOf, type LiquidityInput } from '../market-data/universe'
 
@@ -16,7 +17,7 @@ describe('parsePriceFile', () => {
       'N,EQ,IRCTC,INDIAN RAIL TOUR CORP LTD,      4189.50,      4250.50,      4334.80,      4033.75,      4130.15,              22223413210.70,5358793,N, ,512531,      6396.30,      1290.05',
     ].join('\n'))
     expect(equities).toEqual([{
-      symbol: 'IRCTC', series: 'EQ', prevClose: 4189.5, open: 4250.5, high: 4334.8, low: 4033.75,
+      symbol: 'IRCTC', name: 'INDIAN RAIL TOUR CORP LTD', series: 'EQ', prevClose: 4189.5, open: 4250.5, high: 4334.8, low: 4033.75,
       close: 4130.15, volume: 5358793, value: 22223413210.7, trades: 512531,
     }])
   })
@@ -140,6 +141,28 @@ describe('resolveEvents', () => {
     expect(events).toMatchObject([{ exDate: 20200104, status: 'confirmed', priceFactor: 0.5 }])
   })
 
+  it('applies a postponed action once when NSE lists it under both ex-dates', () => {
+    // Inox Wind, May 2024: 3:1 bonus listed for the 17th, then moved to the 24th
+    const bars = series([600, 600, 600, 600, 600, [160, 165], 165])
+    const events = resolveEvents(bars, new Map([[20200102, ['BONUS 3:1']], [20200106, ['BONUS 3:1']]]))
+    expect(events).toHaveLength(1)
+    expect(applyAdjustments(bars, events).map(b => b.close)).toEqual([150, 150, 150, 150, 150, 165, 165])
+  })
+
+  it('adjusts a rights issue by the theoretical ex-rights price when the price agrees', () => {
+    // 1 new share at 95 for every 10 held at 200: ex-rights price 190.45
+    const bars = series([200, 200, [190, 190], 190])
+    const [event] = resolveEvents(bars, new Map([[20200103, ['RIGHTS 1:10 @PRM RS 95/-']]]))
+    expect(event.priceFactor).toBeCloseTo(190.4545 / 200, 4)
+  })
+
+  it('uses the actual fall for a rights issue at par, where the premium understates the issue price', () => {
+    // California Software, Jan 2025: "RIGHTS 3:1 @ PRM RS 0/-" implies 0.25; the price went to 0.60
+    const bars = series([22.87, 22.87, [13.63, 13.88], 14])
+    const [event] = resolveEvents(bars, new Map([[20200103, ['RIGHTS 3:1 @ PRM RS 0/-']]]))
+    expect(event.priceFactor).toBeCloseTo(13.63 / 22.87, 10)
+  })
+
   it('takes a demerger ratio from the ex-date open', () => {
     const bars = series([200, 200, [130, 128], 128])
     const events = resolveEvents(bars, new Map([[20200103, ['SCHEME OF ARRANGEMENT']]]))
@@ -180,6 +203,13 @@ describe('resolveEvents', () => {
     const bars = series([100, 100, [93, 93], 93])
     const events = resolveEvents(bars, new Map([[20200103, ['DIVIDEND RS 2 PER SHARE', 'SPL DIV RS 5 PER SHARE']]]))
     expect(events[0].priceFactor).toBeCloseTo(0.93, 10)
+  })
+
+  it('uses the corrected figure when a dividend was listed wrongly first', () => {
+    // SICAGEN, July 2017: listed as Rs 6, then corrected to Re 0.60, on a Rs 40 stock
+    const bars = series([40, 40, [39.9, 39.9], 39.9])
+    const events = resolveEvents(bars, new Map([[20200103, ['AGM/DIV-RS 6 PER SHARE', 'AGM/DIV-RE 0.60 PER SHARE']]]))
+    expect(events).toMatchObject([{ status: 'dividend', priceFactor: 1, dividend: 0.6 }])
   })
 
   it('drops a dividend figure that cannot be right', () => {
@@ -246,9 +276,48 @@ describe('resolveUnannounced', () => {
     expect(resolveUnannounced(bars, events, adjacent)).toEqual({ inferred: [], flagged: [] })
   })
 
+  it('ignores a freak opening print that reverses by the close', () => {
+    // Petronet, 30 Nov 2011: opened at 135 against a 164.65 close, closed at 164.90
+    expect(resolveUnannounced(series([165, 165, [90, 164.9], 165]), [], adjacent)).toEqual({ inferred: [], flagged: [] })
+  })
+
   it('ignores ordinary moves and penny stocks, where one tick is a large move', () => {
     expect(resolveUnannounced(series([100, [81, 81], [97, 97]]), [], adjacent).inferred).toEqual([])
     expect(resolveUnannounced(series([0.1, [0.05, 0.05], [0.1, 0.1]]), [], adjacent).inferred).toEqual([])
     expect(factorFromGap(1.2)).toBeNull()
+  })
+})
+
+describe('securityKind', () => {
+  const listed = parseEtfList('Symbol,Underlying Asset,SecurityName\nBBNPPGOLD,Gold,BARODABNP - BBNPPGOLD\n')
+
+  it.each([
+    ['NIFTYBEES', 'NIP IND ETF NIFTY BEES'],
+    ['GOLDBEES', 'GOLDMAN SACHS GOLD EXCHA'],
+    ['ALPL30IETF', 'ICICIPRAMC - ICICIALPLV'],
+    ['KOTAKGOLD', 'KOTAK GOLD ETF'],
+    ['NIFETF', 'ICICIPRAMC NIFETF'],
+    ['M50', 'MOST SHARES M50 ETF'],
+    ['SETFNIF50', 'SBI-ETF NIFTY 50'],
+    ['BBNPPGOLD', 'BARODABNP - BBNPPGOLD'],
+  ])('%s (%s) is a fund', (symbol, name) => {
+    expect(securityKind(symbol, name, listed)).toBe('fund')
+  })
+
+  it.each([
+    ['FIRSTCRY', 'BRAINBEES SOLUTIONS LTD'],
+    ['JETFREIGHT', 'JET FREIGHT LOGISTICS LTD'],
+    ['PNBGILTS', 'PNB GILTS LIMITED'],
+    ['SENCO', 'SENCO GOLD LIMITED'],
+    ['HDFCAMC', 'HDFC ASSET MANAGEMENT CO'],
+    ['SBIFUNDS', 'SBI FUNDS MANAGEMENT LTD'],
+    ['TATAMTRDVR', 'TATA MOTORS DVR A ORDY'],
+  ])('%s (%s) is a company', (symbol, name) => {
+    expect(securityKind(symbol, name, listed)).toBe('stock')
+  })
+
+  it('recognises rights entitlements by symbol', () => {
+    expect(securityKind('KDDL-RE', 'KDDL LIMITED', listed)).toBe('rights')
+    expect(securityKind('BHANDA-RE2', undefined, listed)).toBe('rights')
   })
 })

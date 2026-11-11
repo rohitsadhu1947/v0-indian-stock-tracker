@@ -74,16 +74,16 @@ function mergeActions(purposes: string[]): ParsedAction & { dividendAmounts: num
 
 /**
  * NSE may list one ex-date's dividend several times: as separate parts
- * ("DIV RS 2" and "SPL DIV RS 5", total 7) or as a part plus the combined
- * figure ("DIV-RS.3" and "DIV-FIN RS3+INT RS120", total 123). The ex-date
- * price drop decides between the two readings.
+ * ("DIV RS 2" and "SPL DIV RS 5", total 7), as a part plus the combined
+ * figure ("DIV-RS.3" and "DIV-FIN RS3+INT RS120", total 123), or as a figure
+ * and its correction ("DIV-RS 6" then "DIV-RE 0.60"). The reading closest to
+ * the ex-date price drop is used.
  */
 function dividendTotal(amounts: number[], cumClose: number, gap: number): number {
   if (!amounts.length) return 0
-  const sum = amounts.reduce((s, x) => s + x, 0)
-  const max = Math.max(...amounts)
   const drop = (1 - gap) * cumClose
-  return Math.abs(drop - max) < Math.abs(drop - sum) ? max : sum
+  const readings = [...amounts, amounts.reduce((s, x) => s + x, 0)]
+  return readings.reduce((best, x) => (Math.abs(drop - x) < Math.abs(drop - best) ? x : best))
 }
 
 const logDistance = (a: number, b: number) => Math.abs(Math.log(a / b))
@@ -96,6 +96,7 @@ const logDistance = (a: number, b: number) => Math.abs(Math.log(a / b))
 export function resolveEvents(bars: RawPriceBar[], actions: Map<number, string[]>): AdjustmentEvent[] {
   const events: AdjustmentEvent[] = []
   const gapAt = (i: number) => bars[i].open / bars[i - 1].close
+  const ratioApplied = new Set<number>()
 
   for (const [exDate, purposes] of [...actions.entries()].sort((a, b) => a[0] - b[0])) {
     const a = mergeActions(purposes)
@@ -119,6 +120,9 @@ export function resolveEvents(bars: RawPriceBar[], actions: Map<number, string[]
         })
         continue
       }
+      // NSE lists a postponed action under both ex-dates; both resolve to the same bar
+      if (ratioApplied.has(hit)) continue
+      ratioApplied.add(hit)
       i = hit
     }
 
@@ -128,10 +132,17 @@ export function resolveEvents(bars: RawPriceBar[], actions: Map<number, string[]
     let priceFactor = stated ?? 1
     let status: EventStatus = 'confirmed'
 
+    // The theoretical ex-rights price uses the premium as the issue price (the
+    // face value is not in the text), which overstates the adjustment for an
+    // issue at par. Without a split or bonus to confirm against, use it only
+    // when the price agrees; otherwise take a large fall as it happened.
     const rights = rightsPriceFactor(a, cumClose)
-    if (rights != null) {
+    if (rights != null && (stated != null || logDistance(gap, rights) <= RATIO_TOLERANCE)) {
       priceFactor *= rights
       notes.push('rights issue (theoretical ex-rights price)')
+    } else if (rights != null && gap <= 1 - RESTRUCTURE_MIN_DROP) {
+      priceFactor *= gap
+      notes.push('rights issue (ratio taken from the ex-date open)')
     }
 
     let dividend = plausibleDividend(dividendTotal(a.dividendAmounts, cumClose, gap), cumClose, gap)
@@ -204,6 +215,8 @@ export function applyAdjustments<T extends RawPriceBar>(bars: T[], events: Adjus
 
 const MIN_PRICE_FOR_GAP_CHECK = 5
 const GAP_DOWN = 0.6
+/** The close must still be within about 28% of the opening move for it to count as a new price basis. */
+const PERSISTENCE_TOLERANCE = 0.25
 const GAP_UP = 1.8
 
 /** Ratios a split, bonus or consolidation produces. */
@@ -247,7 +260,8 @@ export function resolveUnannounced(
     if (bars[i - 1].close < MIN_PRICE_FOR_GAP_CHECK || explained.has(bars[i].date)) continue
     const gap = bars[i].open / bars[i - 1].close
     const factor = factorFromGap(gap)
-    if (!factor) continue
+    // A freak opening print reverses within the session; a corporate action does not
+    if (!factor || logDistance(bars[i].close / bars[i - 1].close, gap) > PERSISTENCE_TOLERANCE) continue
     if (tradedPreviousSession(i)) {
       inferred.push({
         exDate: bars[i].date, status: 'inferred', ...factor, dividend: 0, purposes: [],

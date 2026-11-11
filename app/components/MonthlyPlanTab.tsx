@@ -11,6 +11,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import type { MonthlyPlan } from '@/lib/portfolio/service'
 import { MODES, BENCHMARK_REFERENCE, type RiskMode } from '@/lib/portfolio/config'
+import research from '@/research/results/summary.json'
 
 type Mode = RiskMode
 const MODE_IDS: Mode[] = ['growth', 'multifactor', 'defensive']
@@ -212,11 +213,13 @@ export default function MonthlyPlanTab() {
 
           <BookSection
             title="Stock momentum book (paper experiment)"
-            subtitle={`Top ${plan.satellite.ranking.filter(r => r.selected).length} NIFTY 500 stocks by risk-adjusted 12-month momentum, equal weight, monthly. An experiment: since 2020, momentum has not beaten owning all NIFTY 500 stocks equally, and picking stocks yourself adds tax and effort.`}
+            subtitle={`Top ${plan.satellite.ranking.filter(r => r.selected).length} NIFTY 500 stocks by risk-adjusted 12-month momentum, equal weight, monthly. Still an experiment: the backtest below shows a large edge up to 2021 and a small, unproven one since 2022, with falls of up to half the portfolio.`}
             book={plan.satellite}
             busy={busy === 'satellite'}
             onRebalance={() => rebalance('satellite')}
           />
+
+          <StockBookBacktest trendFilter={trendFilter} />
 
           <div style={card}>
             <h3 style={{ marginTop: 0 }}>This month&apos;s ranking</h3>
@@ -293,6 +296,65 @@ function ReferenceTable({ mode, trendFilter }: { mode: Mode; trendFilter: boolea
       <p style={{ ...muted, marginBottom: 0 }}>
         Years before each index launched are NSE back-calculations. The later columns are the stricter test.
         Much of the gap over NIFTY 50 comes from owning mid and small caps. Past results do not guarantee future ones.
+      </p>
+    </div>
+  )
+}
+
+const monthYear = (d: number) =>
+  new Date(Date.UTC(Math.floor(d / 10000), Math.floor(d / 100) % 100 - 1, 1)).toLocaleString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+/** Backtest of the stock momentum book from the research harness (scripts/research/run.ts). */
+function StockBookBacktest({ trendFilter }: { trendFilter: boolean }) {
+  const strategy = research.strategies.find(s => s.key === (trendFilter ? 'stock-momentum-trend' : 'stock-momentum'))
+  const nifty500 = research.indices.find(i => i.key === 'nifty-500')
+  if (!strategy || !strategy.versusBenchmark) return null
+  type Period = { cagrPct: number; maxDrawdownPct: number }
+  const rows: Array<[string, Record<'full' | 'since2020' | 'since2022', Period>]> = [
+    [`This book${trendFilter ? ' with the trend filter' : ''}, after costs and tax`, strategy.afterTax],
+    ['All 500 stocks at equal weight, after costs and tax', research.benchmark.afterTax],
+    ...(nifty500 ? [['NIFTY 500 index, price only', nifty500.priceReturn] as [string, typeof nifty500.priceReturn]] : []),
+  ]
+  const cell = (p: Period) => (
+    <>{p.cagrPct.toFixed(1)}%/yr <span style={{ opacity: 0.6 }}>(worst {p.maxDrawdownPct.toFixed(0)}%)</span></>
+  )
+  const edge = strategy.versusBenchmark.afterTax
+  const verdict = (t: number) => (Math.abs(t) >= 2 ? 'unlikely to be luck' : 'could be luck')
+  const signed = (x: number) => `${x >= 0 ? '+' : ''}${x.toFixed(1)}`
+  return (
+    <div style={card}>
+      <h3 style={{ marginTop: 0 }}>How this stock book would have done</h3>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={th}>Backtest on NSE data</th>
+              <th style={th}>{monthYear(research.dataFrom)} to {monthYear(research.dataThrough)}</th>
+              <th style={th}>Since Jan 2020</th>
+              <th style={th}>Since Jan 2022</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([name, r], i) => (
+              <tr key={name} style={{ fontWeight: i === 0 ? 700 : 400 }}>
+                <td style={td}>{name}</td><td style={td}>{cell(r.full)}</td><td style={td}>{cell(r.since2020)}</td><td style={td}>{cell(r.since2022)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={muted}>
+        Against the equal-weight portfolio: {signed(edge.full.excessCagrPct)}% a year over the whole period ({verdict(edge.full.tStat)}),
+        {' '}{signed(edge.since2022.excessCagrPct)}% a year since 2022 ({verdict(edge.since2022.tStat)}).
+        It replaces about {(strategy.turnoverPctPerYear / 100).toFixed(1)} times its value in trades each year;
+        tax takes about {strategy.taxPctPerYear.toFixed(1)}% of the portfolio a year and charges and slippage
+        {' '}{(strategy.chargesPctPerYear + strategy.slippagePctPerYear).toFixed(1)}%.
+      </p>
+      <p style={{ ...muted, marginBottom: 0 }}>
+        How it was tested: each month it picks from the 500 most traded stocks as they were on that day, including companies
+        later delisted; trades at the next day&apos;s average price; pays Zerodha delivery charges, 0.1% slippage, and capital gains
+        tax under today&apos;s rules; dividends are reinvested. The index row has no dividends, costs or tax. Past results do not
+        guarantee future ones.
       </p>
     </div>
   )

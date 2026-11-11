@@ -20,7 +20,10 @@ db.exec(`
 
 const calendar = (db.prepare('select distinct date from raw_bars order by date').all() as Array<{ date: number }>).map(r => r.date)
 const stocks: LiquidityInput[] = []
+// Companies only: funds and rights entitlements trade in the same series (see classify.ts)
+const stocksOnly = new Set((db.prepare("select symbol from securities where kind = 'stock'").all() as Array<{ symbol: string }>).map(r => r.symbol))
 for (const [symbol, segs] of buildSegments(db, loadSymbolMap(db))) {
+  if (!stocksOnly.has(symbol)) continue
   const bars = loadRawSeries(db, segs)
   if (bars.length >= DEFAULT_UNIVERSE.minBars) {
     stocks.push({ symbol, dates: bars.map(b => b.date), turnover: bars.map(b => b.value) })
