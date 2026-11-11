@@ -56,6 +56,11 @@ export function openStore(path: string = STORE_PATH): DatabaseSync {
       primary key (old_symbol, effective_date)
     ) without rowid;
 
+    -- Latest name NSE printed for each traded symbol (used to tell funds from companies)
+    create table if not exists security_names (
+      symbol text primary key, name text not null, last_seen integer not null
+    ) without rowid;
+
     create table if not exists ingested_days (date integer primary key);
   `)
   return db

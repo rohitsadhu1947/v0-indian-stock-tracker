@@ -1,0 +1,512 @@
+{
+ "generatedAt": "2026-11-11T17:07:31.623Z",
+ "dataFrom": 20110131,
+ "dataThrough": 20261111,
+ "assumptions": {
+  "execution": "Signal at the close of the last session of each month; trades in the next session at its volume-weighted average price.",
+  "universe": "Point-in-time: the 500 most traded NSE stocks as known at each month-end, including companies later delisted.",
+  "costs": "Zerodha delivery charges (STT, exchange, SEBI, stamp duty, GST, DP) plus 0.1% slippage a side.",
+  "tax": "Capital gains under current rules for every year: 20% short-term, 12.5% long-term above Rs 1.25 lakh, 4% cess, paid each April.",
+  "dividends": "Reinvested, untaxed. Index references are price-only: an index fund also earns roughly 1.2% a year in dividends.",
+  "capital": 1000000,
+  "cashYieldPct": 6,
+  "delistingHaircutPct": 20,
+  "resizeBandPct": 20
+ },
+ "benchmark": {
+  "key": "equal-weight-500",
+  "name": "Equal weight, top 500 by turnover",
+  "afterTax": {
+   "full": {
+    "cagrPct": 11.1,
+    "volatilityPct": 18.8,
+    "sharpe": 0.33,
+    "maxDrawdownPct": -60,
+    "drawdownFrom": 20180115,
+    "drawdownTo": 20200324,
+    "worstYearPct": -30.1,
+    "bestYearPct": 58.5
+   },
+   "since2020": {
+    "cagrPct": 20.4,
+    "volatilityPct": 19.6,
+    "sharpe": 0.74,
+    "maxDrawdownPct": -42.1,
+    "drawdownFrom": 20200124,
+    "drawdownTo": 20200324,
+    "worstYearPct": -1.6,
+    "bestYearPct": 51
+   },
+   "since2022": {
+    "cagrPct": 14,
+    "volatilityPct": 18,
+    "sharpe": 0.49,
+    "maxDrawdownPct": -24.4,
+    "drawdownFrom": 20220117,
+    "drawdownTo": 20220620,
+    "worstYearPct": -1.6,
+    "bestYearPct": 51
+   }
+  },
+  "beforeTax": {
+   "full": {
+    "cagrPct": 11.5,
+    "volatilityPct": 18.8,
+    "sharpe": 0.36,
+    "maxDrawdownPct": -59.6,
+    "drawdownFrom": 20180115,
+    "drawdownTo": 20200324,
+    "worstYearPct": -30.1,
+    "bestYearPct": 58.5
+   },
+   "since2020": {
+    "cagrPct": 21.4,
+    "volatilityPct": 19.7,
+    "sharpe": 0.78,
+    "maxDrawdownPct": -42.1,
+    "drawdownFrom": 20200124,
+    "drawdownTo": 20200324,
+    "worstYearPct": -0.2,
+    "bestYearPct": 51.4
+   },
+   "since2022": {
+    "cagrPct": 15.4,
+    "volatilityPct": 18.1,
+    "sharpe": 0.55,
+    "maxDrawdownPct": -24.3,
+    "drawdownFrom": 20240924,
+    "drawdownTo": 20250303,
+    "worstYearPct": -0.2,
+    "bestYearPct": 51.4
+   }
+  },
+  "versusBenchmark": null,
+  "turnoverPctPerYear": 58,
+  "chargesPctPerYear": 0.53,
+  "slippagePctPerYear": 0.12,
+  "taxPctPerYear": 0.76,
+  "averagePositions": 500,
+  "monthsInCashPct": 0,
+  "delistings": 65,
+  "yearlyAfterTaxPct": {
+   "2011": -30.1,
+   "2012": 34.3,
+   "2013": -10.7,
+   "2014": 58.5,
+   "2015": 8.2,
+   "2016": 0.1,
+   "2017": 50.1,
+   "2018": -24,
+   "2019": -11.2,
+   "2020": 25.8,
+   "2021": 50.7,
+   "2022": -1.2,
+   "2023": 51,
+   "2024": 21.6,
+   "2025": -1.6,
+   "2026": 6.1
+  }
+ },
+ "strategies": [
+  {
+   "key": "stock-momentum",
+   "name": "Stock momentum, top 20 of 500",
+   "afterTax": {
+    "full": {
+     "cagrPct": 21.3,
+     "volatilityPct": 22.6,
+     "sharpe": 0.7,
+     "maxDrawdownPct": -49.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323,
+     "worstYearPct": -22.3,
+     "bestYearPct": 102.3
+    },
+    "since2020": {
+     "cagrPct": 32.8,
+     "volatilityPct": 25.1,
+     "sharpe": 1.02,
+     "maxDrawdownPct": -37.5,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323,
+     "worstYearPct": -7.1,
+     "bestYearPct": 94
+    },
+    "since2022": {
+     "cagrPct": 17.8,
+     "volatilityPct": 24.8,
+     "sharpe": 0.55,
+     "maxDrawdownPct": -33.9,
+     "drawdownFrom": 20240731,
+     "drawdownTo": 20250303,
+     "worstYearPct": -7.1,
+     "bestYearPct": 71.8
+    }
+   },
+   "beforeTax": {
+    "full": {
+     "cagrPct": 24.5,
+     "volatilityPct": 22.5,
+     "sharpe": 0.82,
+     "maxDrawdownPct": -46.6,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323,
+     "worstYearPct": -17.9,
+     "bestYearPct": 108
+    },
+    "since2020": {
+     "cagrPct": 38.2,
+     "volatilityPct": 24.8,
+     "sharpe": 1.19,
+     "maxDrawdownPct": -37.5,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323,
+     "worstYearPct": -7.1,
+     "bestYearPct": 108
+    },
+    "since2022": {
+     "cagrPct": 22.7,
+     "volatilityPct": 24.4,
+     "sharpe": 0.72,
+     "maxDrawdownPct": -33.9,
+     "drawdownFrom": 20240731,
+     "drawdownTo": 20250303,
+     "worstYearPct": -7.1,
+     "bestYearPct": 72.1
+    }
+   },
+   "versusBenchmark": {
+    "afterTax": {
+     "full": {
+      "excessCagrPct": 10.2,
+      "tStat": 2.49,
+      "months": 190,
+      "yearsAheadPct": 69,
+      "rolling3yAheadPct": 79
+     },
+     "since2020": {
+      "excessCagrPct": 12.4,
+      "tStat": 1.7,
+      "months": 82,
+      "yearsAheadPct": 57,
+      "rolling3yAheadPct": 72
+     },
+     "since2022": {
+      "excessCagrPct": 3.8,
+      "tStat": 0.72,
+      "months": 59,
+      "yearsAheadPct": 33,
+      "rolling3yAheadPct": 46
+     }
+    },
+    "beforeTax": {
+     "full": {
+      "excessCagrPct": 13,
+      "tStat": 3.17,
+      "months": 190,
+      "yearsAheadPct": 81,
+      "rolling3yAheadPct": 87
+     },
+     "since2020": {
+      "excessCagrPct": 16.8,
+      "tStat": 2.29,
+      "months": 82,
+      "yearsAheadPct": 86,
+      "rolling3yAheadPct": 85
+     },
+     "since2022": {
+      "excessCagrPct": 7.3,
+      "tStat": 1.17,
+      "months": 59,
+      "yearsAheadPct": 67,
+      "rolling3yAheadPct": 71
+     }
+    }
+   },
+   "turnoverPctPerYear": 437,
+   "chargesPctPerYear": 0.99,
+   "slippagePctPerYear": 0.87,
+   "taxPctPerYear": 3.57,
+   "averagePositions": 20,
+   "monthsInCashPct": 0,
+   "delistings": 1,
+   "yearlyAfterTaxPct": {
+    "2011": -7.3,
+    "2012": 45.3,
+    "2013": -7.3,
+    "2014": 73.5,
+    "2015": 0.1,
+    "2016": -14.8,
+    "2017": 102.3,
+    "2018": -22.3,
+    "2019": 3.1,
+    "2020": 63.1,
+    "2021": 94,
+    "2022": -4.8,
+    "2023": 71.8,
+    "2024": 13.5,
+    "2025": -7.1,
+    "2026": 28.8
+   },
+   "sensitivity": [
+    {
+     "label": "Slippage 0.3% a side (base 0.1%)",
+     "cagrPct": 19.7,
+     "maxDrawdownPct": -51.1
+    },
+    {
+     "label": "Slippage 0.5% a side",
+     "cagrPct": 17.9,
+     "maxDrawdownPct": -52.7
+    },
+    {
+     "label": "Delisted holdings lose everything (base 20%)",
+     "cagrPct": 21,
+     "maxDrawdownPct": -49.5
+    },
+    {
+     "label": "Dividends ignored",
+     "cagrPct": 20.6,
+     "maxDrawdownPct": -50.1
+    }
+   ]
+  },
+  {
+   "key": "stock-momentum-trend",
+   "name": "Stock momentum, top 20 of 500 + trend filter",
+   "afterTax": {
+    "full": {
+     "cagrPct": 19.3,
+     "volatilityPct": 17.7,
+     "sharpe": 0.75,
+     "maxDrawdownPct": -35.9,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20191007,
+     "worstYearPct": -22.2,
+     "bestYearPct": 96.2
+    },
+    "since2020": {
+     "cagrPct": 29.9,
+     "volatilityPct": 19.3,
+     "sharpe": 1.14,
+     "maxDrawdownPct": -32.9,
+     "drawdownFrom": 20220117,
+     "drawdownTo": 20230227,
+     "worstYearPct": -11.1,
+     "bestYearPct": 96.2
+    },
+    "since2022": {
+     "cagrPct": 15.3,
+     "volatilityPct": 19.3,
+     "sharpe": 0.52,
+     "maxDrawdownPct": -32.9,
+     "drawdownFrom": 20220117,
+     "drawdownTo": 20230227,
+     "worstYearPct": -11.1,
+     "bestYearPct": 57.7
+    }
+   },
+   "beforeTax": {
+    "full": {
+     "cagrPct": 22.4,
+     "volatilityPct": 17.5,
+     "sharpe": 0.9,
+     "maxDrawdownPct": -32.4,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20191007,
+     "worstYearPct": -18.6,
+     "bestYearPct": 108
+    },
+    "since2020": {
+     "cagrPct": 35.2,
+     "volatilityPct": 18.8,
+     "sharpe": 1.38,
+     "maxDrawdownPct": -26.3,
+     "drawdownFrom": 20220117,
+     "drawdownTo": 20230227,
+     "worstYearPct": -2.3,
+     "bestYearPct": 108
+    },
+    "since2022": {
+     "cagrPct": 20.5,
+     "volatilityPct": 18.6,
+     "sharpe": 0.77,
+     "maxDrawdownPct": -26.3,
+     "drawdownFrom": 20220117,
+     "drawdownTo": 20230227,
+     "worstYearPct": -2.3,
+     "bestYearPct": 57.8
+    }
+   },
+   "versusBenchmark": {
+    "afterTax": {
+     "full": {
+      "excessCagrPct": 8.2,
+      "tStat": 1.18,
+      "months": 190,
+      "yearsAheadPct": 69,
+      "rolling3yAheadPct": 81
+     },
+     "since2020": {
+      "excessCagrPct": 9.5,
+      "tStat": 0.68,
+      "months": 82,
+      "yearsAheadPct": 71,
+      "rolling3yAheadPct": 68
+     },
+     "since2022": {
+      "excessCagrPct": 1.3,
+      "tStat": 0.12,
+      "months": 59,
+      "yearsAheadPct": 50,
+      "rolling3yAheadPct": 67
+     }
+    },
+    "beforeTax": {
+     "full": {
+      "excessCagrPct": 10.8,
+      "tStat": 1.61,
+      "months": 190,
+      "yearsAheadPct": 75,
+      "rolling3yAheadPct": 95
+     },
+     "since2020": {
+      "excessCagrPct": 13.8,
+      "tStat": 1.04,
+      "months": 82,
+      "yearsAheadPct": 86,
+      "rolling3yAheadPct": 96
+     },
+     "since2022": {
+      "excessCagrPct": 5.1,
+      "tStat": 0.48,
+      "months": 59,
+      "yearsAheadPct": 67,
+      "rolling3yAheadPct": 96
+     }
+    }
+   },
+   "turnoverPctPerYear": 371,
+   "chargesPctPerYear": 0.84,
+   "slippagePctPerYear": 0.74,
+   "taxPctPerYear": 3.6,
+   "averagePositions": 13,
+   "monthsInCashPct": 33,
+   "delistings": 0,
+   "yearlyAfterTaxPct": {
+    "2011": 5.5,
+    "2012": 18.1,
+    "2013": -7,
+    "2014": 73.2,
+    "2015": -2.8,
+    "2016": -1.6,
+    "2017": 81.7,
+    "2018": -22.2,
+    "2019": -1.7,
+    "2020": 54.1,
+    "2021": 96.2,
+    "2022": -11.1,
+    "2023": 57.7,
+    "2024": 15.9,
+    "2025": 6.4,
+    "2026": 15.4
+   },
+   "sensitivity": [
+    {
+     "label": "Slippage 0.3% a side (base 0.1%)",
+     "cagrPct": 17.9,
+     "maxDrawdownPct": -37.1
+    },
+    {
+     "label": "Slippage 0.5% a side",
+     "cagrPct": 16.6,
+     "maxDrawdownPct": -38.2
+    },
+    {
+     "label": "Delisted holdings lose everything (base 20%)",
+     "cagrPct": 19.3,
+     "maxDrawdownPct": -35.9
+    },
+    {
+     "label": "Dividends ignored",
+     "cagrPct": 18.8,
+     "maxDrawdownPct": -36.2
+    }
+   ]
+  }
+ ],
+ "indices": [
+  {
+   "key": "nifty-50",
+   "name": "NIFTY 50 index",
+   "priceReturn": {
+    "full": {
+     "cagrPct": 10.1,
+     "volatilityPct": 16.2,
+     "sharpe": 0.31,
+     "maxDrawdownPct": -38.4,
+     "drawdownFrom": 20200114,
+     "drawdownTo": 20200323,
+     "worstYearPct": -16,
+     "bestYearPct": 31.4
+    },
+    "since2020": {
+     "cagrPct": 11.2,
+     "volatilityPct": 17.6,
+     "sharpe": 0.35,
+     "maxDrawdownPct": -38.4,
+     "drawdownFrom": 20200114,
+     "drawdownTo": 20200323,
+     "worstYearPct": -3.3,
+     "bestYearPct": 24.1
+    },
+    "since2022": {
+     "cagrPct": 8,
+     "volatilityPct": 13.7,
+     "sharpe": 0.19,
+     "maxDrawdownPct": -16.5,
+     "drawdownFrom": 20220117,
+     "drawdownTo": 20220617,
+     "worstYearPct": -3.3,
+     "bestYearPct": 20
+    }
+   }
+  },
+  {
+   "key": "nifty-500",
+   "name": "NIFTY 500 index",
+   "priceReturn": {
+    "full": {
+     "cagrPct": 11.2,
+     "volatilityPct": 16,
+     "sharpe": 0.37,
+     "maxDrawdownPct": -38.3,
+     "drawdownFrom": 20200117,
+     "drawdownTo": 20200323,
+     "worstYearPct": -18.7,
+     "bestYearPct": 37.8
+    },
+    "since2020": {
+     "cagrPct": 13.6,
+     "volatilityPct": 17.4,
+     "sharpe": 0.48,
+     "maxDrawdownPct": -38.3,
+     "drawdownFrom": 20200117,
+     "drawdownTo": 20200323,
+     "worstYearPct": -0.4,
+     "bestYearPct": 30.2
+    },
+    "since2022": {
+     "cagrPct": 9.9,
+     "volatilityPct": 14.3,
+     "sharpe": 0.32,
+     "maxDrawdownPct": -18.8,
+     "drawdownFrom": 20240926,
+     "drawdownTo": 20250228,
+     "worstYearPct": -0.4,
+     "bestYearPct": 25.8
+    }
+   }
+  }
+ ]
+}

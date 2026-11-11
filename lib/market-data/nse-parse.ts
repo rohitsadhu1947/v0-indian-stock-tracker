@@ -8,6 +8,8 @@ export const EQUITY_SERIES = new Set(['EQ', 'BE', 'BZ'])
 
 export interface RawBar {
   symbol: string
+  /** Security name as printed in the price file; absent in the older-format file. */
+  name?: string
   series: string
   prevClose: number
   open: number
@@ -69,7 +71,7 @@ export function parsePriceFile(text: string): { equities: RawBar[]; indices: Ind
     if (!EQUITY_SERIES.has(series) || !symbol) continue
 
     const bar: RawBar = {
-      symbol, series, prevClose,
+      symbol, name: f.slice(3, f.length - 12).join(',').trim(), series, prevClose,
       // NSE leaves open/high/low blank on days a security did not trade
       open: open > 0 ? open : close,
       high: high > 0 ? high : close,

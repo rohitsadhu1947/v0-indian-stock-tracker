@@ -1,0 +1,78 @@
+/**
+ * Build the research market from the local store (data/market.db): adjusted
+ * series for every stock that was ever in the point-in-time universe, the
+ * monthly universe lists, and the tracked indices.
+ */
+import type { DatabaseSync } from 'node:sqlite'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs'
+import { deserialize, serialize } from 'v8'
+import { applyAdjustments } from '@/lib/market-data/adjust'
+import { INDEX_SERIES } from '@/lib/market-data/indices'
+import { buildSegments, loadEvents, loadRawSeries, loadSymbolMap } from '@/lib/market-data/series'
+import { openStore, STORE_PATH } from '@/lib/market-data/store'
+import type { IndexSeries, Market, StockSeries } from './market'
+
+export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
+  const sessions = Int32Array.from(
+    (db.prepare('select distinct date from raw_bars order by date').all() as Array<{ date: number }>).map(r => r.date))
+
+  const universe = new Map<number, string[]>()
+  const rows = db.prepare('select date, symbol from universe_monthly where rank <= ? order by date, rank')
+    .all(universeSize) as Array<{ date: number; symbol: string }>
+  for (const r of rows) {
+    const list = universe.get(r.date) ?? []
+    list.push(r.symbol)
+    universe.set(r.date, list)
+  }
+
+  const segments = buildSegments(db, loadSymbolMap(db))
+  const stocks = new Map<string, StockSeries>()
+  for (const symbol of new Set(rows.map(r => r.symbol))) {
+    const segs = segments.get(symbol)
+    if (!segs) continue
+    const bars = applyAdjustments(loadRawSeries(db, segs), loadEvents(db, symbol))
+    stocks.set(symbol, {
+      symbol,
+      dates: Int32Array.from(bars.map(b => b.date)),
+      close: Float64Array.from(bars.map(b => b.close)),
+      // Rupees traded / shares traded, on the adjusted basis, kept inside the day's range
+      fill: Float64Array.from(bars.map(b => {
+        const shares = b.volume * b.shareFactor
+        const vwap = shares > 0 ? (b.value / shares) * b.priceFactor : b.close
+        return Math.min(b.high, Math.max(b.low, vwap))
+      })),
+      turnover: Float64Array.from(bars.map(b => b.value)),
+      dividendFactor: Float64Array.from(bars.map(b => b.totalReturnFactor / b.priceFactor)),
+    })
+  }
+
+  const indices = new Map<string, IndexSeries>()
+  const indexQuery = db.prepare('select date, close from index_bars where lower(name) = lower(?)')
+  for (const idx of INDEX_SERIES) {
+    const byDate = new Map<number, number>()
+    for (const name of idx.names) {
+      for (const r of indexQuery.all(name) as Array<{ date: number; close: number }>) byDate.set(r.date, r.close)
+    }
+    const dates = [...byDate.keys()].sort((a, b) => a - b)
+    indices.set(idx.barSymbol, { dates: Int32Array.from(dates), close: Float64Array.from(dates.map(d => byDate.get(d)!)) })
+  }
+
+  return { sessions, stocks, indices, universe, universeDates: Int32Array.from([...universe.keys()].sort((a, b) => a - b)) }
+}
+
+/**
+ * loadMarket with a disk cache (data/cache), rebuilt whenever the store file
+ * changes. Loading from the store takes a few minutes; the cache a few seconds.
+ */
+export function loadMarketCached(storePath = STORE_PATH, universeSize = 1000): Market {
+  const stamp = statSync(storePath)
+  const file = `data/cache/market-${universeSize}-${Math.floor(stamp.mtimeMs)}-${stamp.size}.v8`
+  if (existsSync(file)) return deserialize(readFileSync(file)) as Market
+  const db = openStore(storePath)
+  const market = loadMarket(db, universeSize)
+  db.close()
+  mkdirSync('data/cache', { recursive: true })
+  for (const old of readdirSync('data/cache')) if (old.startsWith('market-')) rmSync(`data/cache/${old}`)
+  writeFileSync(file, serialize(market))
+  return market
+}
