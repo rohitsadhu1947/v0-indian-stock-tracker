@@ -749,10 +749,14 @@ export const companyInfo = pgTable('company_info', {
 // ============================================================================
 
 /**
- * One end-of-day bar per symbol. Stocks use their NSE symbol; indices are
- * prefixed "IDX:" (e.g. "IDX:NIFTY 200"). Filled by the daily cron from a
- * single batched quote call; `provisional` bars were captured before the close
- * and are finalised the next session from the quote's previous-close field.
+ * One end-of-day bar per symbol. Stocks use their current NSE symbol; indices
+ * are prefixed "IDX:" (e.g. "IDX:NIFTY 200").
+ *
+ * Prices are adjusted for splits, bonuses, demergers and extraordinary
+ * dividends (see lib/market-data/adjust.ts), so the series is continuous.
+ * Official bars come from NSE's daily archive (lib/market-data/daily-update);
+ * `provisional` bars were captured from broker quotes before the close and
+ * are replaced when the official file arrives.
  */
 export const dailyBars = pgTable('daily_bars', {
   symbol: text('symbol').notNull(),
@@ -763,10 +767,42 @@ export const dailyBars = pgTable('daily_bars', {
   close: doublePrecision('close').notNull(),
   volume: doublePrecision('volume').notNull(),
   provisional: boolean('provisional').default(false).notNull(),
+  turnover: doublePrecision('turnover'),        // rupees traded; unaffected by adjustments
+  deliveryQty: doublePrecision('delivery_qty'), // shares taken into delivery
 }, (table) => ({
   symbolDateIdx: uniqueIndex('daily_bars_symbol_date_idx').on(table.symbol, table.date),
   dateIdx: index('daily_bars_date_idx').on(table.date),
 }))
+
+/**
+ * Corporate actions from NSE, one row per company and ex-date. `status` is
+ * 'pending' until the ex-date bar arrives, then 'confirmed' / 'inferred'
+ * (earlier bars were rescaled by priceFactor), 'dividend' (no price change)
+ * or 'rejected' (the stated ratio did not match the price; nothing applied).
+ */
+export const corporateActions = pgTable('corporate_actions', {
+  symbol: text('symbol').notNull(),
+  exDate: date('ex_date').notNull(),
+  purposes: jsonb('purposes').$type<string[]>().notNull(),
+  status: text('status').notNull(),
+  priceFactor: doublePrecision('price_factor').default(1).notNull(),
+  shareFactor: doublePrecision('share_factor').default(1).notNull(),
+  dividend: doublePrecision('dividend').default(0).notNull(),
+  note: text('note'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  symbolDateIdx: uniqueIndex('corporate_actions_symbol_date_idx').on(table.symbol, table.exDate),
+  statusIdx: index('corporate_actions_status_idx').on(table.status),
+}))
+
+/** One row per run of the market-data update, so a failure is visible instead of silent. */
+export const marketDataRuns = pgTable('market_data_runs', {
+  id: serial('id').primaryKey(),
+  ranAt: timestamp('ran_at').defaultNow().notNull(),
+  ok: boolean('ok').notNull(),
+  latestDate: date('latest_date'),
+  summary: jsonb('summary').notNull(),
+})
 
 /**
  * A paper model portfolio. `kind` is 'core' (factor index funds) or

@@ -80,7 +80,7 @@ export async function dataFreshness(): Promise<DataFreshness> {
     ok,
     message: ok
       ? `Prices current to ${latest.date} (${coveragePct.toFixed(0)}% of stocks).`
-      : `Prices only current to ${latest.date}${stale ? `, ${stale} trading day(s) behind` : ''} (${coveragePct.toFixed(0)}% coverage). Log in with Kite so the daily update can run, or run scripts/backfill-daily-bars.mjs.`,
+      : `Prices only current to ${latest.date}${stale ? `, ${stale} trading day(s) behind` : ''} (${coveragePct.toFixed(0)}% coverage). The nightly NSE update (/api/cron/market-data) has not brought in newer prices.`,
   }
 }
 

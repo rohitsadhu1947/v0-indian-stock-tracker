@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "tsc --noEmit && vitest run"
+    "check": "tsc --noEmit && vitest run",
+    "data:sync": "tsx scripts/data/download-nse.ts && tsx scripts/data/ingest-nse.ts && tsx scripts/data/build-adjustments.ts && tsx scripts/data/build-universe.ts",
+    "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -58,6 +60,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "embla-carousel-react": "8.5.1",
+    "fflate": "^0.8.2",
     "geist": "latest",
     "input-otp": "1.4.1",
     "kiteconnect": "^5.1.0",

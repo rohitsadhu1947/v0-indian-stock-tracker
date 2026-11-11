@@ -11,6 +11,7 @@
  * Also callable manually via the dashboard for testing.
  */
 
+import { runMarketDataUpdate } from '@/lib/market-data/run-update'
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { db } from '@/db'
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
       }
       logger.info('Morning note cron triggered manually', { userId: user.id })
     }
+
+    // Catch up on any NSE price files published since the evening run
+    await runMarketDataUpdate().catch(err => logger.error('Market data update failed', { error: err.message }))
 
     // ── Phase 1: Fetch all data sources in parallel ──────────────────────
     logger.info('Starting morning note generation...')

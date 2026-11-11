@@ -11,8 +11,12 @@ const PUBLIC_API_ROUTES = new Set([
   '/api/auth/kite/session',
   '/api/auth/kite/logout',
   '/api/health',
-  '/api/cron/morning-note', // Auth handled internally via CRON_SECRET
 ])
+
+// Cron routes authorise themselves (CRON_SECRET bearer or an admin session,
+// failing closed). The scheduler sends no session cookie, so gating them here
+// rejected every scheduled run.
+const SELF_AUTHORISED_PREFIX = '/api/cron/'
 
 const PUBLIC_PAGES = new Set(['/login'])
 
@@ -96,7 +100,7 @@ export async function middleware(request: NextRequest) {
 
   // API routes
   if (pathname.startsWith('/api/')) {
-    if (PUBLIC_API_ROUTES.has(pathname)) {
+    if (PUBLIC_API_ROUTES.has(pathname) || pathname.startsWith(SELF_AUTHORISED_PREFIX)) {
       return addSecurityHeaders(NextResponse.next())
     }
 

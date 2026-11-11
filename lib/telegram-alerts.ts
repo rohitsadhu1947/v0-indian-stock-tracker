@@ -51,7 +51,7 @@ function formatINR(amount: number | undefined): string {
 /**
  * Send a Telegram message
  */
-async function sendTelegramMessage(
+export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
   message: string,
