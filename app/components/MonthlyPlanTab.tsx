@@ -11,6 +11,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import type { MonthlyPlan } from '@/lib/portfolio/service'
+import type { TrackRecord } from '@/lib/portfolio/signals'
 import { MODES, DEFAULT_MODE, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
 
@@ -62,6 +63,7 @@ export default function MonthlyPlanTab() {
   const [trendFilter, setTrendFilter] = useState(false)
   const [plan, setPlan] = useState<MonthlyPlan | null>(null)
   const [perf, setPerf] = useState<Performance | null>(null)
+  const [record, setRecord] = useState<TrackRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -79,9 +81,10 @@ export default function MonthlyPlanTab() {
     setLoading(true)
     setError(null)
     try {
-      const [planRes, perfRes] = await Promise.all([
+      const [planRes, perfRes, recordRes] = await Promise.all([
         fetch(`/api/model-portfolio/plan?mode=${m}&trend=${trend ? 1 : 0}`),
         fetch('/api/model-portfolio/performance'),
+        fetch('/api/model-portfolio/track-record'),
       ])
       if (planRes.status === 401) { window.location.href = '/login'; return }
       const planJson = await planRes.json()
@@ -89,6 +92,8 @@ export default function MonthlyPlanTab() {
       setPlan(planJson.plan)
       const perfJson = await perfRes.json()
       if (perfJson.success) setPerf(perfJson)
+      const recordJson = await recordRes.json().catch(() => null)
+      if (recordJson?.success) setRecord(recordJson)
     } catch (e: any) {
       // Never leave another mode's plan on screen under this mode's heading
       setPlan(null)
@@ -267,6 +272,8 @@ export default function MonthlyPlanTab() {
             </div>
           </div>
 
+          <LiveRecordCard record={record} mode={mode} />
+
           <PerformanceCard perf={perf} />
         </>
       )}
@@ -432,6 +439,100 @@ function BookSection({ plan, busy, onRebalance }: { plan: MonthlyPlan; busy: boo
   )
 }
 
+const INDEX_NAMES: Record<string, string> = {
+  'IDX:NIFTY 500': 'NIFTY 500 index',
+  'IDX:NIFTY500 EW': 'NIFTY 500 equal-weight index',
+}
+const dayOf = (d: number) => `${String(d).slice(0, 4)}-${String(d).slice(4, 6)}-${String(d).slice(6, 8)}`
+
+/**
+ * How the mode's own picks have done since they started being recorded. The
+ * picks are frozen each month-end and replayed with the backtest's simulator.
+ */
+function LiveRecordCard({ record, mode }: { record: TrackRecord | null; mode: Mode }) {
+  const live = record?.modes[mode]
+  if (!record || !live) {
+    return (
+      <div style={card}>
+        <h3 style={{ marginTop: 0 }}>Live record of {MODES[mode].label} picks</h3>
+        <p style={{ ...muted, marginBottom: 0 }}>
+          Nothing recorded yet. After each month-end the app saves this mode&apos;s 20 picks and then measures them against
+          the NIFTY 500, whether or not you rebalance the paper book. A backtest can be flattered by hindsight; this cannot.
+        </p>
+      </div>
+    )
+  }
+
+  const rows: Array<[string, number | null, number | null]> = [
+    [`${MODES[mode].label} picks, after costs`, live.afterTax.returnPct, live.afterTax.maxDrawdownPct],
+    ['Same, with the trend filter', live.withTrendFilterAfterTax.returnPct, live.withTrendFilterAfterTax.maxDrawdownPct],
+    ...record.benchmarks.map(b => [`${INDEX_NAMES[b] ?? b}, price only`, live.benchmarks[b] ?? null, null] as [string, number | null, number | null]),
+  ]
+  const scored = live.picks.filter(p => p.benchmarkPct != null)
+  const ahead = scored.filter(p => p.returnPct > p.benchmarkPct!).length
+  const late = live.recorded.filter(r => (Date.parse(r.recordedAt) - Date.parse(r.signalDate)) / 86400000 > 5)
+
+  return (
+    <div style={card}>
+      <h3 style={{ marginTop: 0 }}>Live record of {MODES[mode].label} picks</h3>
+      <p style={muted}>
+        From {dayOf(live.started)} to {dayOf(live.asOf)}: {live.signals} month{live.signals === 1 ? '' : 's'} of picks, saved at each
+        month-end and never changed afterwards. Too short to judge yet; it needs a year or more.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr><th style={th}>Since {dayOf(live.started)}</th><th style={th}>Return</th><th style={th}>Worst fall</th></tr></thead>
+          <tbody>
+            {rows.map(([name, ret, fall], i) => (
+              <tr key={name} style={{ fontWeight: i === 0 ? 700 : 400 }}>
+                <td style={td}>{name}</td>
+                <td style={{ ...td, color: ret == null ? undefined : ret >= 0 ? '#34d399' : '#f87171' }}>{ret == null ? 'no data' : pct(ret, 2)}</td>
+                <td style={td}>{fall == null ? '' : `${(Math.abs(fall) < 0.05 ? 0 : fall).toFixed(1)}%`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={muted}>
+        Measured like the backtest: bought the session after the month-end at that day&apos;s average price, with charges and
+        slippage. Capital gains tax is deducted each April, so it is not in these figures yet. Dividends are not counted on
+        either side.
+        {late.length > 0 && ` The picks for ${late.map(r => r.signalDate).join(', ')} were saved on ${late[0].recordedAt}, after that month had started.`}
+      </p>
+
+      <details>
+        <summary style={{ cursor: 'pointer' }}>
+          Every pick ({live.picks.length}){scored.length > 0 && `: ${ahead} of ${scored.length} ahead of the NIFTY 500 so far`}
+        </summary>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th style={th}>Stock</th><th style={th}>Picked</th><th style={th}>Rank</th><th style={th}>Bought at</th>
+                <th style={th}>Now / sold at</th><th style={th}>Return</th><th style={th}>NIFTY 500, same days</th><th style={th}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {live.picks.map(p => (
+                <tr key={`${p.symbol}-${p.signalDate}`}>
+                  <td style={{ ...td, fontWeight: 600 }}>{p.symbol}</td>
+                  <td style={td}>{dayOf(p.signalDate)}</td>
+                  <td style={td}>{p.rank}</td>
+                  <td style={td}>{p.entryPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                  <td style={td}>{p.lastPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                  <td style={{ ...td, color: p.returnPct >= 0 ? '#34d399' : '#f87171' }}>{pct(p.returnPct)}</td>
+                  <td style={td}>{p.benchmarkPct == null ? '' : pct(p.benchmarkPct)}</td>
+                  <td style={td}>{p.exitDate ? `sold ${dayOf(p.exitDate)}` : 'held'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  )
+}
+
 function PerformanceCard({ perf }: { perf: Performance | null }) {
   const book = perf?.book
   const first = book?.points[0]
@@ -439,7 +540,7 @@ function PerformanceCard({ perf }: { perf: Performance | null }) {
   if (!perf || !book || !first || !last) {
     return (
       <div style={card}>
-        <h3 style={{ marginTop: 0 }}>Paper track record</h3>
+        <h3 style={{ marginTop: 0 }}>Your paper book</h3>
         <p style={muted}>Starts with the first paper rebalance. Values are recorded every trading day at 15:25 IST.</p>
       </div>
     )
@@ -452,7 +553,7 @@ function PerformanceCard({ perf }: { perf: Performance | null }) {
     ? ((benchEnd.value - benchStart.value) / benchStart.value) * 100 : null
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Paper track record</h3>
+      <h3 style={{ marginTop: 0 }}>Your paper book</h3>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead><tr><th style={th}>Mode</th><th style={th}>Started</th><th style={th}>Value</th><th style={th}>Return</th><th style={th}>NIFTY 500 same period</th></tr></thead>
         <tbody>

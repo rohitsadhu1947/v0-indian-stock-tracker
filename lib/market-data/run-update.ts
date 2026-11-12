@@ -1,11 +1,13 @@
 /**
- * Run the NSE update and tell the admins when it fails. Shared by the
- * market-data cron and the morning cron.
+ * Run the NSE update, tell the admins when it fails, and freeze the month's
+ * picks for the live track record. Shared by the market-data cron and the
+ * morning cron.
  */
 import { db } from '@/db'
 import { userPreferences, users } from '@/db/schema'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import logger from '@/lib/logger'
+import { recordMonthlySignals } from '@/lib/portfolio/signals'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
 import { updateFromNseArchive, type UpdateSummary } from './daily-update'
 
@@ -15,6 +17,14 @@ export async function runMarketDataUpdate(): Promise<UpdateSummary> {
     ok: summary.ok, latest: summary.latestAfter, days: summary.days.length, problems: summary.problems,
   })
   if (!summary.ok) await alertAdmins(summary).catch(err => logger.error('Market data alert failed', { error: err.message }))
+
+  // With prices current, freeze this month's picks if a month-end has passed since the last record
+  try {
+    const signals = await recordMonthlySignals()
+    if (signals.recorded.length) logger.info('Monthly signals recorded', signals)
+  } catch (err: any) {
+    logger.error('Recording monthly signals failed', { error: err.message })
+  }
   return summary
 }
 
