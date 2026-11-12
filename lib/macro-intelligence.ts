@@ -9,7 +9,7 @@
  * - Asian Markets (Nikkei, Hang Seng)
  * - US Yields (10Y Treasury)
  *
- * Uses Yahoo Finance chart API (same pattern as fundamental-api.ts).
+ * Uses Yahoo Finance chart API.
  * Results cached for 5 minutes.
  */
 

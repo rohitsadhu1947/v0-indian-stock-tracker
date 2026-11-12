@@ -36,13 +36,9 @@ export async function GET(request: NextRequest) {
           userId,
           telegramEnabled: false,
           telegramAlertPreferences: {
-            newSignals: true,
-            newsPops: true,
-            orbBreakouts: true,
             targetHits: true,
             stopLossHits: true,
-            dailySummary: true,
-            positionUpdates: false
+            dailySummary: true
           }
         })
         .returning()
@@ -67,13 +63,9 @@ export async function GET(request: NextRequest) {
         botToken: prefs[0].telegramBotToken || '',
         chatId: prefs[0].telegramChatId || '',
         alertPreferences: prefs[0].telegramAlertPreferences || {
-          newSignals: true,
-          newsPops: true,
-          orbBreakouts: true,
           targetHits: true,
           stopLossHits: true,
-          dailySummary: true,
-          positionUpdates: false
+          dailySummary: true
         }
       }
     })

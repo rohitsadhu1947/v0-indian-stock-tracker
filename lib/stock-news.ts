@@ -1,10 +1,8 @@
 /**
  * Stock news + sentiment, callable from server code.
  *
- * This logic used to live only inside /api/news/quote, so master-scorer had to
- * fetch its own API over HTTP — which the auth middleware rejected with a 401
- * on every call. News sentiment therefore defaulted to "neutral" forever, and
- * the intelligence score was pinned at its no-information floor.
+ * Shared by /api/news/quote and server code, which must not call that route
+ * over HTTP (the auth middleware rejects requests without a session).
  *
  * Yahoo's RSS endpoint is effectively dead (rate-limited / 429); Google News
  * RSS still works. `available` says whether any source actually answered, so

@@ -7,24 +7,20 @@ import { usePositionsStore } from '@/lib/stores/positions-store'
 import { useMarketStore } from '@/lib/stores/market-store'
 import { useUIStore } from '@/lib/stores/ui-store'
 import ResearchTab from './components/ResearchTab'
-import TradeNowTab from './components/TradeNowTab'
-import NewsPopTab from './components/NewsPopTab'
 // SectorRotationTab merged into MarketTab
 import DataTab from './components/DataTab'
 import SettingsTab from './components/SettingsTab'
-import BacktestTab from './components/BacktestTab'
 // MacroDashboard merged into MarketTab
 import RiskDashboard from './components/RiskDashboard'
 import { generateTradingSignal } from '@/lib/market-utils'
 import { fetchStockQuote } from '@/lib/stock-fetcher'
 import { TabErrorBoundary } from './components/TabErrorBoundary'
 
-// WatchlistTab removed — use Portfolio tab for position analysis
 const IntradayTab = lazy(() => import('./components/IntradayTab'))
 const UniverseTab = lazy(() => import('./components/UniverseTab'))
 const FundamentalsTab = lazy(() => import('./components/FundamentalsTab'))
 const MarketTab = lazy(() => import('./components/MarketTab'))
-const MomentumTab = lazy(() => import('./components/MomentumTab'))
+const PaperTradesTab = lazy(() => import('./components/PaperTradesTab'))
 const PortfolioAnalyst = lazy(() => import('./components/PortfolioAnalyst'))
 const MonthlyPlanTab = lazy(() => import('./components/MonthlyPlanTab'))
 const StockCheckTab = lazy(() => import('./components/StockCheckTab'))
@@ -572,7 +568,6 @@ export default function StockTracker() {
               <a href="https://github.com/rohitsadhu1947/v0-indian-stock-tracker/blob/main/USER_GUIDE.md" target="_blank" rel="noopener noreferrer" className="tab" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>📚 Guide</a>
               <a href="https://github.com/rohitsadhu1947/v0-indian-stock-tracker/blob/main/QUICK_REFERENCE.md" target="_blank" rel="noopener noreferrer" className="tab" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>🚀 Quick Ref</a>
               <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings</button>
-              <button className={`tab ${activeTab === 'backtest' ? 'active' : ''}`} onClick={() => setActiveTab('backtest')}>🔬 Backtest</button>
               {userRole === 'admin' && <button className={`tab ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')}>👑 Admin</button>}
               <button className="tab" onClick={handleLogout}>Logout</button>
             </div>
@@ -696,31 +691,11 @@ export default function StockTracker() {
         >
           🌐 Market
         </button>
-        <button
-          className={`tab ${activeTab === 'tradenow' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tradenow')}
-          style={{
-            background: activeTab === 'tradenow' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : undefined,
-            fontWeight: activeTab === 'tradenow' ? 'bold' : undefined
-          }}
-        >
-          🎯 TRADE NOW
-        </button>
         <button 
-          className={`tab ${activeTab === 'newspop' ? 'active' : ''}`}
-          onClick={() => setActiveTab('newspop')}
-          style={{
-            background: activeTab === 'newspop' ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : undefined,
-            fontWeight: activeTab === 'newspop' ? 'bold' : undefined
-          }}
+          className={`tab ${activeTab === 'papertrades' ? 'active' : ''}`}
+          onClick={() => setActiveTab('papertrades')}
         >
-          📰 News Pops
-        </button>
-        <button 
-          className={`tab ${activeTab === 'momentum' ? 'active' : ''}`}
-          onClick={() => setActiveTab('momentum')}
-        >
-          💰 Momentum
+          📝 Paper Trades
         </button>
         <button 
           className={`tab ${activeTab === 'research' ? 'active' : ''}`}
@@ -758,153 +733,7 @@ export default function StockTracker() {
       {activeTab === 'market' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Market"><MarketTab /></TabErrorBoundary></Suspense>}
 
       {/* 💰 MOMENTUM SCANNER TAB */}
-      {activeTab === 'momentum' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Momentum"><MomentumTab /></TabErrorBoundary></Suspense>}
-
-      {/* 🎯 TRADE NOW TAB */}
-      {activeTab === 'tradenow' && (
-        <TradeNowTab
-          capitalAvailable={momentumCapital}
-          capitalDeployed={paperPositions
-            .filter(p => p.status === 'open')
-            .reduce((sum, p) => sum + (p.capitalRequired || 0), 0)
-          }
-          openPositions={paperPositions.filter(p => p.status === 'open').length}
-          maxPositions={momentumMaxPositions}
-          todayPnL={paperPositions
-            .filter(p => p.status === 'open')
-            .reduce((sum, p) => sum + (p.pnl || 0), 0)
-          }
-          onExecuteTrade={async (signal, tradeType) => {
-            try {
-              console.log(`🚀 Executing ${tradeType} trade for ${signal.symbol}`)
-              
-              // Handle different signal types
-              const isMomentum = 'totalScore' in signal
-              const tradePlan = (signal as any).tradePlan
-              
-              // Get target prices based on signal type
-              let target1, target2
-              if (isMomentum) {
-                // MasterScore type has target1 and target2
-                target1 = tradePlan.target1
-                target2 = tradePlan.target2
-              } else {
-                // NewsPop type has quickTarget
-                target1 = (tradePlan as any).quickTarget
-                target2 = (tradePlan as any).quickTarget
-              }
-              
-              // Get reasoning
-              const notes = isMomentum 
-                ? (signal as any).reasoning?.join('; ') || '' 
-                : `News pop detected at ${new Date().toLocaleTimeString()}`
-              
-              // Execute paper trade
-              const response = await fetch('/api/positions/paper', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  symbol: signal.symbol,
-                  exchange: signal.exchange || 'NSE',
-                  positionType: 'LONG',  // Required field!
-                  entryPrice: tradePlan.entry,
-                  quantity: tradePlan.positionSize,
-                  stopLoss: tradePlan.stopLoss,
-                  target1: target1,
-                  target2: target2,
-                  capitalRequired: tradePlan.capitalRequired,
-                  riskAmount: tradePlan.riskAmount,
-                  strategy: tradeType,  // 'MOMENTUM' or 'NEWS_POP'
-                  momentumScore: isMomentum ? signal.totalScore : 0,
-                  confidence: isMomentum ? signal.totalScore : 100,
-                  reasons: isMomentum ? (signal as any).reasoning : [`News pop detected at ${new Date().toLocaleTimeString()}`],
-                  tradeType: tradeType,
-                  notes: notes
-                })
-              })
-              
-              if (response.ok) {
-                const data = await response.json()
-                console.log('✅ Trade executed:', data)
-                alert(`✅ Paper trade executed!\n\n${signal.symbol}\nEntry: ₹${tradePlan.entry}\nSize: ${tradePlan.positionSize} shares`)
-                
-                // Refresh paper positions
-                const posRes = await fetch('/api/positions/paper')
-                if (posRes.ok) {
-                  const posData = await posRes.json()
-                  if (posData.success) setPaperPositions(posData.positions)
-                }
-              } else {
-                const errorData = await response.json()
-                console.error('❌ Trade execution failed:', errorData)
-                alert(`❌ Failed to execute trade: ${errorData.error}`)
-              }
-            } catch (error: any) {
-              console.error('❌ Trade execution error:', error)
-              alert(`❌ Error: ${error.message}`)
-            }
-          }}
-        />
-      )}
-
-      {/* 📰 NEWS POP TAB */}
-      {activeTab === 'newspop' && (
-        <NewsPopTab
-          capitalAvailable={momentumCapital}
-          onExecuteTrade={async (signal, tradeType) => {
-            try {
-              console.log(`🚀 Executing ${tradeType} trade for ${signal.symbol}`)
-              
-              // News Pop signals have full master score data
-              const tradePlan = (signal as any).tradePlan
-              
-              // Execute paper trade
-              const response = await fetch('/api/positions/paper', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  symbol: signal.symbol,
-                  exchange: signal.exchange || 'NSE',
-                  positionType: 'LONG',
-                  entryPrice: tradePlan.entry,
-                  quantity: tradePlan.positionSize,
-                  stopLoss: tradePlan.stopLoss,
-                  target1: tradePlan.target1,
-                  target2: tradePlan.target2,
-                  capitalRequired: tradePlan.capitalRequired,
-                  riskAmount: tradePlan.riskAmount,
-                  strategy: tradeType,
-                  momentumScore: signal.totalScore,
-                  confidence: signal.totalScore,
-                  reasons: signal.reasoning || [`News pop: ${signal.newsSentiment}`],
-                  tradeType: tradeType,
-                  notes: `News pop detected. Sentiment: ${signal.newsSentiment}. Volume spike: ${signal.volumeSpike.toFixed(1)}x`
-                })
-              })
-              
-              if (response.ok) {
-                const data = await response.json()
-                console.log('✅ Trade executed:', data)
-                alert(`✅ Paper trade executed!\n\n${signal.symbol}\nEntry: ₹${tradePlan.entry}\nSize: ${tradePlan.positionSize} shares`)
-                
-                // Refresh paper positions
-                const posRes = await fetch('/api/positions/paper')
-                if (posRes.ok) {
-                  const posData = await posRes.json()
-                  if (posData.success) setPaperPositions(posData.positions)
-                }
-              } else {
-                const errorData = await response.json()
-                console.error('❌ Trade execution failed:', errorData)
-                alert(`❌ Failed to execute trade: ${errorData.error}`)
-              }
-            } catch (error: any) {
-              console.error('❌ Trade execution error:', error)
-              alert(`❌ Error: ${error.message}`)
-            }
-          }}
-        />
-      )}
+      {activeTab === 'papertrades' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Paper Trades"><PaperTradesTab /></TabErrorBoundary></Suspense>}
 
       {/* 📊 RESEARCH TAB */}
       {activeTab === 'research' && (
@@ -919,11 +748,6 @@ export default function StockTracker() {
       {/* ⚙️ SETTINGS TAB */}
       {activeTab === 'settings' && (
         <SettingsTab />
-      )}
-
-      {/* 🔬 BACKTEST TAB */}
-      {activeTab === 'backtest' && (
-        <BacktestTab />
       )}
 
       {/* 👑 ADMIN TAB */}
