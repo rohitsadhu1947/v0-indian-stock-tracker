@@ -6,12 +6,9 @@ import { useWatchlistStore } from '@/lib/stores/watchlist-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import {
   calculateFundamentalScore,
-  getCombinedSignal,
   formatLargeNumber,
   getCompanySize,
 } from '@/lib/fundamentals-utils'
-import { generateCombinedIntelligence } from '@/lib/combined-intelligence'
-import { generateTradingSignal } from '@/lib/market-utils'
 
 export default memo(function FundamentalsTab() {
   const {
@@ -27,7 +24,6 @@ export default memo(function FundamentalsTab() {
     stockSentiment, setStockSentiment,
     marketSentiment, setMarketSentiment,
     multiLayerNews, setMultiLayerNews,
-    combinedIntelligence, setCombinedIntelligence,
     error, setError,
   } = useUIStore()
 
@@ -65,7 +61,6 @@ export default memo(function FundamentalsTab() {
         console.log(`   📰 Stock: ${result.stockNews.sentiment.aggregate.overall}`)
         if (result.sectorNews) console.log(`   🏢 Sector: ${result.sectorNews.sentiment.aggregate.overall}`)
         if (result.macroNews) console.log(`   🌍 Macro: ${result.macroNews.sentiment.aggregate.overall}`)
-        console.log(`   ⚡ Combined: ${result.combinedSentiment.overall} (${result.combinedSentiment.tradingSignal.signal})`)
       }
 
     } catch (error: any) {
@@ -101,7 +96,7 @@ export default memo(function FundamentalsTab() {
         setStockNews(result.news)
         setStockSentiment(result.sentiment)
         console.log(`✅ Loaded ${result.count} news items for ${targetSymbol}`)
-        console.log(`📊 Sentiment: ${result.sentiment.aggregate.overall} (${result.sentiment.trading.signal})`)
+        console.log(`📊 Sentiment: ${result.sentiment.aggregate.overall}`)
       }
 
     } catch (error: any) {
@@ -130,7 +125,7 @@ export default memo(function FundamentalsTab() {
         setMarketNews(result.news)
         setMarketSentiment(result.sentiment)
         console.log(`✅ Loaded ${result.count} market news items`)
-        console.log(`📊 Market Sentiment: ${result.sentiment.aggregate.overall} (${result.sentiment.trading.signal})`)
+        console.log(`📊 Market Sentiment: ${result.sentiment.aggregate.overall}`)
       }
 
     } catch (error: any) {
@@ -196,55 +191,6 @@ export default memo(function FundamentalsTab() {
     }
   }
 
-  // Calculate Combined Intelligence when we have all data
-  useEffect(() => {
-    if (!fundamentalData || !fundamentalScore || !multiLayerNews) {
-      setCombinedIntelligence(null)
-      return
-    }
-
-    // Check if we have technical data for this stock
-    const technicalData = stockData[fundamentalData.symbol]
-    if (!technicalData) {
-      console.log(`⏳ Waiting for technical data for ${fundamentalData.symbol}...`)
-      setCombinedIntelligence(null)
-      return
-    }
-
-    console.log(`🧠 Calculating Combined Intelligence for ${fundamentalData.symbol}...`)
-
-    // Generate trading signal from technical data
-    const technicalSignal = generateTradingSignal(
-      technicalData.current,
-      technicalData.prices,
-      technicalData.volumes
-    )
-
-    // Prepare data for combined intelligence
-    const technical = {
-      signal: technicalSignal.signal as any,
-      reason: technicalSignal.reason
-    }
-
-    const fundamental = {
-      pe: fundamentalData.peRatio,
-      roe: fundamentalData.roe,
-      debtToEquity: fundamentalData.debtToEquity,
-      marketCap: fundamentalData.marketCap
-    }
-
-    const sentiment = {
-      dayTradingSignal: multiLayerNews.dayTradingSignal,
-      combinedSentiment: multiLayerNews.combinedSentiment
-    }
-
-    // Generate combined intelligence
-    const intelligence = generateCombinedIntelligence(technical, fundamental, sentiment)
-    setCombinedIntelligence(intelligence)
-
-    console.log(`✅ Combined Intelligence: ${intelligence.scenario} (${intelligence.overallSignal})`)
-  }, [fundamentalData, fundamentalScore, multiLayerNews, stockData])
-
   // ─── JSX ────────────────────────────────────────────────────────────────────
 
   return (
@@ -253,7 +199,7 @@ export default memo(function FundamentalsTab() {
       <div className="screener-results" style={{ marginBottom: '20px' }}>
         <h3 style={{ marginBottom: '15px' }}>📊 Fundamental Analysis</h3>
         <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '20px' }}>
-          Get comprehensive fundamental data, valuation metrics, and combined technical + fundamental signals
+          Fundamental data, valuation metrics and recent news for a stock. Information only: nothing here is a buy or sell signal
         </p>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -366,187 +312,6 @@ export default memo(function FundamentalsTab() {
               </div>
             </div>
           </div>
-
-          {/* 🧠 COMBINED INTELLIGENCE - The Ultimate Trading Strategy */}
-          {combinedIntelligence && (
-            <div style={{
-              marginBottom: '20px',
-              padding: '30px',
-              background: `linear-gradient(135deg, ${combinedIntelligence.signalColor}15, ${combinedIntelligence.signalColor}08)`,
-              border: `3px solid ${combinedIntelligence.signalColor}`,
-              borderRadius: '20px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Animated background effect */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                fontSize: '15em',
-                opacity: 0.03,
-                transform: 'rotate(-15deg)',
-                pointerEvents: 'none'
-              }}>
-                {combinedIntelligence.scenarioEmoji}
-              </div>
-
-              {/* Header */}
-              <div style={{ marginBottom: '25px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
-                  <span style={{ fontSize: '3.5em' }}>{combinedIntelligence.scenarioEmoji}</span>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{
-                      margin: 0,
-                      fontSize: '2em',
-                      color: combinedIntelligence.signalColor,
-                      textShadow: `0 0 20px ${combinedIntelligence.signalColor}40`
-                    }}>
-                      {combinedIntelligence.scenario}
-                    </h3>
-                    <div style={{ marginTop: '8px', fontSize: '1.1em', opacity: 0.9 }}>
-                      <strong style={{ color: combinedIntelligence.signalColor }}>
-                        {combinedIntelligence.overallSignal}
-                      </strong>
-                      {' • '}
-                      <span style={{ opacity: 0.8 }}>
-                        {combinedIntelligence.timeframe}
-                      </span>
-                      {' • '}
-                      <span style={{
-                        padding: '4px 12px',
-                        background: `${combinedIntelligence.riskColor}20`,
-                        border: `1px solid ${combinedIntelligence.riskColor}`,
-                        borderRadius: '8px',
-                        color: combinedIntelligence.riskColor,
-                        fontSize: '0.9em',
-                        fontWeight: 'bold'
-                      }}>
-                        {combinedIntelligence.riskLevel} Risk
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '20px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: '15px',
-                    textAlign: 'center',
-                    minWidth: '120px'
-                  }}>
-                    <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>CONFIDENCE</div>
-                    <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: combinedIntelligence.signalColor }}>
-                      {combinedIntelligence.confidence}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trading Strategy */}
-              <div style={{
-                padding: '20px',
-                background: 'rgba(0, 0, 0, 0.4)',
-                borderRadius: '15px',
-                marginBottom: '20px'
-              }}>
-                <h4 style={{ margin: '0 0 15px 0', fontSize: '1.3em' }}>📋 Trading Strategy</h4>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '15px'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>💰 Entry</div>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold' }}>{combinedIntelligence.strategy.entry}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>🛑 Stop-Loss</div>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#ff0064' }}>{combinedIntelligence.strategy.stopLoss}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>🎯 Target</div>
-                    <div style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#00ff64' }}>{combinedIntelligence.strategy.target}</div>
-                  </div>
-                </div>
-
-                {/* Exit Conditions */}
-                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '8px' }}>🚪 Exit When:</div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '8px'
-                  }}>
-                    {combinedIntelligence.strategy.exitConditions.map((condition: string, idx: number) => (
-                      <div key={idx} style={{
-                        padding: '8px 12px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        fontSize: '0.9em',
-                        borderLeft: `2px solid ${combinedIntelligence.signalColor}`
-                      }}>
-                        • {condition}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Explanation */}
-              <div style={{
-                padding: '20px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                borderRadius: '15px',
-                marginBottom: '20px'
-              }}>
-                <h4 style={{ margin: '0 0 15px 0', fontSize: '1.3em' }}>💡 Why This Strategy?</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                    <strong style={{ color: '#4facfe' }}>📊 Technical:</strong> {combinedIntelligence.explanation.technical}
-                  </div>
-                  <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                    <strong style={{ color: '#00ff64' }}>💼 Fundamental:</strong> {combinedIntelligence.explanation.fundamental}
-                  </div>
-                  <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                    <strong style={{ color: '#ffa500' }}>📰 Sentiment:</strong> {combinedIntelligence.explanation.sentiment}
-                  </div>
-                  <div style={{
-                    padding: '15px',
-                    background: `${combinedIntelligence.signalColor}10`,
-                    border: `2px solid ${combinedIntelligence.signalColor}40`,
-                    borderRadius: '10px',
-                    fontSize: '1.05em',
-                    lineHeight: '1.6'
-                  }}>
-                    <strong style={{ color: combinedIntelligence.signalColor }}>🎯 Synthesis:</strong> {combinedIntelligence.explanation.synthesis}
-                  </div>
-                </div>
-              </div>
-
-              {/* Alerts & Warnings */}
-              {combinedIntelligence.alerts.length > 0 && (
-                <div style={{
-                  padding: '15px 20px',
-                  background: 'rgba(255, 193, 7, 0.1)',
-                  border: '2px solid rgba(255, 193, 7, 0.4)',
-                  borderRadius: '12px'
-                }}>
-                  <h5 style={{ margin: '0 0 12px 0', fontSize: '1.1em', color: '#ffc107' }}>⚠️ Important Alerts</h5>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {combinedIntelligence.alerts.map((alert: string, idx: number) => (
-                      <div key={idx} style={{
-                        fontSize: '0.95em',
-                        padding: '8px',
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '6px'
-                      }}>
-                        {alert}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Category Scores */}
           <div style={{
@@ -759,58 +524,6 @@ export default memo(function FundamentalsTab() {
             </div>
           </div>
 
-          {/* Combined Signal (if technical data exists) */}
-          {stockData[fundamentalData.symbol] && (
-            <div className="screener-results" style={{
-              marginTop: '20px',
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(138, 43, 226, 0.2))',
-              border: '2px solid rgba(102, 126, 234, 0.5)'
-            }}>
-              <h4 style={{ marginBottom: '15px' }}>🎯 Combined Signal (Technical + Fundamental)</h4>
-              {(() => {
-                const data = stockData[fundamentalData.symbol]
-                const signal = generateTradingSignal(data.current, data.prices, data.volumes)
-                const combined = getCombinedSignal(signal.signal, fundamentalScore.overall)
-
-                return (
-                  <div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-                      <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
-                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Technical Signal</div>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: ['STRONG BUY', 'BUY'].includes(signal.signal) ? '#00ff64' : ['STRONG SELL', 'SELL'].includes(signal.signal) ? '#ff0064' : '#ffc107' }}>
-                          {signal.signal}
-                        </div>
-                      </div>
-                      <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
-                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>Fundamental Score</div>
-                        <div style={{ fontSize: '1.5em', fontWeight: 'bold' }}>
-                          {fundamentalScore.overall}/100 ({fundamentalScore.rating})
-                        </div>
-                      </div>
-                      <div style={{ padding: '15px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '10px', border: '2px solid ' + (combined.signal === 'STRONG BUY' ? '#00ff64' : combined.signal === 'BUY' ? '#00ff64' : combined.signal === 'STRONG SELL' ? '#ff0064' : combined.signal === 'SELL' ? '#ff0064' : '#ffc107') }}>
-                        <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>COMBINED SIGNAL</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 'bold', color: ['STRONG BUY', 'BUY'].includes(combined.signal) ? '#00ff64' : ['STRONG SELL', 'SELL'].includes(combined.signal) ? '#ff0064' : '#ffc107' }}>
-                          {combined.signal}
-                        </div>
-                        <div style={{ fontSize: '0.9em', marginTop: '5px', opacity: 0.8 }}>
-                          {combined.confidence}% confidence
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{
-                      padding: '15px',
-                      background: 'rgba(102, 126, 234, 0.1)',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(102, 126, 234, 0.3)'
-                    }}>
-                      <strong>Analysis:</strong> {combined.reason}
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          )}
-
           {/* News Section */}
           <div className="screener-results" style={{ marginTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
@@ -968,131 +681,8 @@ export default memo(function FundamentalsTab() {
                           )}
                         </div>
                       </div>
-
-                      {/* Trading Signal */}
-                      <div style={{
-                        padding: '25px',
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        textAlign: 'center',
-                        minWidth: '200px'
-                      }}>
-                        <div style={{ fontSize: '0.9em', opacity: 0.7, marginBottom: '8px' }}>⚡ TRADING SIGNAL</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 'bold', color }}>
-                          {combined.tradingSignal.signal}
-                        </div>
-                        <div style={{ fontSize: '1.1em', marginTop: '8px', opacity: 0.9 }}>
-                          Strength: {combined.tradingSignal.strength}/10
-                        </div>
-                        <div style={{ fontSize: '0.9em', marginTop: '12px', opacity: 0.75, lineHeight: '1.4' }}>
-                          {combined.tradingSignal.reason}
-                        </div>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Day Trading Signal Card */}
-                  {multiLayerNews.dayTradingSignal && (() => {
-                    const daySignal = multiLayerNews.dayTradingSignal;
-                    let signalColor = '#888888';
-                    let signalEmoji = '👀';
-
-                    if (daySignal.signal === 'STRONG BUY') {
-                      signalColor = '#00ff64';
-                      signalEmoji = '🚀';
-                    } else if (daySignal.signal === 'BUY') {
-                      signalColor = '#00ff64';
-                      signalEmoji = '📈';
-                    } else if (daySignal.signal === 'SHORT') {
-                      signalColor = '#ff0064';
-                      signalEmoji = '📉';
-                    } else if (daySignal.signal === 'AVOID') {
-                      signalColor = '#ff8800';
-                      signalEmoji = '⚠️';
-                    } else {
-                      signalColor = '#4facfe';
-                      signalEmoji = '👀';
-                    }
-
-                    return (
-                      <div style={{
-                        marginTop: '20px',
-                        padding: '25px',
-                        background: `linear-gradient(135deg, ${signalColor}15, ${signalColor}08)`,
-                        border: `2px solid ${signalColor}`,
-                        borderRadius: '15px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-                          <div style={{ flex: 1, minWidth: '250px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' }}>
-                              <span style={{ fontSize: '2.5em' }}>{signalEmoji}</span>
-                              <div>
-                                <h4 style={{ margin: 0, fontSize: '1.5em', color: signalColor }}>
-                                  DAY TRADING: {daySignal.signal}
-                                </h4>
-                                <div style={{ marginTop: '5px', opacity: 0.9 }}>
-                                  <span style={{ fontSize: '0.95em', fontWeight: 'bold' }}>Confidence: {daySignal.confidence}%</span>
-                                  <span style={{ marginLeft: '15px', fontSize: '0.9em', opacity: 0.8 }}>⏰ {daySignal.timeframe}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <p style={{ margin: '10px 0', fontSize: '1em', lineHeight: '1.5', opacity: 0.9 }}>
-                              {daySignal.reason}
-                            </p>
-                          </div>
-
-                          <div style={{
-                            padding: '20px',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '12px',
-                            minWidth: '200px'
-                          }}>
-                            <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px', textTransform: 'uppercase' }}>Strength</div>
-                            <div style={{ fontSize: '2em', fontWeight: 'bold', color: signalColor }}>
-                              {daySignal.strength}/10
-                            </div>
-                            <div style={{
-                              width: '100%',
-                              height: '8px',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              borderRadius: '4px',
-                              marginTop: '10px',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                width: `${(daySignal.strength / 10) * 100}%`,
-                                height: '100%',
-                                background: signalColor,
-                                borderRadius: '4px'
-                              }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Items */}
-                        {daySignal.actions && daySignal.actions.length > 0 && (
-                          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                            <h5 style={{ margin: '0 0 12px 0', fontSize: '1.05em', opacity: 0.9 }}>📋 Action Plan:</h5>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-                              {daySignal.actions.map((action: string, idx: number) => (
-                                <div key={idx} style={{
-                                  padding: '12px 15px',
-                                  background: 'rgba(255, 255, 255, 0.05)',
-                                  borderRadius: '8px',
-                                  borderLeft: `3px solid ${signalColor}`,
-                                  fontSize: '0.9em',
-                                  lineHeight: '1.4'
-                                }}>
-                                  <span style={{ opacity: 0.7, marginRight: '8px' }}>•</span>
-                                  {action}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
 
                   {/* Detailed News by Layer */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px' }}>
@@ -1141,7 +731,6 @@ export default memo(function FundamentalsTab() {
             {!isFetchingNews && newsTab !== 'multi' && (newsTab === 'stock' ? stockSentiment : marketSentiment) && (newsTab === 'stock' ? stockNews : marketNews).length > 0 && (() => {
               const sentiment = newsTab === 'stock' ? stockSentiment : marketSentiment;
               const aggregate = sentiment.aggregate;
-              const trading = sentiment.trading;
 
               return (
                 <div style={{
@@ -1168,23 +757,6 @@ export default memo(function FundamentalsTab() {
                         <span style={{ color: '#00ff64' }}>📈 {aggregate.positive} Positive</span>
                         <span style={{ color: '#ff0064' }}>📉 {aggregate.negative} Negative</span>
                         <span style={{ color: '#888888' }}>😐 {aggregate.neutral} Neutral</span>
-                      </div>
-                    </div>
-                    <div style={{
-                      padding: '20px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '12px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '5px' }}>TRADING SIGNAL</div>
-                      <div style={{ fontSize: '1.5em', fontWeight: 'bold', color: aggregate.color }}>
-                        {trading.signal}
-                      </div>
-                      <div style={{ fontSize: '0.9em', marginTop: '5px', opacity: 0.8 }}>
-                        Strength: {trading.strength}/10
-                      </div>
-                      <div style={{ fontSize: '0.85em', marginTop: '10px', opacity: 0.7, maxWidth: '200px' }}>
-                        {trading.reason}
                       </div>
                     </div>
                   </div>
@@ -1322,7 +894,6 @@ export default memo(function FundamentalsTab() {
               <li><strong>Financial Health:</strong> Debt/Equity, Current Ratio, Quick Ratio</li>
               <li><strong>Growth:</strong> Revenue Growth, Earnings Growth</li>
               <li><strong>Overall Score:</strong> 0-100 rating (EXCELLENT → VERY POOR)</li>
-              <li><strong>Combined Signal:</strong> Technical + Fundamental analysis together!</li>
             </ul>
           </div>
         </div>

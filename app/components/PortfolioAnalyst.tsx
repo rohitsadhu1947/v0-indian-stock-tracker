@@ -390,15 +390,7 @@ export default function PortfolioAnalyst() {
     setManualPositions(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p))
   }
 
-  const verdictColor = (v: string) => {
-    if (v === 'STRONG_HOLD' || v === 'BUY_MORE') return '#10b981'
-    if (v === 'HOLD') return '#f59e0b'
-    if (v === 'PARTIAL_EXIT' || v === 'HEDGE') return '#f97316'
-    if (v === 'EXIT') return '#ef4444'
-    return '#6b7280'
-  }
 
-  const scoreColor = (s: number) => s > 20 ? '#10b981' : s < -20 ? '#ef4444' : '#f59e0b'
 
   return (
     <div style={{ padding: '0 4px' }}>
@@ -682,31 +674,17 @@ export default function PortfolioAnalyst() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <MetricBadge label="Portfolio Risk" value={`${report.portfolioRiskScore}/100`} color={report.portfolioRiskScore > 60 ? '#ef4444' : report.portfolioRiskScore > 40 ? '#f59e0b' : '#10b981'} />
                 <MetricBadge label="VIX" value={report.marketContext.vix.toFixed(1)} color={report.marketContext.vixRisk === 'EXTREME' || report.marketContext.vixRisk === 'HIGH' ? '#ef4444' : '#f59e0b'} />
                 <MetricBadge label="FII" value={report.marketContext.fiiStance} color={report.marketContext.fiiStance === 'BUYING' ? '#10b981' : report.marketContext.fiiStance === 'SELLING' ? '#ef4444' : '#9ca3af'} />
                 <MetricBadge label="Geo Risk" value={report.marketContext.geoRisk} color={report.marketContext.geoRisk === 'EXTREME' || report.marketContext.geoRisk === 'HIGH' ? '#ef4444' : '#10b981'} />
               </div>
             </div>
-            <div style={{ marginTop: '12px', padding: '10px', background: '#1e1b4b', borderRadius: '6px', fontSize: '13px', color: '#c4b5fd', lineHeight: 1.5 }}>
-              {report.overallVerdict}
-            </div>
           </div>
 
-          {/* Immediate Actions */}
-          {report.immediateActions.length > 0 && (
-            <div className="card" style={{ marginBottom: '16px', padding: '16px', borderLeft: '4px solid #ef4444' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#ef4444', marginBottom: '8px' }}>
-                IMMEDIATE ACTIONS REQUIRED
-              </div>
-              {report.immediateActions.map((a, i) => (
-                <div key={i} style={{ padding: '8px', background: '#7f1d1d22', borderRadius: '6px', marginBottom: '6px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#fca5a5' }}>{a.action}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{a.detail}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 16px' }}>
+            Facts about your holdings: prices, news, option positions, insider trades and delivery volumes. There is no
+            hold or sell advice here; the verdicts this page used to give were never tested.
+          </p>
 
           {/* Sector Exposure */}
           {Object.keys(report.sectorExposure).length > 0 && (
@@ -753,20 +731,6 @@ export default function PortfolioAnalyst() {
                     <span style={{ fontSize: '15px', fontWeight: 700, color: '#e5e7eb' }}>{stock.symbol}</span>
                     <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '8px' }}>{stock.sector} • {stock.holdingDays}d</span>
                   </div>
-                  <span style={{
-                    padding: '3px 10px',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    background: verdictColor(stock.verdict) + '22',
-                    color: verdictColor(stock.verdict),
-                    border: `1px solid ${verdictColor(stock.verdict)}44`,
-                  }}>
-                    {stock.verdict.replace('_', ' ')}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                    {stock.verdictConfidence}% confidence
-                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ textAlign: 'right' }}>
@@ -786,33 +750,6 @@ export default function PortfolioAnalyst() {
               {/* Expanded Details */}
               {expandedStock === stock.symbol && (
                 <div style={{ padding: '16px' }}>
-                  {/* Verdict + Intelligence Thesis */}
-                  <div style={{ padding: '12px', background: verdictColor(stock.verdict) + '11', borderRadius: '6px', marginBottom: '14px', borderLeft: `3px solid ${verdictColor(stock.verdict)}` }}>
-                    <div style={{ fontSize: '13px', color: '#e5e7eb', lineHeight: 1.7, fontWeight: 500 }}>{stock.verdictReasoning}</div>
-                    {stock.intelligence?.recommendation && (
-                      <div style={{ marginTop: '6px', fontSize: '11px', color: '#a5b4fc' }}>
-                        Engine recommendation: <strong>{stock.intelligence.recommendation}</strong> ({stock.intelligence.recommendationConviction}% conviction)
-                      </div>
-                    )}
-                    <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>Timeline: {stock.timeline.replace(/_/g, ' ')} | Risk: {stock.riskScore}/100 | Max Drawdown Est: -{stock.maxDrawdownEstimate}%</div>
-                  </div>
-
-                  {/* Intelligence Thesis — the WHY */}
-                  {stock.intelligence?.thesis && (
-                    <div style={{ padding: '10px', background: '#1e1b4b33', borderRadius: '6px', marginBottom: '14px', border: '1px solid #312e81' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#a5b4fc', marginBottom: '4px' }}>WHY IS THIS HAPPENING</div>
-                      <div style={{ fontSize: '12px', color: '#e5e7eb', lineHeight: 1.6 }}>{stock.intelligence.thesis}</div>
-                    </div>
-                  )}
-
-                  {/* Trade Plan */}
-                  {stock.intelligence?.tradePlan && (
-                    <div style={{ padding: '10px', background: '#064e3b22', borderRadius: '6px', marginBottom: '14px', border: '1px solid #064e3b' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', marginBottom: '4px' }}>TRADE PLAN</div>
-                      <div style={{ fontSize: '12px', color: '#a7f3d0', lineHeight: 1.6 }}>{stock.intelligence.tradePlan}</div>
-                    </div>
-                  )}
-
                   {/* News & Sentiment */}
                   {stock.intelligence && stock.intelligence.newsHeadlines.length > 0 && (
                     <div style={{ marginBottom: '14px' }}>
@@ -848,16 +785,6 @@ export default function PortfolioAnalyst() {
                           Opportunities: {stock.intelligence.newsOpportunities.join(' | ')}
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Second-Order Effects */}
-                  {stock.intelligence && stock.intelligence.secondOrderEffects.length > 0 && (
-                    <div style={{ marginBottom: '14px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', marginBottom: '4px' }}>NON-OBVIOUS EFFECTS</div>
-                      {stock.intelligence.secondOrderEffects.map((e, i) => (
-                        <div key={i} style={{ fontSize: '11px', color: '#d1d5db', marginBottom: '3px' }}>• {e}</div>
-                      ))}
                     </div>
                   )}
 
@@ -905,16 +832,6 @@ export default function PortfolioAnalyst() {
                           </div>
                         )}
                       </div>
-                      {/* Interpretation */}
-                      <div style={{ fontSize: '11px', color: '#d1d5db', marginBottom: '6px', lineHeight: 1.5 }}>
-                        {stock.derivativesAnalysis.interpretation}
-                      </div>
-                      {/* Signals */}
-                      {stock.derivativesAnalysis.signals.map((s, i) => (
-                        <div key={i} style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '3px', paddingLeft: '8px', borderLeft: '2px solid #374151' }}>
-                          {s}
-                        </div>
-                      ))}
                       <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '6px' }}>Expiry: {stock.derivativesAnalysis.expiry} | Call OI: {stock.derivativesAnalysis.totalCallOI.toLocaleString('en-IN')} | Put OI: {stock.derivativesAnalysis.totalPutOI.toLocaleString('en-IN')}</div>
                     </div>
                   )}
@@ -1010,51 +927,6 @@ export default function PortfolioAnalyst() {
                     </div>
                   )}
 
-                  {/* Score Breakdown */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-                    {Object.entries(stock.scores).map(([key, val]) => (
-                      <div key={key} style={{ padding: '8px', background: '#111827', borderRadius: '6px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '10px', color: '#6b7280', textTransform: 'uppercase' }}>{key}</div>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: scoreColor(val as number) }}>{val > 0 ? '+' : ''}{val}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Macro & Geo Detail (collapsible) */}
-                  <AnalysisSection title="Macro & Geopolitical Impact" content={stock.macroAnalysis.summary + ' ' + stock.geopoliticalAnalysis.summary} details={[
-                    ...stock.intelligence?.macroTailwinds?.map(t => `Tailwind: ${t}`) ?? stock.macroAnalysis.tailwinds.map(t => `Tailwind: ${t}`),
-                    ...stock.intelligence?.macroHeadwinds?.map(h => `Headwind: ${h}`) ?? stock.macroAnalysis.headwinds.map(h => `Headwind: ${h}`),
-                    ...stock.intelligence?.geoContext ?? stock.geopoliticalAnalysis.warnings,
-                  ]} />
-
-                  <AnalysisSection title="Technical Analysis" content={stock.technicalAnalysis.summary} details={[
-                    `Trend: ${stock.technicalAnalysis.trend.replace('_', ' ')}`,
-                    stock.technicalAnalysis.rsi ? `RSI: ${stock.technicalAnalysis.rsi.toFixed(0)}` : null,
-                    stock.technicalAnalysis.keyLevels ? `Support: ₹${stock.technicalAnalysis.keyLevels.support} | Resistance: ₹${stock.technicalAnalysis.keyLevels.resistance}` : null,
-                    `SMAs: ${stock.technicalAnalysis.smaAlignment}`,
-                  ].filter(Boolean) as string[]} />
-
-                  <AnalysisSection title="Institutional Flows" content={stock.institutionalAnalysis.summary} details={[
-                    `FII: ${stock.institutionalAnalysis.fiiStance} | DII: ${stock.institutionalAnalysis.diiStance}`,
-                    stock.institutionalAnalysis.flowImpact,
-                  ]} />
-
-                  {/* Bull vs Bear Case */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-                    <div style={{ padding: '10px', background: '#064e3b22', borderRadius: '6px', border: '1px solid #064e3b' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', marginBottom: '6px' }}>BULL CASE</div>
-                      {stock.bullCase.map((b, i) => (
-                        <div key={i} style={{ fontSize: '11px', color: '#a7f3d0', marginBottom: '3px' }}>• {b}</div>
-                      ))}
-                    </div>
-                    <div style={{ padding: '10px', background: '#7f1d1d22', borderRadius: '6px', border: '1px solid #7f1d1d' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', marginBottom: '6px' }}>BEAR CASE</div>
-                      {stock.bearCase.map((b, i) => (
-                        <div key={i} style={{ fontSize: '11px', color: '#fecaca', marginBottom: '3px' }}>• {b}</div>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Catalysts */}
                   {stock.catalysts.length > 0 && (
                     <div style={{ marginBottom: '14px' }}>
@@ -1067,70 +939,10 @@ export default function PortfolioAnalyst() {
                     </div>
                   )}
 
-                  {/* Defensive Actions */}
-                  {stock.defensiveActions.length > 0 && (
-                    <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', marginBottom: '6px' }}>DEFENSIVE ACTIONS</div>
-                      {stock.defensiveActions.map((a, i) => (
-                        <div key={i} style={{
-                          padding: '8px',
-                          background: a.urgency === 'IMMEDIATE' ? '#7f1d1d22' : '#1f2937',
-                          borderRadius: '6px',
-                          marginBottom: '4px',
-                          borderLeft: `3px solid ${a.urgency === 'IMMEDIATE' ? '#ef4444' : a.urgency === 'THIS_WEEK' ? '#f59e0b' : '#6b7280'}`,
-                        }}>
-                          <div style={{ fontSize: '11px', fontWeight: 600, color: a.urgency === 'IMMEDIATE' ? '#fca5a5' : '#e5e7eb' }}>
-                            {a.action}
-                            <span style={{ fontSize: '10px', color: '#6b7280', marginLeft: '8px' }}>[{a.urgency}]</span>
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>{a.detail}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Suggested Levels */}
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '11px' }}>
-                    <div style={{ padding: '6px 10px', background: '#111827', borderRadius: '4px' }}>
-                      <span style={{ color: '#6b7280' }}>Entry: </span>
-                      <span style={{ color: '#e5e7eb' }}>₹{stock.entryPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <div style={{ padding: '6px 10px', background: '#111827', borderRadius: '4px' }}>
-                      <span style={{ color: '#6b7280' }}>Suggested SL: </span>
-                      <span style={{ color: '#ef4444' }}>
-                        {stock.suggestedStopLoss > 0
-                          ? `₹${stock.suggestedStopLoss.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
-                          : 'N/A — no live price'}
-                      </span>
-                    </div>
-                    <div style={{ padding: '6px 10px', background: '#111827', borderRadius: '4px' }}>
-                      <span style={{ color: '#6b7280' }}>Target: </span>
-                      <span style={{ color: '#10b981' }}>
-                        {stock.suggestedTarget > 0
-                          ? `₹${stock.suggestedTarget.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
-                          : 'N/A — no live price'}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
           ))}
-
-          {/* Weekly Actions */}
-          {report.weeklyActions.length > 0 && (
-            <div className="card" style={{ marginTop: '16px', padding: '16px', borderLeft: '4px solid #f59e0b' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '8px' }}>
-                WEEKLY REVIEW ACTIONS
-              </div>
-              {report.weeklyActions.map((a, i) => (
-                <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#e5e7eb' }}>{a.action}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{a.detail}</div>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Timestamp */}
           <div style={{ fontSize: '10px', color: '#4b5563', textAlign: 'center', marginTop: '16px' }}>
@@ -1149,22 +961,6 @@ function MetricBadge({ label, value, color }: { label: string; value: string; co
     <div style={{ padding: '6px 10px', background: '#111827', borderRadius: '6px', textAlign: 'center', minWidth: '60px' }}>
       <div style={{ fontSize: '9px', color: '#6b7280', textTransform: 'uppercase' }}>{label}</div>
       <div style={{ fontSize: '13px', fontWeight: 700, color }}>{value}</div>
-    </div>
-  )
-}
-
-function AnalysisSection({ title, content, details }: { title: string; content: string; details: string[] }) {
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, color: '#667eea', marginBottom: '4px', textTransform: 'uppercase' }}>{title}</div>
-      <div style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.5, marginBottom: '4px' }}>{content}</div>
-      {details.length > 0 && (
-        <div style={{ paddingLeft: '8px' }}>
-          {details.map((d, i) => (
-            <div key={i} style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>• {d}</div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

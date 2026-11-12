@@ -17,12 +17,14 @@ and the app shows that backtest next to the recommendation.
 - **Monthly Plan** — three modes (Growth, Balanced, Defensive). Once a month it
   ranks the 500 most traded NSE stocks and holds the top 20 in a paper book.
 - **Stock Check** — a risk report card for any stock, with a position-size limit.
-- **Portfolio, Intraday, Universe Scanner, Fundamentals, Market, Research, Data**
-  — descriptive tools. Their signals have **not** been backtested.
+- **Portfolio, Fundamentals, Market, Research, Data** — information only
+  (prices, ratios, news, option positions, insider trades, delivery). They
+  give no buy or sell verdicts.
 - **Paper Trades** — positions opened from the old swing scanner, kept for the record.
 
-Removed after testing: the swing scanner (its buy signal did worse than a random
-day), the master score, News Pops, Sector Rotation and the old Backtest tab.
+Removed: the swing scanner (its buy signal did worse than a random day), the
+master score, News Pops, Sector Rotation, the old Backtest tab, and the Intraday
+and Universe Scanner tabs, whose entry signals were never tested.
 
 ## How the evidence is produced
 

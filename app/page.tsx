@@ -16,8 +16,6 @@ import { generateTradingSignal } from '@/lib/market-utils'
 import { fetchStockQuote } from '@/lib/stock-fetcher'
 import { TabErrorBoundary } from './components/TabErrorBoundary'
 
-const IntradayTab = lazy(() => import('./components/IntradayTab'))
-const UniverseTab = lazy(() => import('./components/UniverseTab'))
 const FundamentalsTab = lazy(() => import('./components/FundamentalsTab'))
 const MarketTab = lazy(() => import('./components/MarketTab'))
 const PaperTradesTab = lazy(() => import('./components/PaperTradesTab'))
@@ -668,18 +666,6 @@ export default function StockTracker() {
           💼 Portfolio
         </button>
         <button 
-          className={`tab ${activeTab === 'intraday' ? 'active' : ''}`}
-          onClick={() => setActiveTab('intraday')}
-        >
-          🔥 Intraday
-        </button>
-        <button 
-          className={`tab ${activeTab === 'universe' ? 'active' : ''}`}
-          onClick={() => setActiveTab('universe')}
-        >
-          🔍 Universe Scanner
-        </button>
-        <button 
           className={`tab ${activeTab === 'fundamentals' ? 'active' : ''}`}
           onClick={() => setActiveTab('fundamentals')}
         >
@@ -721,10 +707,6 @@ export default function StockTracker() {
 
 
       {activeTab === 'portfolio' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Portfolio"><PortfolioAnalyst /></TabErrorBoundary></Suspense>}
-
-      {activeTab === 'intraday' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Intraday"><IntradayTab /></TabErrorBoundary></Suspense>}
-
-      {activeTab === 'universe' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Universe"><UniverseTab /></TabErrorBoundary></Suspense>}
 
       {/* FUNDAMENTALS TAB */}
       {activeTab === 'fundamentals' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Fundamentals"><FundamentalsTab /></TabErrorBoundary></Suspense>}
