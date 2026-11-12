@@ -4,7 +4,7 @@
  * GET /api/cron/check-exits
  *
  * Runs during market hours so exits are honoured even when nobody has the app
- * open. Previously stops were only checked while the Momentum tab was visible,
+ * open. Previously stops were only checked while the positions tab was visible,
  * so a position could blow through its stop overnight and stay open.
  *
  * Auth: Vercel CRON_SECRET header, or an admin session for manual runs.

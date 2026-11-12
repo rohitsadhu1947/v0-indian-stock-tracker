@@ -112,11 +112,9 @@ export async function GET(request: NextRequest) {
     }
 
     const alertPrefs = (userPrefs[0]?.telegramAlertPreferences as any) || {
-      newSignals: true,
       targetHits: true,
       stopLossHits: true,
       dailySummary: true,
-      positionUpdates: false
     }
 
     if (telegramConfig.enabled && alertPrefs.dailySummary) {

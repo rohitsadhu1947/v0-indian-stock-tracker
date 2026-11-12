@@ -14,7 +14,7 @@ export type { NewsItem } from '@/lib/stock-news'
  * GET /api/news/quote?symbol=TCS&exchange=NSE
  *
  * The fetching/sentiment logic lives in lib/stock-news.ts so server code
- * (master-scorer, cron jobs) can call it directly instead of over HTTP.
+ * (cron jobs) can call it directly instead of over HTTP.
  */
 export async function GET(request: NextRequest) {
   const userId = await getAuthenticatedUserIdCompat()

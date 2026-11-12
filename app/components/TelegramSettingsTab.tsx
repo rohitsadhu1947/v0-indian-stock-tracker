@@ -14,13 +14,9 @@ export default function TelegramSettingsTab() {
   const [chatId, setChatId] = useState('')
   
   const [alertPreferences, setAlertPreferences] = useState({
-    newSignals: true,
-    newsPops: true,
-    orbBreakouts: true,
     targetHits: true,
     stopLossHits: true,
     dailySummary: true,
-    positionUpdates: false
   })
 
   // Load settings on mount
@@ -363,13 +359,9 @@ export default function TelegramSettingsTab() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
             {Object.entries({
-              newSignals: { label: '🔥 New High-Conviction Signals', desc: 'Get notified when new trading opportunities are found' },
-              newsPops: { label: '📰 News Pop Alerts', desc: 'Urgent alerts for news-driven price/volume spikes (fast-moving!)' },
-              orbBreakouts: { label: '🎯 ORB Breakout Alerts', desc: 'Opening Range Breakout signals for intraday trading' },
               targetHits: { label: '✅ Target Hits', desc: 'Alert when your positions hit target prices' },
               stopLossHits: { label: '❌ Stop-Loss Hits', desc: 'Alert when positions hit stop-loss (urgent!)' },
-              dailySummary: { label: '📊 Daily Summary', desc: 'End-of-day P&L report and statistics' },
-              positionUpdates: { label: '📝 Position Updates', desc: 'Notifications for all position changes' }
+              dailySummary: { label: '📊 Daily Summary', desc: 'End-of-day P&L report and statistics' }
             }).map(([key, { label, desc }]) => (
               <label
                 key={key}

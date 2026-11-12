@@ -1,98 +1,56 @@
 # Vibe Trades — Indian Stock Tracker
 
-> Real-time NSE/BSE analysis, momentum scanning, and paper trading — powered by Zerodha Kite Connect.
+> Backtested monthly stock strategies for NSE, with live quotes from Zerodha Kite Connect.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://v0-indian-stock-tracker-seven.vercel.app)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://v0-indian-stock-tracker-topaz.vercel.app)
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2014-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![Zerodha Kite](https://img.shields.io/badge/Powered%20by-Kite%20Connect-blue?style=for-the-badge)](https://kite.trade)
 
 ---
+
+## What it does
+
+A research-backed tool for investing in Indian stocks. Every strategy the app
+recommends has been backtested on 16 years of NSE data, after costs and tax,
+and the app shows that backtest next to the recommendation.
+
+- **Monthly Plan** — three modes (Growth, Balanced, Defensive). Once a month it
+  ranks the 500 most traded NSE stocks and holds the top 20 in a paper book.
+- **Stock Check** — a risk report card for any stock, with a position-size limit.
+- **Portfolio, Intraday, Universe Scanner, Fundamentals, Market, Research, Data**
+  — descriptive tools. Their signals have **not** been backtested.
+- **Paper Trades** — positions opened from the old swing scanner, kept for the record.
+
+Removed after testing: the swing scanner (its buy signal did worse than a random
+day), the master score, News Pops, Sector Rotation and the old Backtest tab.
+
+## How the evidence is produced
+
+```
+npm run data:sync      # download NSE's daily archive, build the local store (data/, gitignored)
+npm run research       # backtest every candidate strategy -> research/results/
+npm run data:publish   # push the last three years of adjusted prices to Postgres
+```
+
+- `lib/market-data/` — NSE archive parsers, corporate-action adjustment, point-in-time universe, nightly update.
+- `lib/research/` — the backtest harness: no look-ahead, real charges, capital gains tax, delistings.
+- `lib/portfolio/` — factor definitions, ranking and selection, shared by the harness and the live plan.
+- `research/results/summary.json` — the figures the app displays.
+
+Prices update nightly from NSE's archive (`/api/cron/market-data`); no broker login is needed for that.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 14.2 (App Router), TypeScript 5 |
-| UI | Tailwind CSS v4, Radix UI |
-| State | Zustand v5 (5 stores) |
-| Database | PostgreSQL via Neon serverless, Drizzle ORM 0.44 |
-| Auth | HMAC-signed sessions (email/password) + Kite OAuth |
-| Broker | Zerodha Kite Connect SDK (multi-broker abstraction) |
-| AI | Google Gemini (PDF parsing, sentiment) |
+| UI | Tailwind CSS v4, Radix UI, Zustand |
+| Database | PostgreSQL via Neon serverless, Drizzle ORM (schema in `db/schema.ts`) |
+| Auth | HMAC-signed sessions (email/password) + Kite OAuth; middleware gates every `/api/*` route |
+| Broker | Zerodha Kite Connect (live quotes; multi-broker abstraction) |
+| AI | Google Gemini (PDF parsing, news sentiment) |
 | Alerts | Telegram Bot API |
-| Tests | Vitest (75 tests) |
-
----
-
-## Architecture
-
-```
-app/
-├── page.tsx                  # Shell (~989 lines): auth, tab bar, store init
-├── components/
-│   ├── WatchlistTab.tsx       # Watchlist + signal cards
-│   ├── IntradayTab.tsx        # Morning screener, ORB, trade watch, positions
-│   ├── UniverseTab.tsx        # NIFTY 500 scanner
-│   ├── FundamentalsTab.tsx    # Fundamental analysis + combined intelligence
-│   ├── MarketTab.tsx          # Market dashboard (indices, breadth, movers)
-│   ├── MomentumTab.tsx        # Momentum swing scanner + paper trading
-│   ├── ErrorBoundary.tsx      # Generic React error boundary
-│   ├── TabErrorBoundary.tsx   # Per-tab isolation
-│   └── ...29 total components
-│
-lib/
-├── stores/                   # Zustand stores (auth, watchlist, positions, market, ui)
-├── hooks/                    # use-auth, use-market-data, use-positions
-├── broker/                   # Multi-broker abstraction (Kite, Angel)
-├── logger.ts                 # Structured JSON logger (prod) / colorized (dev)
-├── rate-limit.ts             # Sliding-window rate limiter (PostgreSQL-backed)
-├── market-utils.ts           # RSI, MACD, Bollinger Bands, trading signals
-├── momentum-scanner.ts       # NIFTY 500 momentum scan algorithm
-├── master-scorer.ts          # Composite signal scoring
-├── intraday-utils.ts         # VWAP, ORB, gap detection
-├── multi-user-auth.ts        # HMAC session auth + RBAC
-├── api-client.ts             # Typed fetch client with 401 handling
-└── ...37 total modules
-
-app/api/                      # 57 API routes
-db/
-├── schema.ts                 # 22 PostgreSQL tables (Drizzle ORM)
-└── index.ts                  # Neon serverless connection
-
-middleware.ts                 # Auth gate + security headers (CSP, HSTS, etc.)
-```
-
----
-
-## Features
-
-### Trading Tabs (all lazy-loaded, error-isolated)
-- **Watchlist** — Live quotes, RSI/MACD signals, strength bars
-- **Intraday** — Morning screener, Opening Range Breakout scanner, Trade Watch monitor, position P&L
-- **Universe Scanner** — Scans 200+ NIFTY 500 stocks for gap/volume/volatility candidates
-- **Momentum** — Systematic 1-7 day swing scanner with paper trade execution
-- **Fundamentals** — PE ratio, ROE, debt metrics + combined technical+fundamental signal
-- **Market Dashboard** — Indices, sector heatmap, market breadth, top movers
-- **Top Picks** — AI-powered recommendation engine
-- **Global Macro** — Geopolitical and macro intelligence
-- **News Pops** — Sentiment-driven momentum scanner
-- **Sector Rotation** — Inter-sector flow analysis
-- **Research** — Analyst reports and multi-layer news
-- **Backtest** — Strategy backtesting engine
-- **Settings / Admin** — Broker connection, RBAC, data management
-
-### Infrastructure
-- **Security** — HMAC-signed sessions, middleware auth gate on all `/api/*` routes, security headers (CSP, HSTS, X-Frame-Options), no legacy plain-integer tokens
-- **Rate limiting** — 10 login attempts/15 min, 30 scanner calls/min (PostgreSQL-backed sliding window)
-- **Caching** — DB-backed quote and historical data cache (Neon PostgreSQL)
-- **Logging** — Structured JSON in production, colorized in development
-- **Health check** — `GET /api/health` with DB connectivity probe
-
----
-
-## Database Schema (22 tables)
-
-`users`, `userPermissions`, `brokerConnections`, `watchlists`, `positions`, `paperPositions`, `stockQuotes`, `historicalData`, `screenerResults`, `patternAnalysis`, `marketCloseAnalyses`, `fundamentalData`, `newsCache`, `backtestRuns`, `backtestTrades`, `adminAuditLog`, `rateLimitBuckets`, `sectors`, `sectorStocks`, `events`, `telegramSettings`, `systemConfig`
+| Tests | Vitest |
 
 ---
 
@@ -134,7 +92,7 @@ npm run dev            # Start development server
 ### Tests
 
 ```bash
-npm test               # Run all 75 tests
+npm test               # Run the test suite
 npm run test:coverage  # Coverage report
 ```
 
