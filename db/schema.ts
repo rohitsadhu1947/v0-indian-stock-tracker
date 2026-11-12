@@ -807,6 +807,26 @@ export const securities = pgTable('securities', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+/**
+ * The picks each Monthly Plan mode made at a month-end, frozen when made.
+ * Later price corrections never change a row, so the track record built from
+ * these is a genuine forward record (lib/portfolio/track-record.ts).
+ */
+export const monthlySignals = pgTable('monthly_signals', {
+  id: serial('id').primaryKey(),
+  mode: text('mode').notNull(),
+  signalDate: date('signal_date').notNull(),
+  /** Best first: { symbol, rank, scorePct, close } */
+  picks: jsonb('picks').$type<Array<{ symbol: string; rank: number; scorePct: number; close: number }>>().notNull(),
+  /** Whether the trend filter would have been invested (NIFTY 200 above its 200-day average). */
+  trendInvested: boolean('trend_invested').notNull(),
+  universeSize: integer('universe_size').notNull(),
+  rankedCount: integer('ranked_count').notNull(),
+  recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+}, (table) => ({
+  modeDateIdx: uniqueIndex('monthly_signals_mode_date_idx').on(table.mode, table.signalDate),
+}))
+
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
 export const marketDataRuns = pgTable('market_data_runs', {
   id: serial('id').primaryKey(),

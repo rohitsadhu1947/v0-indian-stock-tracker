@@ -200,9 +200,9 @@ export default function StockTracker() {
 
 
 
-  // Check authentication status on mount
+  // Check the broker connection on mount
   useEffect(() => {
-    checkAuthStatus()
+    checkBrokerConnection()
     
     // Check for auth callback
     const params = new URLSearchParams(window.location.search)
@@ -210,7 +210,7 @@ export default function StockTracker() {
       setError(null)
       setTimeout(() => {
         window.history.replaceState({}, '', '/')
-        checkAuthStatus()
+        checkBrokerConnection()
       }, 500)
     } else if (params.get('error')) {
       setError(`Authentication failed: ${params.get('error')}`)
@@ -267,18 +267,19 @@ export default function StockTracker() {
     checkAuth()
   }, [])
 
-  async function checkAuthStatus() {
+  /**
+   * Whether Zerodha is connected today. Being signed in to the app is decided
+   * by /api/auth/session alone: an expired Kite token only means no live
+   * quotes, and must not lock the user out of the rest of the app.
+   */
+  async function checkBrokerConnection() {
     try {
       const res = await fetch('/api/auth/kite/session')
       const data = await res.json()
-      setAuthStatus(data)
+      setBrokerExpired(!data.authenticated)
     } catch (err) {
-      console.error('Error checking auth status:', err)
+      console.error('Error checking the broker connection:', err)
     }
-  }
-
-  async function handleLogin() {
-    window.location.href = '/api/auth/kite/login'
   }
 
   async function handleLogout() {
@@ -511,38 +512,16 @@ export default function StockTracker() {
   }
 
   if (!authStatus.authenticated) {
+    // checkAuth() sends anyone without a session to /login; this shows only until it does
     return (
       <div className="container">
         <h1>⚡ Vibe Trades</h1>
-        
         <div className="alert warning">
-          <strong>🔐 Authentication Required</strong>
-          <p style={{ marginTop: '10px' }}>Catch the vibe, stack the cash 💸</p>
-          <p style={{ marginTop: '5px', fontSize: '0.95em' }}>Login with your Zerodha account to access live NSE/BSE market data.</p>
-          <button onClick={handleLogin} style={{ marginTop: '15px' }}>
-            Login with Zerodha Kite
-          </button>
+          <strong>Signing you in…</strong>
+          <p style={{ marginTop: '10px' }}>
+            If this does not move on, <a href="/login" style={{ color: '#93c5fd' }}>sign in here</a>.
+          </p>
         </div>
-
-        {error && (
-          <div className="error">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
-
-
-        <div className="card">
-          <h3>Features</h3>
-          <ul style={{ marginTop: '15px', lineHeight: '1.8' }}>
-            <li>⚡ Real-time NSE/BSE stock quotes via Zerodha Kite Connect</li>
-            <li>🧠 AI-powered technical analysis (RSI, MACD, Bollinger Bands)</li>
-            <li>🎯 Automated trading signals (Buy/Sell/Hold)</li>
-            <li>💎 Master scoring system (Technical + Fundamental + Intelligence)</li>
-            <li>📈 Historical data for comprehensive analysis</li>
-            <li>⚡ Live market data with no rate limits</li>
-          </ul>
-        </div>
-
         <style jsx>{`
           ${require('./styles').default}
         `}</style>
@@ -586,9 +565,9 @@ export default function StockTracker() {
           gap: '16px',
         }}>
           <div>
-            <strong style={{ color: '#eab308' }}>Broker Token Expired</strong>
+            <strong style={{ color: '#eab308' }}>Zerodha not connected today</strong>
             <span style={{ color: '#a3a3a3', fontSize: '13px', marginLeft: '8px' }}>
-              Zerodha token needs daily refresh. Reconnect to resume live data.
+              Live quotes are off until you reconnect. The Monthly Plan does not need it: its prices come from NSE each night.
             </span>
           </div>
           <button

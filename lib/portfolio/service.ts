@@ -11,12 +11,13 @@ import { db } from '@/db'
 import { modelPortfolios, modelPortfolioEvents } from '@/db/schema'
 import { and, eq, asc } from 'drizzle-orm'
 import type { BrokerClient } from '@/lib/broker'
-import { MODES, PORTFOLIO_RULES, INDEX_INSTRUMENTS, type RiskMode } from './config'
-import { trendRegime, type TrendRegime } from './regime'
+import { MODES, PORTFOLIO_RULES, type RiskMode } from './config'
+import type { TrendRegime } from './regime'
 import { exposure, rebalanceStatus, type Exposure } from './allocation'
 import { rankByFactors, selectWithBuffer, stockFacts, type StockFacts } from './factors'
 import { planRebalance, applyOrders, bookValue, type BookState, type RebalancePlan } from './rebalance'
-import { loadBars, dataFreshness, latestPrices, liveUniverse, signalDate, istDate, type DataFreshness } from './data'
+import { loadBars, dataFreshness, latestPrices, signalDate, istDate, type DataFreshness } from './data'
+import { rankingInputs } from './signals'
 import { INDUSTRY_BY_SYMBOL } from './universe'
 
 /** One paper book per user. */
@@ -25,13 +26,6 @@ export const DEFAULT_CAPITAL = 300000
 const BENCHMARK_INDEX = 'IDX:NIFTY 500'
 /** Rows of the ranking sent to the page: everything down to the exit rank. */
 const RANKING_ROWS = PORTFOLIO_RULES.exitRank
-
-/** `days` calendar days before an ISO date. */
-function daysBefore(date: string, days: number): string {
-  const d = new Date(date + 'T00:00:00Z')
-  d.setUTCDate(d.getUTCDate() - days)
-  return d.toISOString().slice(0, 10)
-}
 
 async function getPortfolio(userId: number) {
   const [p] = await db.select().from(modelPortfolios)
@@ -89,22 +83,15 @@ export async function buildMonthlyPlan(params: {
   const { userId, mode, client } = params
   const trendFilter = params.trendFilter ?? false
   const capital = params.capital ?? DEFAULT_CAPITAL
-  const { topN, exitRank, universeSize } = PORTFOLIO_RULES
+  const { topN, exitRank } = PORTFOLIO_RULES
 
   const [freshness, asOfDate, portfolio] = await Promise.all([dataFreshness(), signalDate(), getPortfolio(userId)])
   const asOf = asOfDate ?? istDate()
-  const since = daysBefore(asOf, 420)
   const state = stateOf(portfolio, capital)
   const held = Object.keys(state.holdings)
 
-  const [indexBars, universe] = await Promise.all([
-    loadBars([INDEX_INSTRUMENTS.NIFTY_200.barSymbol], since, asOf),
-    asOfDate ? liveUniverse(asOf, universeSize) : Promise.resolve([]),
-  ])
-  const regime = trendRegime(indexBars[INDEX_INSTRUMENTS.NIFTY_200.barSymbol] ?? [])
+  const { universe, bars, regime } = asOfDate ? await rankingInputs(asOf) : { universe: [], bars: {}, regime: null }
   const invested = exposure(regime, trendFilter)
-
-  const bars = await loadBars(universe, since, asOf)
   const ranked = rankByFactors(bars, MODES[mode].factors)
 
   // A share that costs more than one position's budget cannot be bought even once
