@@ -13,7 +13,6 @@ import Parser from 'rss-parser'
 import {
   analyzeSentiment,
   calculateAggregateSentiment,
-  getSentimentTradingSignal,
   type SentimentResult,
   type AggregateSentiment,
 } from '@/lib/sentiment-utils'
@@ -37,7 +36,6 @@ export interface StockNewsResult {
   news: NewsItem[]
   sentiment: {
     aggregate: AggregateSentiment
-    trading: ReturnType<typeof getSentimentTradingSignal>
   }
   sources: string[]
 }
@@ -145,7 +143,7 @@ export async function fetchStockNews(
     exchange,
     available: news.length > 0,
     news,
-    sentiment: { aggregate, trading: getSentimentTradingSignal(aggregate) },
+    sentiment: { aggregate },
     sources,
   }
 }

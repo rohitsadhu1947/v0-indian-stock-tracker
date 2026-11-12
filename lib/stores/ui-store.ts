@@ -1,12 +1,9 @@
 import { create } from 'zustand'
-import type { CombinedIntelligence } from '@/lib/combined-intelligence'
 import type { FundamentalData, FundamentalScore } from '@/lib/fundamentals-utils'
 
 export type ActiveTab =
   | 'plan'
   | 'stockcheck'
-  | 'intraday'
-  | 'universe'
   | 'fundamentals'
   | 'market'
   | 'papertrades'
@@ -31,7 +28,6 @@ interface UIStore {
   multiLayerNews: any
 
   // Combined Intelligence
-  combinedIntelligence: CombinedIntelligence | null
 
   // Fundamentals
   fundamentalData: FundamentalData | null
@@ -51,7 +47,6 @@ interface UIStore {
   setStockSentiment: (sentiment: any) => void
   setMarketSentiment: (sentiment: any) => void
   setMultiLayerNews: (news: any) => void
-  setCombinedIntelligence: (intel: CombinedIntelligence | null) => void
   setFundamentalData: (data: FundamentalData | null) => void
   setFundamentalScore: (score: FundamentalScore | null) => void
   setFundamentalSymbol: (symbol: string) => void
@@ -72,7 +67,6 @@ export const useUIStore = create<UIStore>()((set) => ({
   marketSentiment: null,
   multiLayerNews: null,
 
-  combinedIntelligence: null,
 
   fundamentalData: null,
   fundamentalScore: null,
@@ -90,7 +84,6 @@ export const useUIStore = create<UIStore>()((set) => ({
   setStockSentiment: (sentiment) => set({ stockSentiment: sentiment }),
   setMarketSentiment: (sentiment) => set({ marketSentiment: sentiment }),
   setMultiLayerNews: (news) => set({ multiLayerNews: news }),
-  setCombinedIntelligence: (intel) => set({ combinedIntelligence: intel }),
   setFundamentalData: (data) => set({ fundamentalData: data }),
   setFundamentalScore: (score) => set({ fundamentalScore: score }),
   setFundamentalSymbol: (symbol) => set({ fundamentalSymbol: symbol }),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
-import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal, getDayTradingSignal, type AggregateSentiment, type DayTradingSignal } from '@/lib/sentiment-utils';
+import { analyzeSentiment, calculateAggregateSentiment, type AggregateSentiment } from '@/lib/sentiment-utils';
 import { getSectorInfo, buildSectorNewsQuery, buildMacroNewsQuery, MACRO_NEWS_KEYWORDS } from '@/lib/sector-mapping';
 import { analyzeNewsSentiment, type GeminiSentimentResult } from '@/lib/gemini-sentiment';
 import { detectGeopoliticalEvents, getGeopoliticalImpactForStock, type GeopoliticalSnapshot } from '@/lib/geopolitical-monitor';
@@ -41,7 +41,6 @@ export interface MultiLayerNews {
       sector: number;
       macro: number;
     };
-    tradingSignal: any;
     reasoning: string;
   };
 }
@@ -135,22 +134,13 @@ export async function GET(request: NextRequest) {
     // Calculate combined sentiment (enhanced with Gemini + geopolitical)
     const combinedSentiment = calculateCombinedSentiment(stockNews, sectorNews, macroNews, sectorInfo, geminiSentiment, geopolitical ? getGeopoliticalImpactForStock(symbol.toUpperCase(), geopolitical) : undefined);
 
-    // Calculate day trading signal (more aggressive for intraday)
-    const dayTradingSignal = getDayTradingSignal(
-      stockNews.sentiment.aggregate,
-      sectorNews?.sentiment.aggregate || null,
-      macroNews?.sentiment.aggregate || null,
-      combinedSentiment.score
-    );
-
     console.log(`\n✅ MULTI-LAYER ANALYSIS COMPLETE`);
     console.log(`   Stock Sentiment: ${stockNews.sentiment.aggregate.overall}`);
     if (sectorNews) console.log(`   Sector Sentiment: ${sectorNews.sentiment.aggregate.overall}`);
     if (macroNews) console.log(`   Macro Sentiment: ${macroNews.sentiment.aggregate.overall}`);
     if (geminiSentiment) console.log(`   🤖 Gemini: ${geminiSentiment.category} (${geminiSentiment.source})`);
     if (geopolitical?.events.length) console.log(`   🌍 Geopolitical: ${geopolitical.events.length} events (${geopolitical.overallRisk} risk)`);
-    console.log(`   ⚡ COMBINED: ${combinedSentiment.overall} (${combinedSentiment.tradingSignal.signal})`);
-    console.log(`   📊 DAY TRADING: ${dayTradingSignal.signal} (${dayTradingSignal.confidence}% confidence, ${dayTradingSignal.timeframe})`);
+    console.log(`   ⚡ COMBINED: ${combinedSentiment.overall}`);
 
     return NextResponse.json({
       success: true,
@@ -161,8 +151,7 @@ export async function GET(request: NextRequest) {
       macroNews,
       geminiSentiment: geminiSentiment || null,
       geopolitical: geopolitical || null,
-      combinedSentiment,
-      dayTradingSignal
+      combinedSentiment
     });
 
   } catch (error: any) {
@@ -232,11 +221,10 @@ async function fetchStockNews(symbol: string, exchange: string) {
   const uniqueNews = removeDuplicates(allNews);
   const sentiments = uniqueNews.map(item => item.sentiment);
   const aggregate = calculateAggregateSentiment(sentiments);
-  const trading = getSentimentTradingSignal(aggregate);
 
   console.log(`   ✅ Stock: ${uniqueNews.length} articles, ${aggregate.overall} sentiment`);
 
-  return { news: uniqueNews, sentiment: { aggregate, trading } };
+  return { news: uniqueNews, sentiment: { aggregate } };
 }
 
 /**
@@ -281,13 +269,12 @@ async function fetchSectorNews(sectorInfo: any) {
   const uniqueNews = removeDuplicates(allNews).slice(0, 15);
   const sentiments = uniqueNews.map(item => item.sentiment);
   const aggregate = calculateAggregateSentiment(sentiments);
-  const trading = getSentimentTradingSignal(aggregate);
 
   console.log(`   ✅ Sector (${sectorInfo.sector}): ${uniqueNews.length} articles, ${aggregate.overall} sentiment`);
 
   return {
     news: uniqueNews,
-    sentiment: { aggregate, trading },
+    sentiment: { aggregate },
     sector: sectorInfo.sector,
     industry: sectorInfo.industry
   };
@@ -330,13 +317,12 @@ async function fetchMacroNews(sectorInfo: any) {
   const uniqueNews = removeDuplicates(allNews).slice(0, 15);
   const sentiments = uniqueNews.map(item => item.sentiment);
   const aggregate = calculateAggregateSentiment(sentiments);
-  const trading = getSentimentTradingSignal(aggregate);
 
   console.log(`   ✅ Macro: ${uniqueNews.length} articles, ${aggregate.overall} sentiment`);
 
   return {
     news: uniqueNews,
-    sentiment: { aggregate, trading },
+    sentiment: { aggregate },
     affectedFactors: macroFactors
   };
 }
@@ -455,8 +441,6 @@ function calculateCombinedSentiment(
     description: reasoning
   };
 
-  const tradingSignal = getSentimentTradingSignal(aggregate);
-
   return {
     overall,
     score: combinedScore,
@@ -465,7 +449,6 @@ function calculateCombinedSentiment(
       sector: sectorScore,
       macro: macroScore
     },
-    tradingSignal,
     reasoning
   };
 }

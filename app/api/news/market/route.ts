@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { NewsItem } from '../quote/route';
-import { analyzeSentiment, calculateAggregateSentiment, getSentimentTradingSignal } from '@/lib/sentiment-utils';
+import { analyzeSentiment, calculateAggregateSentiment } from '@/lib/sentiment-utils';
 import { db } from '@/db'
 import { newsData } from '@/db/schema'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
@@ -155,10 +155,8 @@ export async function GET() {
     const topNews = uniqueNews.slice(0, 30); // Top 30 news items
     const sentiments = topNews.map(item => item.sentiment);
     const aggregateSentiment = calculateAggregateSentiment(sentiments);
-    const tradingSignal = getSentimentTradingSignal(aggregateSentiment);
     
     console.log(`📊 Market Sentiment: ${aggregateSentiment.overall} (${aggregateSentiment.positive} positive, ${aggregateSentiment.negative} negative, ${aggregateSentiment.neutral} neutral)`);
-    console.log(`💡 Market Signal: ${tradingSignal.signal} (strength: ${tradingSignal.strength}/10)`);
 
     // Persist market news items to DB (non-fatal)
     try {
@@ -186,8 +184,7 @@ export async function GET() {
       count: topNews.length,
       news: topNews,
       sentiment: {
-        aggregate: aggregateSentiment,
-        trading: tradingSignal
+        aggregate: aggregateSentiment
       }
     });
 
