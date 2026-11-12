@@ -7,9 +7,10 @@
  * market_data_runs.
  */
 import { db } from '@/db'
-import { corporateActions, dailyBars, marketDataRuns } from '@/db/schema'
+import { corporateActions, dailyBars, marketDataRuns, securities } from '@/db/schema'
 import { and, eq, gte, lte, sql } from 'drizzle-orm'
 import { factorFromGap, resolveEvents, type RawPriceBar } from './adjust'
+import { securityKind } from './classify'
 import { parseCorporateAction } from './corporate-actions'
 import { indexBarSymbol } from './indices'
 import { deliveryUrl, extractPrBundle, fetchArchiveFile, prBundleUrl, SYMBOL_CHANGES_URL } from './nse-archive'
@@ -19,6 +20,7 @@ const REFERENCE_INDEX = 'IDX:NIFTY 50'
 /** A stock not yet in daily_bars (a new listing) is added once it trades this much in a day. */
 const NEW_SYMBOL_MIN_TURNOVER = 5e7
 const MAX_DAYS_PER_RUN = 12
+const NO_FUND_LIST: ReadonlySet<string> = new Set()
 const MIN_CONTINUITY = 0.8
 /** A stated ratio the price has not confirmed is retried for this many days, in case the ex-date is off. */
 const RESOLVE_RETRY_DAYS = 6
@@ -73,6 +75,7 @@ async function applyRenames(tracked: Set<string>, after: string, problems: strin
       await db.transaction(async tx => {
         await tx.execute(sql`update daily_bars set symbol = ${c.newSymbol} where symbol = ${c.oldSymbol}`)
         await tx.execute(sql`update corporate_actions set symbol = ${c.newSymbol} where symbol = ${c.oldSymbol}`)
+        await tx.execute(sql`update securities set symbol = ${c.newSymbol} where symbol = ${c.oldSymbol}`)
       })
       tracked.delete(c.oldSymbol)
       tracked.add(c.newSymbol)
@@ -120,12 +123,15 @@ async function loadDay(
   }
 
   const newSymbols: string[] = []
+  const newSecurities: Array<typeof securities.$inferInsert> = []
   const rows: Array<typeof dailyBars.$inferInsert> = []
   for (const b of equities) {
     if (!tracked.has(b.symbol)) {
       if (b.value < NEW_SYMBOL_MIN_TURNOVER) continue
       newSymbols.push(b.symbol)
       tracked.add(b.symbol)
+      // No ETF list here, so a new fund is recognised by its name or symbol
+      newSecurities.push({ symbol: b.symbol, name: b.name ?? null, kind: securityKind(b.symbol, b.name, NO_FUND_LIST) })
     }
     rows.push({
       symbol: b.symbol, date, open: b.open, high: b.high, low: b.low, close: b.close,
@@ -148,6 +154,7 @@ async function loadDay(
   }
 
   await db.transaction(async tx => {
+    if (newSecurities.length) await tx.insert(securities).values(newSecurities).onConflictDoNothing()
     for (let i = 0; i < rows.length; i += 500) {
       await tx.insert(dailyBars).values(rows.slice(i, i + 500)).onConflictDoUpdate({
         target: [dailyBars.symbol, dailyBars.date],

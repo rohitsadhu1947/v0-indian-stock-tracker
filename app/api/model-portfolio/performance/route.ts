@@ -1,6 +1,6 @@
 /**
  * GET /api/model-portfolio/performance
- * Value history of the user's paper books and NIFTY 50 over the same dates.
+ * Value history of the user's paper book and NIFTY 500 over the same dates.
  */
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'

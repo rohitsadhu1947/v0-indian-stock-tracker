@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { scoreMomentum, rankMomentum, selectAffordable, type DailyBar } from '../portfolio/momentum'
 import { trendRegime } from '../portfolio/regime'
-import { allocateSleeves, rebalanceStatus } from '../portfolio/allocation'
+import { exposure, rebalanceStatus } from '../portfolio/allocation'
+import { MODES } from '../portfolio/config'
+import { selectWithBuffer } from '../portfolio/factors'
+import research from '../../research/results/summary.json'
 import { planRebalance, applyOrders, bookValue } from '../portfolio/rebalance'
 
 function series(n: number, f: (i: number) => number, volume = 1_000_000): DailyBar[] {
@@ -75,27 +78,47 @@ describe('trend regime', () => {
   })
 })
 
-describe('sleeve allocation', () => {
+describe('exposure', () => {
   const up = { invested: true, close: 110, sma200: 100, distancePct: 10, asOf: '2026-09-25' }
   const down = { invested: false, close: 90, sma200: 100, distancePct: -10, asOf: '2026-09-25' }
 
-  it('maps each mode to its sleeves when the trend filter is off', () => {
-    expect(allocateSleeves('growth', down, false)).toMatchObject({ momentum: 1, lowvol: 0, value: 0, cash: 0 })
-    expect(allocateSleeves('defensive', down, false)).toMatchObject({ momentum: 0, lowvol: 1, value: 0, cash: 0 })
-    const mf = allocateSleeves('multifactor', down, false)
-    expect(mf.momentum + mf.lowvol + mf.value).toBeCloseTo(1)
-    expect(mf.momentum).toBeCloseTo(1 / 3)
-  })
-
   it('goes to cash in a downtrend only when the trend filter is on', () => {
-    expect(allocateSleeves('multifactor', up, true)).toMatchObject({ cash: 0 })
-    expect(allocateSleeves('multifactor', down, true)).toMatchObject({ momentum: 0, lowvol: 0, value: 0, cash: 1 })
-    expect(allocateSleeves('growth', down, false).cash).toBe(0)
+    expect(exposure(up, true).invested).toBe(true)
+    expect(exposure(down, true).invested).toBe(false)
+    expect(exposure(down, false).invested).toBe(true)
   })
 
   it('holds cash with the filter on when trend data is missing', () => {
-    expect(allocateSleeves('defensive', null, true).cash).toBe(1)
-    expect(allocateSleeves('defensive', null, false).cash).toBe(0)
+    expect(exposure(null, true).invested).toBe(false)
+    expect(exposure(null, false).invested).toBe(true)
+  })
+})
+
+describe('modes', () => {
+  it('every mode has a backtest of exactly what it runs, with and without the trend filter', () => {
+    const tested = new Set(research.strategies.map(s => s.key))
+    for (const mode of Object.values(MODES)) {
+      expect(tested, mode.id).toContain(mode.researchKey)
+      expect(tested, mode.id).toContain(mode.researchKeyWithTrendFilter)
+    }
+  })
+})
+
+describe('selectWithBuffer', () => {
+  const ranked = ['A', 'B', 'C', 'D', 'E', 'F'].map(symbol => ({ symbol }))
+
+  it('takes the top names when nothing is held', () => {
+    expect(selectWithBuffer(ranked, [], 2, 4)).toEqual(['A', 'B'])
+  })
+
+  it('keeps a holding inside the exit rank and replaces one below it', () => {
+    expect(selectWithBuffer(ranked, ['C', 'D'], 2, 4).sort()).toEqual(['C', 'D'])
+    expect(selectWithBuffer(ranked, ['C', 'F'], 2, 4).sort()).toEqual(['A', 'C'])
+    expect(selectWithBuffer(ranked, ['GONE'], 2, 4)).toEqual(['A', 'B'])
+  })
+
+  it('skips names that cannot be bought without forcing a held one out', () => {
+    expect(selectWithBuffer(ranked, ['A'], 3, 4, s => s !== 'A' && s !== 'B')).toEqual(['A', 'C', 'D'])
   })
 })
 

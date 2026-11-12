@@ -25,7 +25,16 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
     universe.set(r.date, list)
   }
 
-  const segments = buildSegments(db, loadSymbolMap(db))
+  const symbolMap = loadSymbolMap(db)
+  const segments = buildSegments(db, symbolMap)
+
+  // Results dates are announced under the symbol in use at the time
+  const resultsBySymbol = new Map<string, Set<number>>()
+  for (const r of db.prepare('select symbol, date, first_seen from results_dates').all() as Array<{ symbol: string; date: number; first_seen: number }>) {
+    const canonical = symbolMap.canonical(r.symbol, r.first_seen)
+    if (!resultsBySymbol.has(canonical)) resultsBySymbol.set(canonical, new Set())
+    resultsBySymbol.get(canonical)!.add(r.date)
+  }
   const stocks = new Map<string, StockSeries>()
   for (const symbol of new Set(rows.map(r => r.symbol))) {
     const segs = segments.get(symbol)
@@ -42,7 +51,10 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
         return Math.min(b.high, Math.max(b.low, vwap))
       })),
       turnover: Float64Array.from(bars.map(b => b.value)),
+      // Delivered and traded quantities are on the same share basis, so the ratio needs no adjustment
+      deliveryShare: Float64Array.from(bars.map(b => (b.delivQty != null && b.volume > 0 ? Math.min(1, (b.delivQty / b.shareFactor) / b.volume) : NaN))),
       dividendFactor: Float64Array.from(bars.map(b => b.totalReturnFactor / b.priceFactor)),
+      resultsDates: Int32Array.from([...(resultsBySymbol.get(symbol) ?? [])].sort((a, b) => a - b)),
     })
   }
 
@@ -60,13 +72,16 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
   return { sessions, stocks, indices, universe, universeDates: Int32Array.from([...universe.keys()].sort((a, b) => a - b)) }
 }
 
+/** Bump when the shape of Market changes, so an old cache is not read. */
+const CACHE_VERSION = 3
+
 /**
  * loadMarket with a disk cache (data/cache), rebuilt whenever the store file
  * changes. Loading from the store takes a few minutes; the cache a few seconds.
  */
 export function loadMarketCached(storePath = STORE_PATH, universeSize = 1000): Market {
   const stamp = statSync(storePath)
-  const file = `data/cache/market-${universeSize}-${Math.floor(stamp.mtimeMs)}-${stamp.size}.v8`
+  const file = `data/cache/market-v${CACHE_VERSION}-${universeSize}-${Math.floor(stamp.mtimeMs)}-${stamp.size}.v8`
   if (existsSync(file)) return deserialize(readFileSync(file)) as Market
   const db = openStore(storePath)
   const market = loadMarket(db, universeSize)

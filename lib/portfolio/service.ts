@@ -1,32 +1,41 @@
 /**
- * Portfolio engine service: monthly plan, paper rebalance, daily snapshots
- * and performance. Two paper books per user:
- *   core      - factor index funds (momentum / low-vol) by risk mode
- *   satellite - top-20 risk-adjusted momentum stocks from the NIFTY 500
+ * Portfolio engine service: this month's plan, paper rebalance, daily
+ * snapshots and performance for the user's paper stock book.
+ *
+ * The plan is decided as of the last session of the previous month, with the
+ * same ranking and selection code the research harness backtests
+ * (lib/portfolio/factors.ts), on the same universe rule.
  */
 
 import { db } from '@/db'
 import { modelPortfolios, modelPortfolioEvents } from '@/db/schema'
 import { and, eq, asc } from 'drizzle-orm'
 import type { BrokerClient } from '@/lib/broker'
-import { MODES, STOCK_MOMENTUM, INDEX_INSTRUMENTS, SLEEVE_FUNDS, type RiskMode } from './config'
+import { MODES, PORTFOLIO_RULES, INDEX_INSTRUMENTS, type RiskMode } from './config'
 import { trendRegime, type TrendRegime } from './regime'
-import { allocateSleeves, coreTargets, rebalanceStatus, type SleeveAllocation } from './allocation'
-import { rankMomentum, selectAffordable, type RankedStock } from './momentum'
+import { exposure, rebalanceStatus, type Exposure } from './allocation'
+import { rankByFactors, selectWithBuffer, stockFacts, type StockFacts } from './factors'
 import { planRebalance, applyOrders, bookValue, type BookState, type RebalancePlan } from './rebalance'
-import { loadBars, dataFreshness, latestPrices, istDate, type DataFreshness } from './data'
-import { UNIVERSE_SYMBOLS, INDUSTRY_BY_SYMBOL } from './universe'
+import { loadBars, dataFreshness, latestPrices, liveUniverse, signalDate, istDate, type DataFreshness } from './data'
+import { INDUSTRY_BY_SYMBOL } from './universe'
 
-export type BookKind = 'core' | 'satellite'
+/** One paper book per user. */
+const BOOK_KIND = 'stock'
 export const DEFAULT_CAPITAL = 300000
+const BENCHMARK_INDEX = 'IDX:NIFTY 500'
+/** Rows of the ranking sent to the page: everything down to the exit rank. */
+const RANKING_ROWS = PORTFOLIO_RULES.exitRank
 
-function sinceDate(daysBack: number): string {
-  return istDate(new Date(Date.now() - daysBack * 86400000))
+/** `days` calendar days before an ISO date. */
+function daysBefore(date: string, days: number): string {
+  const d = new Date(date + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toISOString().slice(0, 10)
 }
 
-async function getPortfolio(userId: number, kind: BookKind) {
+async function getPortfolio(userId: number) {
   const [p] = await db.select().from(modelPortfolios)
-    .where(and(eq(modelPortfolios.userId, userId), eq(modelPortfolios.kind, kind))).limit(1)
+    .where(and(eq(modelPortfolios.userId, userId), eq(modelPortfolios.kind, BOOK_KIND))).limit(1)
   return p ?? null
 }
 
@@ -34,68 +43,39 @@ function stateOf(p: { cash: number; holdings: unknown } | null, capital: number)
   return p ? { cash: p.cash, holdings: (p.holdings as BookState['holdings']) ?? {} } : { cash: capital, holdings: {} }
 }
 
-async function currentRegime(): Promise<TrendRegime | null> {
-  const bars = await loadBars([INDEX_INSTRUMENTS.NIFTY_200.barSymbol], sinceDate(420))
-  return trendRegime(bars[INDEX_INSTRUMENTS.NIFTY_200.barSymbol] ?? [])
-}
-
-export interface BookPlan {
-  kind: BookKind
-  exists: boolean
-  mode: RiskMode
-  startingCapital: number
-  state: BookState
-  value: number
-  rebalance: { due: boolean; reason: string; last: string | null }
-  targets: Record<string, number>
-  plan: RebalancePlan
-  priceSource: 'live' | 'last close'
-  notes: string[]
+export interface RankedRow extends StockFacts {
+  symbol: string
+  rank: number
+  /** Average percentile on the mode's factors, 0 to 100. */
+  scorePct: number
+  industry: string
+  selected: boolean
+  held: boolean
 }
 
 export interface MonthlyPlan {
+  /** The month-end session the ranking is taken at. */
   asOf: string
   mode: RiskMode
   trendFilter: boolean
   modeInfo: (typeof MODES)[RiskMode]
   regime: TrendRegime | null
-  allocation: SleeveAllocation
+  exposure: Exposure
   freshness: DataFreshness
-  core: BookPlan
-  satellite: BookPlan & {
-    ranking: Array<RankedStock & { industry: string; rank: number; selected: boolean }>
+  universe: { size: number; ranked: number }
+  book: {
+    exists: boolean
+    mode: RiskMode
+    startingCapital: number
+    state: BookState
+    value: number
+    rebalance: { due: boolean; reason: string; last: string | null }
+    targets: Record<string, number>
+    plan: RebalancePlan
+    priceSource: 'live' | 'last close'
+    notes: string[]
+    ranking: RankedRow[]
     skippedUnaffordable: string[]
-    excluded: { shortHistory: number; illiquid: number; badData: number }
-  }
-}
-
-async function planBook(params: {
-  kind: BookKind
-  userId: number
-  mode: RiskMode
-  capital: number
-  targets: Record<string, number>
-  client: BrokerClient | null
-  notes: string[]
-}): Promise<BookPlan> {
-  const p = await getPortfolio(params.userId, params.kind)
-  const state = stateOf(p, params.capital)
-  const symbols = [...new Set([...Object.keys(params.targets), ...Object.keys(state.holdings)])]
-  const { prices, source } = await latestPrices(symbols, params.client)
-  const plan = planRebalance({ state, targets: params.targets, prices })
-  const last = p?.lastRebalance ? String(p.lastRebalance) : null
-  return {
-    kind: params.kind,
-    exists: !!p,
-    mode: (p?.mode as RiskMode) ?? params.mode,
-    startingCapital: p?.startingCapital ?? params.capital,
-    state,
-    value: bookValue(state, prices),
-    rebalance: { ...rebalanceStatus(last, istDate()), last },
-    targets: params.targets,
-    plan,
-    priceSource: source,
-    notes: params.notes,
   }
 }
 
@@ -109,62 +89,82 @@ export async function buildMonthlyPlan(params: {
   const { userId, mode, client } = params
   const trendFilter = params.trendFilter ?? false
   const capital = params.capital ?? DEFAULT_CAPITAL
+  const { topN, exitRank, universeSize } = PORTFOLIO_RULES
 
-  const [freshness, regime] = await Promise.all([dataFreshness(), currentRegime()])
-  const allocation = allocateSleeves(mode, regime, trendFilter)
+  const [freshness, asOfDate, portfolio] = await Promise.all([dataFreshness(), signalDate(), getPortfolio(userId)])
+  const asOf = asOfDate ?? istDate()
+  const since = daysBefore(asOf, 420)
+  const state = stateOf(portfolio, capital)
+  const held = Object.keys(state.holdings)
 
-  // Core: index funds
-  const core = coreTargets(allocation)
-  const sleeveName = { momentum: 'momentum', lowvol: 'low-volatility', value: 'value' } as const
-  const coreNotes = core.unfunded.map(s =>
-    `The ${sleeveName[s]} fund is not configured yet, so its ${Math.round(allocation[s] * 100)}% target has no orders.`)
-
-  // Satellite: stock momentum, same trend rule as the chosen mode
-  const bars = await loadBars(UNIVERSE_SYMBOLS, sinceDate(420))
-  const ranking = rankMomentum(bars)
-  const satPortfolio = await getPortfolio(userId, 'satellite')
-  const satCapital = satPortfolio ? bookValue(stateOf(satPortfolio, capital), {}) : capital
-  const { picks, skippedUnaffordable } = selectAffordable(ranking.ranked, STOCK_MOMENTUM.topN, satCapital)
-  const satInvested = allocation.cash < 1
-  const satTargets: Record<string, number> = satInvested && freshness.ok
-    ? Object.fromEntries(picks.map(s => [s.symbol, 1 / STOCK_MOMENTUM.topN]))
-    : {}
-  const satNotes: string[] = []
-  if (!freshness.ok) satNotes.push(`No orders: ${freshness.message}`)
-  if (!satInvested) satNotes.push(allocation.reason)
-
-  const [corePlan, satPlan] = await Promise.all([
-    planBook({ kind: 'core', userId, mode, capital, targets: core.targets, client, notes: coreNotes }),
-    planBook({ kind: 'satellite', userId, mode, capital, targets: satTargets, client, notes: satNotes }),
+  const [indexBars, universe] = await Promise.all([
+    loadBars([INDEX_INSTRUMENTS.NIFTY_200.barSymbol], since, asOf),
+    asOfDate ? liveUniverse(asOf, universeSize) : Promise.resolve([]),
   ])
+  const regime = trendRegime(indexBars[INDEX_INSTRUMENTS.NIFTY_200.barSymbol] ?? [])
+  const invested = exposure(regime, trendFilter)
 
-  const selected = new Set(picks.map(p => p.symbol))
+  const bars = await loadBars(universe, since, asOf)
+  const ranked = rankByFactors(bars, MODES[mode].factors)
+
+  // A share that costs more than one position's budget cannot be bought even once
+  const budget = (portfolio ? bookValue(state, {}) : capital) / topN
+  const lastClose = new Map(ranked.map(r => [r.symbol, r.lastClose]))
+  const picks = selectWithBuffer(ranked, held, topN, exitRank, symbol => lastClose.get(symbol)! <= budget)
+  const selected = new Set(picks)
+  const skippedUnaffordable = ranked.slice(0, topN).filter(r => !selected.has(r.symbol) && r.lastClose > budget).map(r => r.symbol)
+
+  const notes: string[] = []
+  if (!freshness.ok) notes.push(`No orders: ${freshness.message}`)
+  if (!invested.invested) notes.push(invested.reason)
+  const targets: Record<string, number> = invested.invested && freshness.ok
+    ? Object.fromEntries(picks.map(symbol => [symbol, 1 / topN]))
+    : {}
+
+  const symbols = [...new Set([...Object.keys(targets), ...held])]
+  const { prices, source } = await latestPrices(symbols, client)
+  const plan = planRebalance({ state, targets, prices })
+  const last = portfolio?.lastRebalance ? String(portfolio.lastRebalance) : null
+
   return {
-    asOf: freshness.latestDate ?? istDate(),
+    asOf,
     mode,
     trendFilter,
     modeInfo: MODES[mode],
     regime,
-    allocation,
+    exposure: invested,
     freshness,
-    core: corePlan,
-    satellite: {
-      ...satPlan,
-      ranking: ranking.ranked.slice(0, 40).map((s, i) => ({
-        ...s, rank: i + 1, industry: INDUSTRY_BY_SYMBOL[s.symbol] ?? '', selected: selected.has(s.symbol),
+    universe: { size: universe.length, ranked: ranked.length },
+    book: {
+      exists: !!portfolio,
+      mode: (portfolio?.mode as RiskMode) ?? mode,
+      startingCapital: portfolio?.startingCapital ?? capital,
+      state,
+      value: bookValue(state, prices),
+      rebalance: { ...rebalanceStatus(last, istDate()), last },
+      targets,
+      plan,
+      priceSource: source,
+      notes,
+      ranking: ranked.slice(0, RANKING_ROWS).map((r, i) => ({
+        ...stockFacts(bars[r.symbol]),
+        symbol: r.symbol,
+        rank: i + 1,
+        scorePct: r.score * 100,
+        industry: INDUSTRY_BY_SYMBOL[r.symbol] ?? '',
+        selected: selected.has(r.symbol),
+        held: r.symbol in state.holdings,
       })),
       skippedUnaffordable,
-      excluded: ranking.excluded,
     },
   }
 }
 
 export class RebalanceRefused extends Error {}
 
-/** Execute this month's orders for one book at current prices (paper). */
+/** Execute this month's orders at current prices (paper). */
 export async function executeRebalance(params: {
   userId: number
-  kind: BookKind
   mode: RiskMode
   trendFilter?: boolean
   capital?: number
@@ -175,10 +175,10 @@ export async function executeRebalance(params: {
   const plan = await buildMonthlyPlan({
     userId: params.userId, mode: params.mode, trendFilter: params.trendFilter, capital, client: params.client,
   })
-  const book = plan[params.kind]
+  const { book } = plan
 
   if (!book.rebalance.due && !params.force) throw new RebalanceRefused(book.rebalance.reason)
-  if (params.kind === 'satellite' && !plan.freshness.ok) throw new RebalanceRefused(plan.freshness.message)
+  if (!plan.freshness.ok) throw new RebalanceRefused(plan.freshness.message)
   if (book.plan.missingPrices.length) {
     throw new RebalanceRefused(`No price for ${book.plan.missingPrices.join(', ')}; cannot rebalance safely.`)
   }
@@ -189,10 +189,10 @@ export async function executeRebalance(params: {
   const today = istDate()
   const value = bookValue(state, prices)
 
-  let portfolio = await getPortfolio(params.userId, params.kind)
+  let portfolio = await getPortfolio(params.userId)
   if (!portfolio) {
     ;[portfolio] = await db.insert(modelPortfolios).values({
-      userId: params.userId, kind: params.kind, mode: params.mode,
+      userId: params.userId, kind: BOOK_KIND, mode: params.mode,
       startingCapital: capital, cash: state.cash, holdings: state.holdings, lastRebalance: today,
     }).returning()
   } else {
@@ -211,11 +211,13 @@ export async function executeRebalance(params: {
     details: {
       mode: params.mode,
       trendFilter: plan.trendFilter,
+      signalDate: plan.asOf,
       regime: plan.regime,
-      allocation: plan.allocation,
+      exposure: plan.exposure,
       priceSource: source,
       fills,
-      ranking: params.kind === 'satellite' ? plan.satellite.ranking.filter(r => r.selected).map(r => r.symbol) : undefined,
+      // Every name and its rank at the signal date, so the picks can be scored later
+      picks: book.ranking.filter(r => r.selected).map(r => ({ symbol: r.symbol, rank: r.rank })),
     },
   })
 
@@ -239,27 +241,21 @@ export async function snapshotAllPortfolios(): Promise<number> {
   return written
 }
 
-/** Value history for both books plus NIFTY 50 over the same dates. */
+/** Value history of the paper book, with NIFTY 500 over the same dates. */
 export async function portfolioPerformance(userId: number) {
-  const books = await db.select().from(modelPortfolios).where(eq(modelPortfolios.userId, userId))
-  const out: Record<string, { startingCapital: number; points: Array<{ date: string; value: number; type: string }> }> = {}
-  let firstDate: string | null = null
+  const book = await getPortfolio(userId)
+  if (!book) return { book: null, benchmark: [] as Array<{ date: string; value: number }> }
 
-  for (const b of books) {
-    const events = await db.select().from(modelPortfolioEvents)
-      .where(eq(modelPortfolioEvents.portfolioId, b.id))
-      .orderBy(asc(modelPortfolioEvents.date), asc(modelPortfolioEvents.id))
-    const byDate = new Map<string, { date: string; value: number; type: string }>()
-    for (const e of events) byDate.set(String(e.date), { date: String(e.date), value: e.value, type: e.type })
-    const points = [...byDate.values()]
-    out[b.kind] = { startingCapital: b.startingCapital, points }
-    if (points[0] && (!firstDate || points[0].date < firstDate)) firstDate = points[0].date
-  }
+  const events = await db.select().from(modelPortfolioEvents)
+    .where(eq(modelPortfolioEvents.portfolioId, book.id))
+    .orderBy(asc(modelPortfolioEvents.date), asc(modelPortfolioEvents.id))
+  const byDate = new Map<string, { date: string; value: number; type: string }>()
+  for (const e of events) byDate.set(String(e.date), { date: String(e.date), value: e.value, type: e.type })
+  const points = [...byDate.values()]
 
-  let benchmark: Array<{ date: string; value: number }> = []
-  if (firstDate) {
-    const bars = await loadBars([INDEX_INSTRUMENTS.NIFTY_50.barSymbol], firstDate)
-    benchmark = (bars[INDEX_INSTRUMENTS.NIFTY_50.barSymbol] ?? []).map(b => ({ date: b.date, value: b.close }))
+  const bars = points[0] ? await loadBars([BENCHMARK_INDEX], points[0].date) : {}
+  return {
+    book: { mode: book.mode as RiskMode, startingCapital: book.startingCapital, points },
+    benchmark: (bars[BENCHMARK_INDEX] ?? []).map(b => ({ date: b.date, value: b.close })),
   }
-  return { books: out, benchmark, fundsConfigured: SLEEVE_FUNDS }
 }

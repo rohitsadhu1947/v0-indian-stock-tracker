@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  continuity, parseArchiveDate, parseCorporateActionsFile, parseDeliveryFile, parseLegacyBhavcopy, parseMarketCapFile,
+  continuity, parseArchiveDate, parseBoardMeetings, parseCorporateActionsFile, parseDeliveryFile, parseLegacyBhavcopy, parseMarketCapFile,
   parsePriceFile, parseSymbolChanges,
 } from '../market-data/nse-parse'
 import { applyAdjustments, factorFromGap, resolveEvents, resolveUnannounced, type RawPriceBar } from '../market-data/adjust'
@@ -82,6 +82,22 @@ describe('other NSE files', () => {
   it('reads shares outstanding from the market cap file', () => {
     const rows = parseMarketCapFile('25 SEP 2026,20MICRONS,EQ,20 MICRONS LTD           ,Listed    ,25 SEP 2026,               5.00,          35286502,            217.60,     7677637105.15 ')
     expect(rows).toEqual([{ symbol: '20MICRONS', faceValue: 5, shares: 35286502, marketCap: 7677637105.15 }])
+  })
+
+  it('reads board meetings and marks the ones for results', () => {
+    const rows = parseBoardMeetings([
+      'COMPANY NAME    SYMBOL     : BM DATE    : BM PURPOSE ',
+      'Coal India Limited    COALINDIA : 12-NOV-2021 : Financial Results To consider and approve the financial results for the period ended September 30, 2021',
+      'MIC Electronics Limited    MIC : 16-May-2015 : To consResults/Otherssider Audited Financial Results for the fourth quarter',
+      'Super Spinning Mills Ltd    SUPERSPIN  : 25-JAN-2010 :Unaudited Financial Results for the qtr ended Dec 31, 2009',
+      'Punjab & Sind Bank PSB : 29-SEP-2026 : Fund Raising To consider Fund Raising',
+    ].join('\n'))
+    expect(rows).toEqual([
+      { symbol: 'COALINDIA', date: '2021-11-12', results: true },
+      { symbol: 'MIC', date: '2015-05-16', results: true },
+      { symbol: 'SUPERSPIN', date: '2010-01-25', results: true },
+      { symbol: 'PSB', date: '2026-09-29', results: false },
+    ])
   })
 
   it('reads symbol changes', () => {

@@ -3,18 +3,19 @@
 /**
  * Monthly Plan: the portfolio engine's landing screen.
  *
- * Shows the market regime, the allocation for the chosen risk mode, this
- * month's stock-momentum ranking and the exact buy/sell orders for the paper
- * books, and tracks their value against NIFTY 50.
+ * Three modes, each a strategy that went through the research harness. The
+ * page shows that mode's backtest, the ranking at the last month-end, the
+ * exact buy/sell orders for the paper book, and the book's value against
+ * NIFTY 500.
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
 import type { MonthlyPlan } from '@/lib/portfolio/service'
-import { MODES, BENCHMARK_REFERENCE, type RiskMode } from '@/lib/portfolio/config'
+import { MODES, DEFAULT_MODE, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
 
 type Mode = RiskMode
-const MODE_IDS: Mode[] = ['growth', 'multifactor', 'defensive']
+const MODE_IDS = Object.keys(MODES) as Mode[]
 
 const MODE_KEY = 'monthlyPlan.mode'
 const TREND_KEY = 'monthlyPlan.trendFilter'
@@ -33,18 +34,37 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '6px 8px', borderB
 const td: React.CSSProperties = { padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.9em' }
 
 interface Performance {
-  books: Record<string, { startingCapital: number; points: Array<{ date: string; value: number; type: string }> }>
+  book: { mode: Mode; startingCapital: number; points: Array<{ date: string; value: number; type: string }> } | null
   benchmark: Array<{ date: string; value: number }>
 }
 
+type PeriodKey = 'full' | 'to2019' | 'since2020' | 'since2022'
+interface PeriodStats { cagrPct: number; maxDrawdownPct: number }
+interface Edge { excessCagrPct: number; tStat: number }
+interface Backtest {
+  key: string
+  afterTax: Record<PeriodKey, PeriodStats>
+  versusBenchmark: { afterTax: Record<PeriodKey, Edge> } | null
+  turnoverPctPerYear: number
+  taxPctPerYear: number
+  chargesPctPerYear: number
+  slippagePctPerYear: number
+}
+
+/** The backtest of a mode exactly as the plan runs it. */
+function backtestFor(mode: Mode, trendFilter: boolean): Backtest | undefined {
+  const key = trendFilter ? MODES[mode].researchKeyWithTrendFilter : MODES[mode].researchKey
+  return (research.strategies as unknown as Backtest[]).find(s => s.key === key)
+}
+
 export default function MonthlyPlanTab() {
-  const [mode, setMode] = useState<Mode>('multifactor')
+  const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
   const [trendFilter, setTrendFilter] = useState(false)
   const [plan, setPlan] = useState<MonthlyPlan | null>(null)
   const [perf, setPerf] = useState<Performance | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -70,7 +90,9 @@ export default function MonthlyPlanTab() {
       const perfJson = await perfRes.json()
       if (perfJson.success) setPerf(perfJson)
     } catch (e: any) {
-      setError(e.message)
+      // Never leave another mode's plan on screen under this mode's heading
+      setPlan(null)
+      setError(e.message.split('\n')[0].slice(0, 200))
     } finally {
       setLoading(false)
     }
@@ -88,22 +110,21 @@ export default function MonthlyPlanTab() {
     try { localStorage.setItem(TREND_KEY, on ? '1' : '0') } catch { /* ignore */ }
   }
 
-  const rebalance = async (kind: 'core' | 'satellite') => {
+  const rebalance = async () => {
     if (!plan) return
-    const book = plan[kind]
     const ok = window.confirm(
-      `Record a paper rebalance of the ${kind === 'satellite' ? 'stock momentum' : 'core'} book?\n\n` +
-      `${book.plan.orders.length} orders at ${book.priceSource} prices, with slippage and charges.\n` +
+      `Record a paper rebalance in ${MODES[mode].label} mode?\n\n` +
+      `${plan.book.plan.orders.length} orders at ${plan.book.priceSource} prices, with slippage and charges.\n` +
       `No real orders are placed.`
     )
     if (!ok) return
-    setBusy(kind)
+    setBusy(true)
     setMessage(null)
     try {
       const res = await fetch('/api/model-portfolio/rebalance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, mode, trendFilter }),
+        body: JSON.stringify({ mode, trendFilter }),
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Rebalance failed')
@@ -112,18 +133,22 @@ export default function MonthlyPlanTab() {
     } catch (e: any) {
       setMessage(`Not rebalanced: ${e.message}`)
     } finally {
-      setBusy(null)
+      setBusy(false)
     }
   }
+
+  const plain = backtestFor(mode, false)
+  const filtered = backtestFor(mode, true)
 
   return (
     <div>
       <div style={card}>
         <h2 style={{ margin: '0 0 6px' }}>🧭 Monthly Plan</h2>
         <p style={{ ...muted, margin: 0 }}>
-          A monthly-rebalanced portfolio of NSE factor index funds. The factors (momentum, low volatility, value) are
-          the few stock characteristics with a long, documented record in India and abroad; combining them softens bad years.
-          Books here are paper; no real orders are placed.
+          Once a month, hold the {PORTFOLIO_RULES.topN} best-ranked of the {PORTFOLIO_RULES.universeSize} most traded NSE stocks
+          at equal weight. A stock you hold stays until it falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves
+          the trading. Each mode ranks stocks differently and was backtested exactly as it runs here. The book is paper; no
+          real orders are placed.
         </p>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
@@ -143,7 +168,7 @@ export default function MonthlyPlanTab() {
                 background: mode === m ? 'rgba(96,165,250,0.15)' : 'rgba(0,0,0,0.2)',
               }}
             >
-              <div style={{ fontWeight: 700 }}>{MODES[m].label}{m === 'multifactor' ? ' (default)' : ''}</div>
+              <div style={{ fontWeight: 700 }}>{MODES[m].label}{m === DEFAULT_MODE ? ' (default)' : ''}</div>
               <div style={{ fontSize: '0.8em', marginTop: 4, opacity: 0.85 }}>{MODES[m].description}</div>
             </button>
           ))}
@@ -153,11 +178,16 @@ export default function MonthlyPlanTab() {
           <input type="checkbox" checked={trendFilter} onChange={e => toggleTrend(e.target.checked)} />
           <span>
             Trend filter: hold cash while NIFTY 200 is below its 200-day average.
-            <span style={muted}> Roughly halves the worst falls, but cost 2-4% a year of return since 2020.</span>
+            {plain && filtered && (
+              <span style={muted}>
+                {' '}In the backtest it took this mode from {plain.afterTax.full.cagrPct.toFixed(1)}% to {filtered.afterTax.full.cagrPct.toFixed(1)}% a
+                year, and its worst fall from {plain.afterTax.full.maxDrawdownPct.toFixed(0)}% to {filtered.afterTax.full.maxDrawdownPct.toFixed(0)}%.
+              </span>
+            )}
           </span>
         </label>
 
-        <ReferenceTable mode={mode} trendFilter={trendFilter} />
+        <BacktestTable mode={mode} trendFilter={trendFilter} />
       </div>
 
       {loading && <div style={card}>Building this month&apos;s plan…</div>}
@@ -182,16 +212,11 @@ export default function MonthlyPlanTab() {
             </div>
 
             <div style={card}>
-              <div style={muted}>Allocation this month</div>
+              <div style={muted}>This month</div>
               <div style={{ fontSize: '1.1em', fontWeight: 700, marginTop: 6 }}>
-                {[
-                  ['Momentum', plan.allocation.momentum],
-                  ['Low-vol', plan.allocation.lowvol],
-                  ['Value', plan.allocation.value],
-                  ['Cash', plan.allocation.cash],
-                ].filter(([, w]) => (w as number) > 0).map(([n, w]) => `${n} ${Math.round((w as number) * 100)}%`).join(' · ')}
+                {plan.exposure.invested ? `Invested: ${MODES[plan.mode].label}` : 'In cash'}
               </div>
-              <div style={muted}>{plan.allocation.reason}</div>
+              <div style={muted}>{plan.exposure.reason} Decided on prices at {plan.asOf}, the last session of last month.</div>
             </div>
 
             <div style={{ ...card, borderColor: plan.freshness.ok ? 'rgba(255,255,255,0.1)' : '#f59e0b' }}>
@@ -203,31 +228,16 @@ export default function MonthlyPlanTab() {
             </div>
           </div>
 
-          <BookSection
-            title="Core book: factor index funds (paper)"
-            subtitle="Factor index funds in the proportions above. This is the main recommendation."
-            book={plan.core}
-            busy={busy === 'core'}
-            onRebalance={() => rebalance('core')}
-          />
-
-          <BookSection
-            title="Stock momentum book (paper experiment)"
-            subtitle={`Top ${plan.satellite.ranking.filter(r => r.selected).length} NIFTY 500 stocks by risk-adjusted 12-month momentum, equal weight, monthly. Still an experiment: the backtest below shows a large edge up to 2021 and a small, unproven one since 2022, with falls of up to half the portfolio.`}
-            book={plan.satellite}
-            busy={busy === 'satellite'}
-            onRebalance={() => rebalance('satellite')}
-          />
-
-          <StockBookBacktest trendFilter={trendFilter} />
+          <BookSection plan={plan} busy={busy} onRebalance={rebalance} />
 
           <div style={card}>
-            <h3 style={{ marginTop: 0 }}>This month&apos;s ranking</h3>
+            <h3 style={{ marginTop: 0 }}>Ranking at {plan.asOf}</h3>
             <p style={muted}>
-              Score = 12-month return (skipping the latest month) divided by volatility. Stocks trading under ₹10 Cr a day are excluded
-              ({plan.satellite.excluded.illiquid} this month; {plan.satellite.excluded.shortHistory} have under a year of history).
-              {plan.satellite.skippedUnaffordable.length > 0 &&
-                ` Skipped because one share exceeds the per-position budget: ${plan.satellite.skippedUnaffordable.join(', ')}.`}
+              {plan.universe.ranked} of the {plan.universe.size} most traded stocks have a year of history and trade at least ₹10 Cr a day.
+              Score is the stock&apos;s standing among them on {MODES[plan.mode].factors.length > 1 ? 'the average of ' : ''}
+              {MODES[plan.mode].factors.map(f => FACTOR_WORDS[f] ?? f).join(' and ')}: 100 is best.
+              {plan.book.skippedUnaffordable.length > 0 &&
+                ` Skipped because one share costs more than a position's budget: ${plan.book.skippedUnaffordable.join(', ')}.`}
             </p>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -235,21 +245,21 @@ export default function MonthlyPlanTab() {
                   <tr>
                     <th style={th}>#</th><th style={th}>Stock</th><th style={th}>Industry</th>
                     <th style={th}>12-1m return</th><th style={th}>Volatility</th><th style={th}>Score</th>
-                    <th style={th}>Traded/day</th><th style={th}>Last close</th><th style={th}>In book</th>
+                    <th style={th}>Traded/day</th><th style={th}>Close</th><th style={th}>Book</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {plan.satellite.ranking.map(r => (
-                    <tr key={r.symbol} style={{ opacity: r.selected ? 1 : 0.55 }}>
+                  {plan.book.ranking.map(r => (
+                    <tr key={r.symbol} style={{ opacity: r.selected || r.held ? 1 : 0.55 }}>
                       <td style={td}>{r.rank}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
                       <td style={td}>{r.industry}</td>
-                      <td style={{ ...td, color: r.momentumPct >= 0 ? '#34d399' : '#f87171' }}>{pct(r.momentumPct)}</td>
-                      <td style={td}>{r.volatilityPct.toFixed(0)}%</td>
-                      <td style={td}>{r.score.toFixed(2)}</td>
+                      <td style={{ ...td, color: (r.momentumPct ?? 0) >= 0 ? '#34d399' : '#f87171' }}>{r.momentumPct == null ? '' : pct(r.momentumPct)}</td>
+                      <td style={td}>{r.volatilityPct == null ? '' : `${r.volatilityPct.toFixed(0)}%`}</td>
+                      <td style={td}>{r.scorePct.toFixed(0)}</td>
                       <td style={td}>₹{r.tradedValueCr.toFixed(0)} Cr</td>
-                      <td style={td}>{r.lastClose.toLocaleString('en-IN')}</td>
-                      <td style={td}>{r.selected ? '✓' : ''}</td>
+                      <td style={td}>{r.lastClose.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                      <td style={td}>{r.selected ? (r.held ? 'Keep' : 'Buy') : r.held ? 'Sell' : ''}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -264,80 +274,54 @@ export default function MonthlyPlanTab() {
   )
 }
 
-function ReferenceTable({ mode, trendFilter }: { mode: Mode; trendFilter: boolean }) {
-  const ref = trendFilter ? MODES[mode].referenceWithTrendFilter : MODES[mode].reference
-  const rows: Array<[string, typeof ref]> = [
-    [`${MODES[mode].label}${trendFilter ? ' + trend filter' : ''}`, ref],
-    ['NIFTY 50', BENCHMARK_REFERENCE.nifty50],
-    ['All NIFTY 500 stocks, equal weight', BENCHMARK_REFERENCE.nifty500EqualWeight],
-  ]
-  const cell = (p: { cagrPct: number; maxDrawdownPct: number }) => (
-    <>{p.cagrPct.toFixed(1)}%/yr <span style={{ opacity: 0.6 }}>(worst {p.maxDrawdownPct.toFixed(0)}%)</span></>
-  )
-  return (
-    <div style={{ marginTop: 14, overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={th}>History (NSE indices, price return)</th>
-            <th style={th}>Jun 2013 to now</th>
-            <th style={th}>Since Sep 2020</th>
-            <th style={th}>Since Jan 2022</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(([name, r], i) => (
-            <tr key={name} style={{ fontWeight: i === 0 ? 700 : 400 }}>
-              <td style={td}>{name}</td><td style={td}>{cell(r.full)}</td><td style={td}>{cell(r.since2020)}</td><td style={td}>{cell(r.since2022)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p style={{ ...muted, marginBottom: 0 }}>
-        Years before each index launched are NSE back-calculations. The later columns are the stricter test.
-        Much of the gap over NIFTY 50 comes from owning mid and small caps. Past results do not guarantee future ones.
-      </p>
-    </div>
-  )
+const FACTOR_WORDS: Record<string, string> = {
+  momentum: '12-month trend relative to volatility',
+  lowVolatility: 'steadiness (low volatility)',
 }
 
 const monthYear = (d: number) =>
   new Date(Date.UTC(Math.floor(d / 10000), Math.floor(d / 100) % 100 - 1, 1)).toLocaleString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 
-/** Backtest of the stock momentum book from the research harness (scripts/research/run.ts). */
-function StockBookBacktest({ trendFilter }: { trendFilter: boolean }) {
-  const strategy = research.strategies.find(s => s.key === (trendFilter ? 'stock-momentum-trend' : 'stock-momentum'))
+/** The chosen mode's backtest from the research harness (scripts/research/run.ts). */
+function BacktestTable({ mode, trendFilter }: { mode: Mode; trendFilter: boolean }) {
+  const strategy = backtestFor(mode, trendFilter)
   const nifty500 = research.indices.find(i => i.key === 'nifty-500')
-  if (!strategy || !strategy.versusBenchmark) return null
-  type Period = { cagrPct: number; maxDrawdownPct: number }
-  const rows: Array<[string, Record<'full' | 'since2020' | 'since2022', Period>]> = [
-    [`This book${trendFilter ? ' with the trend filter' : ''}, after costs and tax`, strategy.afterTax],
-    ['All 500 stocks at equal weight, after costs and tax', research.benchmark.afterTax],
-    ...(nifty500 ? [['NIFTY 500 index, price only', nifty500.priceReturn] as [string, typeof nifty500.priceReturn]] : []),
+  if (!strategy || !strategy.versusBenchmark) {
+    return <p style={{ ...muted, marginTop: 14 }}>No backtest for this mode yet: run <code>npm run research</code>.</p>
+  }
+  const rows: Array<[string, Record<PeriodKey, PeriodStats>]> = [
+    [`${MODES[mode].label}${trendFilter ? ' with the trend filter' : ''}, after costs and tax`, strategy.afterTax],
+    ['All 500 stocks at equal weight, after costs and tax', research.benchmark.afterTax as Record<PeriodKey, PeriodStats>],
+    ...(nifty500 ? [['NIFTY 500 index, price only', nifty500.priceReturn as Record<PeriodKey, PeriodStats>] as [string, Record<PeriodKey, PeriodStats>]] : []),
   ]
-  const cell = (p: Period) => (
+  const cell = (p: PeriodStats) => (
     <>{p.cagrPct.toFixed(1)}%/yr <span style={{ opacity: 0.6 }}>(worst {p.maxDrawdownPct.toFixed(0)}%)</span></>
   )
   const edge = strategy.versusBenchmark.afterTax
-  const verdict = (t: number) => (Math.abs(t) >= 2 ? 'unlikely to be luck' : 'could be luck')
+  // With many strategies tested, some look good by chance: 2 is weak evidence, 3 is the bar
+  const verdict = (t: number) => (Math.abs(t) >= 3 ? 'unlikely to be luck' : Math.abs(t) >= 2 ? 'probably not luck, but not proven' : 'could be luck')
   const signed = (x: number) => `${x >= 0 ? '+' : ''}${x.toFixed(1)}`
+  const columns: Array<[PeriodKey, string]> = [
+    ['full', `${monthYear(research.dataFrom)} to ${monthYear(research.dataThrough)}`],
+    ['to2019', '2011 to 2019'],
+    ['since2020', 'Since Jan 2020'],
+    ['since2022', 'Since Jan 2022'],
+  ]
   return (
-    <div style={card}>
-      <h3 style={{ marginTop: 0 }}>How this stock book would have done</h3>
+    <div style={{ marginTop: 14 }}>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={th}>Backtest on NSE data</th>
-              <th style={th}>{monthYear(research.dataFrom)} to {monthYear(research.dataThrough)}</th>
-              <th style={th}>Since Jan 2020</th>
-              <th style={th}>Since Jan 2022</th>
+              {columns.map(([key, label]) => <th key={key} style={th}>{label}</th>)}
             </tr>
           </thead>
           <tbody>
             {rows.map(([name, r], i) => (
               <tr key={name} style={{ fontWeight: i === 0 ? 700 : 400 }}>
-                <td style={td}>{name}</td><td style={td}>{cell(r.full)}</td><td style={td}>{cell(r.since2020)}</td><td style={td}>{cell(r.since2022)}</td>
+                <td style={td}>{name}</td>
+                {columns.map(([key]) => <td key={key} style={td}>{cell(r[key])}</td>)}
               </tr>
             ))}
           </tbody>
@@ -351,33 +335,33 @@ function StockBookBacktest({ trendFilter }: { trendFilter: boolean }) {
         {' '}{(strategy.chargesPctPerYear + strategy.slippagePctPerYear).toFixed(1)}%.
       </p>
       <p style={{ ...muted, marginBottom: 0 }}>
-        How it was tested: each month it picks from the 500 most traded stocks as they were on that day, including companies
+        How it was tested: each month it ranks the 500 most traded stocks as they were on that day, including companies
         later delisted; trades at the next day&apos;s average price; pays Zerodha delivery charges, 0.1% slippage, and capital gains
-        tax under today&apos;s rules; dividends are reinvested. The index row has no dividends, costs or tax. Past results do not
-        guarantee future ones.
+        tax under today&apos;s rules; dividends are reinvested. The index row has no dividends, costs or tax.
+        {' '}{research.strategies.length} strategies were tested in all, so the best of them partly reflects luck.
+        Past results do not guarantee future ones.
       </p>
     </div>
   )
 }
 
-function BookSection(props: {
-  title: string
-  subtitle: string
-  book: MonthlyPlan['core']
-  busy: boolean
-  onRebalance: () => void
-}) {
-  const { book } = props
+function BookSection({ plan, busy, onRebalance }: { plan: MonthlyPlan; busy: boolean; onRebalance: () => void }) {
+  const { book } = plan
   const holdings = Object.entries(book.state.holdings)
   const ret = ((book.value - book.startingCapital) / book.startingCapital) * 100
   const canRebalance = book.rebalance.due && book.plan.orders.length > 0 && book.plan.missingPrices.length === 0
+  const why = { exit: `fell below rank ${PORTFOLIO_RULES.exitRank}`, entry: 'new pick', resize: 'resize to target' }
 
   return (
     <div style={card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ margin: 0 }}>{props.title}</h3>
-          <p style={{ ...muted, margin: '4px 0 0' }}>{props.subtitle}</p>
+          <h3 style={{ margin: 0 }}>Paper book</h3>
+          <p style={{ ...muted, margin: '4px 0 0' }}>
+            {book.exists && book.mode !== plan.mode
+              ? `Last rebalanced in ${MODES[book.mode]?.label ?? book.mode} mode. These orders would move it to ${MODES[plan.mode].label}.`
+              : `${MODES[plan.mode].label} mode, ${PORTFOLIO_RULES.topN} stocks at equal weight.`}
+          </p>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '1.3em', fontWeight: 700 }}>{inr(book.value)}</div>
@@ -408,7 +392,7 @@ function BookSection(props: {
                   <td style={td}>{o.qty}</td>
                   <td style={td}>{o.price.toLocaleString('en-IN')}</td>
                   <td style={td}>{inr(o.value)}</td>
-                  <td style={td}>{o.reason === 'exit' ? 'dropped out of top list' : o.reason === 'entry' ? 'new in top list' : 'resize to target'}</td>
+                  <td style={td}>{why[o.reason]}</td>
                 </tr>
               ))}
             </tbody>
@@ -417,15 +401,15 @@ function BookSection(props: {
       )}
 
       <button
-        onClick={props.onRebalance}
-        disabled={!canRebalance || props.busy}
+        onClick={onRebalance}
+        disabled={!canRebalance || busy}
         style={{
           marginTop: 14, padding: '10px 18px', borderRadius: 8, border: 'none', fontWeight: 700,
-          cursor: canRebalance && !props.busy ? 'pointer' : 'not-allowed',
+          cursor: canRebalance && !busy ? 'pointer' : 'not-allowed',
           background: canRebalance ? '#2563eb' : 'rgba(255,255,255,0.1)', color: '#fff',
         }}
       >
-        {props.busy ? 'Recording…' : 'Record paper rebalance'}
+        {busy ? 'Recording…' : 'Record paper rebalance'}
       </button>
 
       {holdings.length > 0 && (
@@ -449,8 +433,10 @@ function BookSection(props: {
 }
 
 function PerformanceCard({ perf }: { perf: Performance | null }) {
-  const entries = perf ? Object.entries(perf.books) : []
-  if (!perf || entries.length === 0) {
+  const book = perf?.book
+  const first = book?.points[0]
+  const last = book?.points[book.points.length - 1]
+  if (!perf || !book || !first || !last) {
     return (
       <div style={card}>
         <h3 style={{ marginTop: 0 }}>Paper track record</h3>
@@ -460,33 +446,26 @@ function PerformanceCard({ perf }: { perf: Performance | null }) {
   }
 
   const bench = perf.benchmark
+  const benchStart = bench.find(x => x.date >= first.date)
+  const benchEnd = bench[bench.length - 1]
+  const benchRet = benchStart && benchEnd && benchEnd.date > benchStart.date
+    ? ((benchEnd.value - benchStart.value) / benchStart.value) * 100 : null
   return (
     <div style={card}>
       <h3 style={{ marginTop: 0 }}>Paper track record</h3>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th style={th}>Book</th><th style={th}>Started</th><th style={th}>Value</th><th style={th}>Return</th><th style={th}>NIFTY 50 same period</th></tr></thead>
+        <thead><tr><th style={th}>Mode</th><th style={th}>Started</th><th style={th}>Value</th><th style={th}>Return</th><th style={th}>NIFTY 500 same period</th></tr></thead>
         <tbody>
-          {entries.map(([kind, b]) => {
-            const first = b.points[0]
-            const last = b.points[b.points.length - 1]
-            if (!first || !last) return null
-            const benchStart = bench.find(x => x.date >= first.date)
-            const benchEnd = bench[bench.length - 1]
-            const benchRet = benchStart && benchEnd && benchEnd.date > benchStart.date
-              ? ((benchEnd.value - benchStart.value) / benchStart.value) * 100 : null
-            return (
-              <tr key={kind}>
-                <td style={td}>{kind === 'satellite' ? 'Stock momentum' : 'Core funds'}</td>
-                <td style={td}>{first.date}</td>
-                <td style={td}>{inr(last.value)}</td>
-                <td style={td}>{pct(((last.value - b.startingCapital) / b.startingCapital) * 100, 2)}</td>
-                <td style={td}>{benchRet === null ? 'not enough data yet' : pct(benchRet, 2)}</td>
-              </tr>
-            )
-          })}
+          <tr>
+            <td style={td}>{MODES[book.mode]?.label ?? book.mode}</td>
+            <td style={td}>{first.date}</td>
+            <td style={td}>{inr(last.value)}</td>
+            <td style={td}>{pct(((last.value - book.startingCapital) / book.startingCapital) * 100, 2)}</td>
+            <td style={td}>{benchRet === null ? 'not enough data yet' : pct(benchRet, 2)}</td>
+          </tr>
         </tbody>
       </table>
-      <p style={muted}>Judge the strategy over 6-12 months, not weeks: the historical reference includes losing years.</p>
+      <p style={muted}>Judge the strategy over a year or more, not weeks: every mode had losing years in the backtest.</p>
     </div>
   )
 }

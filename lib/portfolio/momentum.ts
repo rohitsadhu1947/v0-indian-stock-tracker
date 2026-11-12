@@ -15,6 +15,8 @@ export interface DailyBar {
   date: string   // YYYY-MM-DD
   close: number
   volume: number
+  /** Shares taken into delivery (same basis as volume), when known. */
+  deliveryQty?: number | null
 }
 
 export interface RankedStock {

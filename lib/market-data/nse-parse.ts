@@ -255,3 +255,29 @@ export function parseSymbolChanges(text: string): SymbolChange[] {
   }
   return out
 }
+
+export interface BoardMeeting {
+  symbol: string
+  date: string        // YYYY-MM-DD, the day the board meets
+  /** The meeting is to approve financial results. */
+  results: boolean
+}
+
+/**
+ * Bm file: "Company Name    SYMBOL : DD-MON-YYYY : purpose text". Meetings
+ * are listed ahead of time. The purpose text is free-form and sometimes
+ * garbled ("To consResults/Otherssider Audited Financial Results").
+ */
+export function parseBoardMeetings(text: string): BoardMeeting[] {
+  const out = new Map<string, BoardMeeting>()
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^.*?(\S+)\s*:\s*(\d{2})-([A-Za-z]{3})-(\d{4})\s*:(.*)$/)
+    const month = m && MONTHS[m[3].toUpperCase()]
+    if (!m || !month) continue
+    const meeting = { symbol: m[1], date: `${m[4]}-${month}-${m[2]}`, results: /result/i.test(m[5]) }
+    const key = `${meeting.symbol}|${meeting.date}`
+    const seen = out.get(key)
+    if (!seen || (meeting.results && !seen.results)) out.set(key, meeting)
+  }
+  return [...out.values()]
+}

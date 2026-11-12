@@ -23,6 +23,8 @@ const arg = (name: string, fallback: string) =>
 const YEARS = Number(arg('years', '3'))
 const MIN_TURNOVER = Number(arg('min-turnover-cr', '1')) * 1e7
 const DRY_RUN = process.argv.includes('--dry-run')
+/** Refresh only the securities table (what each symbol is); leaves bars and corporate actions alone. */
+const SECURITIES_ONLY = process.argv.includes('--securities-only')
 
 const store = openStore()
 const UNTIL = arg('until', '')
@@ -50,6 +52,10 @@ type ActionRow = {
   price_factor: number; share_factor: number; dividend: number; note: string | null
 }
 
+type SecurityRow = { symbol: string; name: string | null; kind: string }
+const securityInfo = new Map((store.prepare('select symbol, name, kind from securities').all() as SecurityRow[]).map(r => [r.symbol, r]))
+const securities: SecurityRow[] = []
+
 const bars: BarRow[] = []
 const actions: ActionRow[] = []
 let stocks = 0
@@ -60,6 +66,10 @@ for (const [symbol, segs] of segments) {
   if (!raw.length || raw.at(-1)!.date < activeSince) continue
   const liquid = median(raw.slice(-60).map(b => b.value)) >= MIN_TURNOVER
   if (!liquid && !alwaysKeep.has(symbol)) continue
+
+  const info = securityInfo.get(symbol)
+  securities.push({ symbol, name: info?.name ?? null, kind: info?.kind ?? 'stock' })
+  if (SECURITIES_ONLY) continue
 
   const events = loadEvents(store, symbol).filter(e => e.exDate <= latest)
   stocks++
@@ -98,6 +108,7 @@ for (const [symbol, segs] of segments) {
 }
 
 let indexBars = 0
+if (!SECURITIES_ONLY) {
 const indexQuery = store.prepare('select date, open, high, low, close from index_bars where lower(name) = lower(?) order by date')
 for (const idx of INDEX_SERIES) {
   const byDate = new Map<number, any>()
@@ -111,14 +122,32 @@ for (const idx of INDEX_SERIES) {
   }
   console.log(`  ${idx.barSymbol.padEnd(26)} ${byDate.size} bars`)
 }
+}
 store.close()
 
+const kinds = securities.reduce<Record<string, number>>((acc, r) => ({ ...acc, [r.kind]: (acc[r.kind] ?? 0) + 1 }), {})
+console.log('Securities:', kinds)
 console.log(`${stocks} stocks, ${bars.length - indexBars} stock bars since ${toIsoDate(since)}, ` +
   `${indexBars} index bars, ${actions.length} corporate actions. Latest date ${latestIso}.`)
 if (DRY_RUN) process.exit(0)
 
 async function publish() {
   const sql = postgres(process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL!, { ssl: 'require', max: 1 })
+  for (const migration of ['0005_market_data.sql', '0006_securities.sql']) {
+    await sql.unsafe(readFileSync(`db/migrations/manual/${migration}`, 'utf8'))
+  }
+
+  if (SECURITIES_ONLY) {
+    // Upsert rather than replace: the nightly update may have added symbols since the store was built
+    for (let i = 0; i < securities.length; i += 2000) {
+      await sql`insert into securities ${sql(securities.slice(i, i + 2000))}
+        on conflict (symbol) do update set name = excluded.name, kind = excluded.kind, updated_at = now()`
+    }
+    const rows = await sql`select kind, count(*)::int n from securities group by kind order by kind`
+    console.log('securities table:', rows.map(r => `${r.kind} ${r.n}`).join(', '))
+    await sql.end()
+    return
+  }
 
   mkdirSync('data/backup', { recursive: true })
   const old = await sql`select symbol, date::text, open, high, low, close, volume, provisional from daily_bars order by symbol, date`
@@ -126,10 +155,11 @@ async function publish() {
   writeFileSync(backup, gzipSync(JSON.stringify(old)))
   console.log(`Saved ${old.length} existing rows to ${backup}`)
 
-  await sql.unsafe(readFileSync('db/migrations/manual/0005_market_data.sql', 'utf8'))
   await sql.begin(async tx => {
     await tx`truncate daily_bars`
     await tx`truncate corporate_actions`
+    await tx`truncate securities`
+    for (let i = 0; i < securities.length; i += 2000) await tx`insert into securities ${tx(securities.slice(i, i + 2000))}`
     for (let i = 0; i < bars.length; i += 2000) {
       await tx`insert into daily_bars ${tx(bars.slice(i, i + 2000))}`
       if (i % 100000 === 0) console.log(`  bars ${i}/${bars.length}`)

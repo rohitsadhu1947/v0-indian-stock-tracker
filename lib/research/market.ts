@@ -19,8 +19,12 @@ export interface StockSeries {
    */
   fill: Float64Array
   turnover: Float64Array       // rupees traded
+  /** Share of the day's volume taken into delivery, 0 to 1; NaN when NSE published none. */
+  deliveryShare: Float64Array
   /** Multiply an adjusted price by this to include reinvested ordinary dividends. */
   dividendFactor: Float64Array
+  /** Dates of board meetings called to approve financial results, ascending. */
+  resultsDates: Int32Array
 }
 
 export interface IndexSeries {
@@ -59,7 +63,9 @@ export function barsUpTo(series: StockSeries, date: number, count: number): Dail
   const start = Math.max(0, end - count + 1)
   const out: DailyBar[] = new Array(Math.max(0, end - start + 1))
   for (let i = start; i <= end; i++) {
-    out[i - start] = { date: iso(series.dates[i]), close: series.close[i], volume: series.turnover[i] / series.close[i] }
+    const volume = series.turnover[i] / series.close[i]
+    const share = series.deliveryShare[i]
+    out[i - start] = { date: iso(series.dates[i]), close: series.close[i], volume, deliveryQty: Number.isNaN(share) ? null : share * volume }
   }
   return out
 }

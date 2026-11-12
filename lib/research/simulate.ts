@@ -14,7 +14,7 @@
 import { applySlippage, calculateTradeCosts, DEFAULT_COSTS, type CostConfig } from '@/lib/backtest/costs'
 import { RESIZE_BAND } from '@/lib/portfolio/config'
 import type { DailyBar } from '@/lib/portfolio/momentum'
-import { daysBetween, financialYear, lastAtOrBefore } from './dates'
+import { daysBetween, financialYear, isoDate, lastAtOrBefore } from './dates'
 import { barsUpTo, indexBarsUpTo, universeAsOf, type Market, type StockSeries } from './market'
 import { INDIA_EQUITY_TAX, TaxLedger, type TaxRules, type YearTax } from './tax'
 
@@ -27,6 +27,8 @@ export interface StrategyContext {
   bars(symbol: string, count: number): DailyBar[]
   /** Last `count` closes of an index (daily_bars symbol, e.g. "IDX:NIFTY 200"). */
   indexBars(symbol: string, count: number): Array<{ date: string; close: number }>
+  /** Dates (YYYY-MM-DD, ascending) of a stock's results board meetings up to the signal date. */
+  resultsDates(symbol: string): string[]
   /** Current portfolio weights at the signal date's close. */
   holdings: ReadonlyMap<string, number>
 }
@@ -249,6 +251,10 @@ export function simulate(market: Market, strategy: Strategy, options: Partial<Si
         universe: size => universeAsOf(market, date, size),
         bars: (symbol, count) => { const s = seriesOf(symbol); return s ? barsUpTo(s, date, count) : [] },
         indexBars: (symbol, count) => { const s = market.indices.get(symbol); return s ? indexBarsUpTo(s, date, count) : [] },
+        resultsDates: symbol => {
+          const s = seriesOf(symbol)
+          return s ? Array.from(s.resultsDates.subarray(0, lastAtOrBefore(s.resultsDates, date) + 1), isoDate) : []
+        },
         holdings,
       })
       const total = Object.values(targets).reduce((a, b) => a + b, 0)

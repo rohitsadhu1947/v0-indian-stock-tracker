@@ -64,13 +64,14 @@ export interface PrBundle {
   pd: string | null    // prices
   bc: string | null    // corporate actions
   mcap: string | null  // market cap (absent in older bundles)
+  bm: string | null    // board meetings announced (results dates)
 }
 
 /** File names changed over the years (Pd040110.csv, pd25092026.csv), so match by prefix. */
 export function extractPrBundle(zip: Uint8Array): PrBundle {
-  const wanted = /^(pd|bc|mcap)\d{6,8}\.csv$/i
+  const wanted = /^(pd|bc|mcap|bm)\d{6,8}\.(?:csv|txt)$/i
   const files = unzipSync(zip, { filter: f => wanted.test(f.name.split('/').pop() || '') })
-  const out: PrBundle = { pd: null, bc: null, mcap: null }
+  const out: PrBundle = { pd: null, bc: null, mcap: null, bm: null }
   for (const [name, data] of Object.entries(files)) {
     const kind = (name.split('/').pop() || '').match(wanted)![1].toLowerCase() as keyof PrBundle
     out[kind] = strFromU8(data, true)
