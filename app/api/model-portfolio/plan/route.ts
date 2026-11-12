@@ -1,9 +1,9 @@
 /**
- * GET /api/model-portfolio/plan?mode=multifactor&trend=1&capital=300000
+ * GET /api/model-portfolio/plan?mode=balanced&trend=1&capital=300000
  *
- * This month's plan for both paper books: market regime, sleeve allocation,
- * stock-momentum ranking, and the buy/sell orders that would rebalance each
- * book. Read-only: nothing is executed.
+ * This month's plan for the paper stock book: market trend, the ranking at
+ * the last month-end, and the buy/sell orders that would rebalance the book.
+ * Read-only: nothing is executed.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'

@@ -61,6 +61,12 @@ export function openStore(path: string = STORE_PATH): DatabaseSync {
       symbol text primary key, name text not null, last_seen integer not null
     ) without rowid;
 
+    -- Board meetings called to approve financial results: the results date
+    create table if not exists results_dates (
+      symbol text not null, date integer not null, first_seen integer not null,
+      primary key (symbol, date)
+    ) without rowid;
+
     create table if not exists ingested_days (date integer primary key);
   `)
   return db

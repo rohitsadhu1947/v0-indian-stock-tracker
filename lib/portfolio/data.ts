@@ -5,9 +5,9 @@
 
 import { db } from '@/db'
 import { dailyBars } from '@/db/schema'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lt, lte, sql } from 'drizzle-orm'
 import type { BrokerClient } from '@/lib/broker'
-import { INDEX_INSTRUMENTS, SLEEVE_FUNDS } from './config'
+import { INDEX_INSTRUMENTS } from './config'
 import { UNIVERSE_SYMBOLS } from './universe'
 import type { DailyBar } from './momentum'
 
@@ -17,19 +17,59 @@ export function istDate(d: Date = new Date()): string {
   return new Date(d.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10)
 }
 
-/** Bars for the given symbols from `sinceDate` onward, oldest first. */
-export async function loadBars(symbols: string[], sinceDate: string): Promise<Record<string, DailyBar[]>> {
+/** Bars for the given symbols from `sinceDate` to `untilDate` (inclusive, default latest), oldest first. */
+export async function loadBars(symbols: string[], sinceDate: string, untilDate?: string): Promise<Record<string, DailyBar[]>> {
+  if (!symbols.length) return {}
   const rows = await db
-    .select({ symbol: dailyBars.symbol, date: dailyBars.date, close: dailyBars.close, volume: dailyBars.volume })
+    .select({ symbol: dailyBars.symbol, date: dailyBars.date, close: dailyBars.close, volume: dailyBars.volume, deliveryQty: dailyBars.deliveryQty })
     .from(dailyBars)
-    .where(and(inArray(dailyBars.symbol, symbols), gte(dailyBars.date, sinceDate)))
+    .where(and(inArray(dailyBars.symbol, symbols), gte(dailyBars.date, sinceDate), untilDate ? lte(dailyBars.date, untilDate) : undefined))
     .orderBy(dailyBars.symbol, dailyBars.date)
 
   const out: Record<string, DailyBar[]> = {}
   for (const r of rows) {
-    ;(out[r.symbol] ??= []).push({ date: String(r.date), close: r.close, volume: r.volume })
+    ;(out[r.symbol] ??= []).push({ date: String(r.date), close: r.close, volume: r.volume, deliveryQty: r.deliveryQty })
   }
   return out
+}
+
+/**
+ * The date this month's plan is decided on: the last session of the previous
+ * calendar month. The backtests rank at that close and trade from the next
+ * session, so the live plan uses the same date however late in the month it
+ * is opened.
+ */
+export async function signalDate(today: string = istDate()): Promise<string | null> {
+  const [row] = await db
+    .select({ date: sql<string | null>`max(${dailyBars.date})::text` })
+    .from(dailyBars)
+    .where(and(eq(dailyBars.symbol, INDEX_INSTRUMENTS.NIFTY_50.barSymbol), lt(dailyBars.date, `${today.slice(0, 7)}-01`)))
+  return row?.date ?? null
+}
+
+/**
+ * The `size` most traded companies as of `asOf`, most traded first: median
+ * daily turnover over the last 126 sessions, for stocks with at least 100
+ * bars in that window that traded in the last five sessions. The same rule
+ * as the backtests' point-in-time universe (lib/market-data/universe.ts);
+ * funds and rights entitlements are left out.
+ */
+export async function liveUniverse(asOf: string, size: number): Promise<string[]> {
+  const rows = await db.execute(sql`
+    with sessions as (
+      select date, row_number() over (order by date desc) as n from daily_bars
+      where symbol = ${INDEX_INSTRUMENTS.NIFTY_50.barSymbol} and date <= ${asOf}::date
+      order by date desc limit 126
+    )
+    select b.symbol
+    from daily_bars b
+    join securities s on s.symbol = b.symbol and s.kind = 'stock'
+    where b.date >= (select min(date) from sessions) and b.date <= ${asOf}::date and b.turnover is not null
+    group by b.symbol
+    having count(*) >= 100 and max(b.date) >= (select date from sessions where n = 5)
+    order by percentile_cont(0.5) within group (order by b.turnover) desc, b.symbol
+    limit ${size}`)
+  return (rows as any[]).map(r => r.symbol as string)
 }
 
 export interface DataFreshness {
@@ -99,7 +139,6 @@ export async function updateDailyBarsFromQuotes(client: BrokerClient): Promise<{
   const instruments: Array<{ quoteKey: string; barSymbol: string }> = [
     ...Object.values(INDEX_INSTRUMENTS).map(i => ({ quoteKey: i.quoteKey, barSymbol: i.barSymbol })),
     ...UNIVERSE_SYMBOLS.map(s => ({ quoteKey: `NSE:${s}`, barSymbol: s })),
-    ...Object.values(SLEEVE_FUNDS).filter((f): f is string => !!f).map(f => ({ quoteKey: `NSE:${f}`, barSymbol: f })),
   ]
 
   const quotes: Record<string, any> = {}

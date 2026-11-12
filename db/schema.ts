@@ -795,6 +795,18 @@ export const corporateActions = pgTable('corporate_actions', {
   statusIdx: index('corporate_actions_status_idx').on(table.status),
 }))
 
+/**
+ * What each traded symbol is. Exchange-traded funds and rights entitlements
+ * trade alongside shares and must stay out of stock rankings
+ * (lib/market-data/classify.ts).
+ */
+export const securities = pgTable('securities', {
+  symbol: text('symbol').primaryKey(),
+  name: text('name'),
+  kind: text('kind').notNull(), // 'stock' | 'fund' | 'rights'
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
 export const marketDataRuns = pgTable('market_data_runs', {
   id: serial('id').primaryKey(),

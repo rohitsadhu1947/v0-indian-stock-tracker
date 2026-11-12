@@ -1,93 +1,64 @@
 /**
- * Portfolio engine configuration: risk modes and the instruments behind them.
+ * Portfolio engine configuration: the Monthly Plan's three modes and the
+ * rules they share.
  *
- * Evidence for the modes comes from NSE's published factor indices
- * (point-in-time constituents, Jun 2013 to Sep 2026, price return),
- * see research/factor_indices.py on the research/factor-study branch.
+ * Each mode is a strategy that went through the research harness
+ * (scripts/research/run.ts) unchanged; `researchKey` names its result in
+ * research/results/summary.json, which is where every performance figure the
+ * app shows for it comes from.
  */
+import type { FactorId } from './factors'
 
-export type RiskMode = 'growth' | 'multifactor' | 'defensive'
-export type Sleeve = 'momentum' | 'lowvol' | 'value'
-
-interface PeriodStats { cagrPct: number; maxDrawdownPct: number }
-interface ModeReference {
-  /** Jun 2013 to Sep 2026. Pre-launch years of some indices are NSE back-calculations. */
-  full: PeriodStats
-  /** After NSE launched its momentum index: cannot have been fitted with hindsight. */
-  since2020: PeriodStats
-  since2022: PeriodStats
-}
+export type RiskMode = 'growth' | 'balanced' | 'defensive'
 
 export interface ModeDefinition {
   id: RiskMode
   label: string
-  /** Share of the invested book in each sleeve. */
-  sleeves: Record<Sleeve, number>
-  /** Historical reference, price return, before tax (not a forecast). */
-  reference: ModeReference
-  /** Same mode with the NIFTY 200 trend filter switched on. */
-  referenceWithTrendFilter: ModeReference
+  /** Stocks are ranked on the average of their percentile ranks on these. */
+  factors: FactorId[]
+  /** Backtest of exactly this mode, without and with the trend filter. */
+  researchKey: string
+  researchKeyWithTrendFilter: string
   description: string
 }
 
-// Numbers from research/modes.py on NSE factor indices (price return, monthly rebalance, 0.225% cost per side).
 export const MODES: Record<RiskMode, ModeDefinition> = {
   growth: {
     id: 'growth',
     label: 'Growth',
-    sleeves: { momentum: 1, lowvol: 0, value: 0 },
-    reference: {
-      full: { cagrPct: 19.3, maxDrawdownPct: -38.0 },
-      since2020: { cagrPct: 21.6, maxDrawdownPct: -31.1 },
-      since2022: { cagrPct: 10.2, maxDrawdownPct: -31.1 },
-    },
-    referenceWithTrendFilter: {
-      full: { cagrPct: 17.3, maxDrawdownPct: -23.2 },
-      since2020: { cagrPct: 19.4, maxDrawdownPct: -22.8 },
-      since2022: { cagrPct: 8.2, maxDrawdownPct: -22.8 },
-    },
-    description: 'Momentum only. Strongest long-run record, but no better than the broad market since 2022 and the deepest falls.',
+    factors: ['momentum'],
+    researchKey: 'momentum-buffer',
+    researchKeyWithTrendFilter: 'momentum-buffer-trend',
+    description: 'Momentum: the 20 stocks with the strongest risk-adjusted 12-month trend. Highest return in the backtest, and falls of about half the portfolio.',
   },
-  multifactor: {
-    id: 'multifactor',
-    label: 'Multi-factor',
-    sleeves: { momentum: 1 / 3, lowvol: 1 / 3, value: 1 / 3 },
-    reference: {
-      full: { cagrPct: 16.7, maxDrawdownPct: -43.7 },
-      since2020: { cagrPct: 22.4, maxDrawdownPct: -22.8 },
-      since2022: { cagrPct: 15.0, maxDrawdownPct: -22.8 },
-    },
-    referenceWithTrendFilter: {
-      full: { cagrPct: 14.8, maxDrawdownPct: -22.7 },
-      since2020: { cagrPct: 19.5, maxDrawdownPct: -16.9 },
-      since2022: { cagrPct: 12.0, maxDrawdownPct: -16.9 },
-    },
-    description: 'Equal thirds momentum, low volatility and value. These lose in different years, so bad years are softer.',
+  balanced: {
+    id: 'balanced',
+    label: 'Balanced',
+    factors: ['momentum', 'lowVolatility'],
+    researchKey: 'momentum-lowvol-buffer',
+    researchKeyWithTrendFilter: 'momentum-lowvol-buffer-trend',
+    description: 'Stocks that are both trending and steady. Lower return than Growth, with much smaller falls. Lagged in the 2020-21 boom.',
   },
   defensive: {
     id: 'defensive',
     label: 'Defensive',
-    sleeves: { momentum: 0, lowvol: 1, value: 0 },
-    reference: {
-      full: { cagrPct: 13.4, maxDrawdownPct: -27.8 },
-      since2020: { cagrPct: 15.6, maxDrawdownPct: -15.4 },
-      since2022: { cagrPct: 12.0, maxDrawdownPct: -15.4 },
-    },
-    referenceWithTrendFilter: {
-      full: { cagrPct: 11.0, maxDrawdownPct: -15.1 },
-      since2020: { cagrPct: 12.3, maxDrawdownPct: -15.1 },
-      since2022: { cagrPct: 8.4, maxDrawdownPct: -12.7 },
-    },
-    description: 'Low volatility only. Lowest return, but it reduced losses in every period tested.',
+    factors: ['lowVolatility'],
+    researchKey: 'low-volatility-buffer',
+    researchKeyWithTrendFilter: 'low-volatility-buffer-trend',
+    description: 'The 20 steadiest stocks. Lowest return of the three and the smallest falls; trails badly when the market runs up.',
   },
 }
 
-export const DEFAULT_MODE: RiskMode = 'multifactor'
+export const DEFAULT_MODE: RiskMode = 'balanced'
 
-/** Benchmarks shown next to the modes (same source and periods). */
-export const BENCHMARK_REFERENCE = {
-  nifty50: { full: { cagrPct: 10.8, maxDrawdownPct: -36.9 }, since2020: { cagrPct: 12.2, maxDrawdownPct: -17.0 }, since2022: { cagrPct: 5.7, maxDrawdownPct: -16.2 } },
-  nifty500EqualWeight: { full: { cagrPct: 15.2, maxDrawdownPct: -56.5 }, since2020: { cagrPct: 21.3, maxDrawdownPct: -23.7 }, since2022: { cagrPct: 12.8, maxDrawdownPct: -23.7 } },
+/** Selection rules shared by every mode, as backtested. */
+export const PORTFOLIO_RULES = {
+  /** Positions held, at equal weight. */
+  topN: 20,
+  /** A holding is kept until its rank falls below this. */
+  exitRank: 60,
+  /** The most traded NSE stocks the ranking draws from. */
+  universeSize: 500,
 }
 
 /** Kite instrument tokens for the indices the engine reads. */
@@ -99,22 +70,9 @@ export const INDEX_INSTRUMENTS = {
   VALUE_50: { token: 409353, quoteKey: 'NSE:NIFTY500 VALUE 50', barSymbol: 'IDX:NIFTY500 VALUE 50' },
 } as const
 
-/**
- * Exchange-traded funds that implement each sleeve in the core book.
- * Filled only after checking on live data that the fund tracks the index and
- * trades enough volume. `null` means "not yet verified": the plan then shows
- * the sleeve as a target weight without buy/sell orders.
- */
-export const SLEEVE_FUNDS: Record<Sleeve | 'cash', string | null> = {
-  momentum: null,
-  lowvol: null,
-  value: null,
-  cash: null,
-}
-
-/** Stock-momentum sleeve (paper) settings, matching research/research.py. */
+/** Windows for momentum, volatility and the liquidity screen (trading days). */
 export const STOCK_MOMENTUM = {
-  topN: 20,
+  topN: PORTFOLIO_RULES.topN,
   lookbackDays: 252,
   skipDays: 21,
   volWindowDays: 252,

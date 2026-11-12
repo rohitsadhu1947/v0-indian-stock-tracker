@@ -4,7 +4,9 @@ import { financialYear, lastAtOrBefore } from '../research/dates'
 import type { Market, StockSeries } from '../research/market'
 import { align, calendarYearReturns, compare, monthly, periodStats } from '../research/metrics'
 import { simulate, type Strategy, type StrategyContext } from '../research/simulate'
-import { equalWeightUniverse } from '../research/strategies'
+import { earningsReaction, equalWeightUniverse, factorPortfolio, stockMomentum, withVolatilityTarget } from '../research/strategies'
+import { FACTORS, rankByFactors } from '../portfolio/factors'
+import { rankMomentum, type DailyBar } from '../portfolio/momentum'
 import { INDIA_EQUITY_TAX, TaxLedger } from '../research/tax'
 
 const NO_COSTS = { ...DEFAULT_COSTS, sttPercent: 0, exchangeTxnPercent: 0, sebiPercent: 0, stampDutyPercent: 0, dpChargePerSell: 0, slippagePercent: 0 }
@@ -27,6 +29,7 @@ function stock(symbol: string, sessions: number[], price: (i: number) => number,
   return {
     symbol, dates: Int32Array.from(sessions.slice(0, n)), fill: Float64Array.from(fill), close: Float64Array.from(close),
     turnover: Float64Array.from(close.map(() => 1e9)), dividendFactor: Float64Array.from(close.map(() => 1)),
+    deliveryShare: Float64Array.from(close.map(() => 0.5)), resultsDates: new Int32Array(),
   }
 }
 
@@ -102,7 +105,8 @@ describe('simulate', () => {
     const feb = sessions.findIndex(d => d >= 20200201)
     const b = stock('B', sessions, () => 50)
     const halted = { ...b, dates: b.dates.filter((_, i) => i !== feb), fill: b.fill.filter((_, i) => i !== feb),
-      close: b.close.filter((_, i) => i !== feb), turnover: b.turnover.filter((_, i) => i !== feb), dividendFactor: b.dividendFactor.filter((_, i) => i !== feb) }
+      close: b.close.filter((_, i) => i !== feb), turnover: b.turnover.filter((_, i) => i !== feb), dividendFactor: b.dividendFactor.filter((_, i) => i !== feb),
+      deliveryShare: b.deliveryShare.filter((_, i) => i !== feb), resultsDates: b.resultsDates }
     const r = simulate(market(sessions, [stock('A', sessions, () => 100), halted]), hold({ A: 0.5, B: 0.5 }),
       { ...FRICTIONLESS, start: sessions[0], end: sessions[feb + 5] })
     expect(r.trades.map(t => t.symbol)).toEqual(['A'])
@@ -228,5 +232,105 @@ describe('metrics', () => {
     expect(c.excessCagrPct).toBeCloseTo(10, 1)
     expect(c.yearsAheadPct).toBe(100)
     expect(monthly(curve).dates).toEqual([20200101, 20200630, 20201231, 20210630, 20211231])
+  })
+})
+
+describe('factors', () => {
+  /** 300 daily bars drifting at `drift` a day with a wobble of size `noise`. */
+  const bars = (drift: number, noise: number, delivery = 0.5): DailyBar[] =>
+    Array.from({ length: 300 }, (_, i) => {
+      const close = 100 * (1 + drift) ** i * (1 + noise * Math.sin(i * 1.7))
+      return { date: `d${i}`, close, volume: 1e7, deliveryQty: (i >= 279 ? delivery : 0.5) * 1e7 }
+    })
+  const universe = { UP: bars(0.002, 0.01), FLAT: bars(0, 0.01), DOWN: bars(-0.002, 0.01), WILD: bars(0.002, 0.05), CALM: bars(0.0005, 0.001) }
+
+  it('ranks risk-adjusted momentum exactly as the Monthly Plan ranking does', () => {
+    expect(rankByFactors(universe, ['momentum']).map(r => r.symbol)).toEqual(rankMomentum(universe).ranked.map(r => r.symbol))
+  })
+
+  it('scores each factor in the stated direction', () => {
+    expect(FACTORS.momentumRaw.score(universe.UP)!).toBeGreaterThan(FACTORS.momentumRaw.score(universe.DOWN)!)
+    expect(FACTORS.lowVolatility.score(universe.CALM)!).toBeGreaterThan(FACTORS.lowVolatility.score(universe.WILD)!)
+    expect(FACTORS.high52w.score(universe.UP)!).toBeGreaterThan(FACTORS.high52w.score(universe.DOWN)!)
+    expect(FACTORS.deliveryRise.score(bars(0, 0.01, 0.9))!).toBeGreaterThan(FACTORS.deliveryRise.score(bars(0, 0.01, 0.2))!)
+    expect(FACTORS.deliveryRise.score(universe.UP.map(b => ({ ...b, deliveryQty: null })))).toBeNull()
+  })
+
+  it('averages percentile ranks when several factors are combined', () => {
+    const ranked = rankByFactors(universe, ['momentumRaw', 'lowVolatility'])
+    // CALM is mid-table on momentum but the least volatile; WILD ties UP on momentum but is the most volatile
+    expect(ranked.map(r => r.symbol).indexOf('CALM')).toBeLessThan(ranked.map(r => r.symbol).indexOf('WILD'))
+    expect(ranked.every(r => r.score >= 0 && r.score <= 1)).toBe(true)
+  })
+
+  it('leaves out stocks that are illiquid or have under a year of history', () => {
+    const thin = bars(0.003, 0.01).map(b => ({ ...b, volume: 10 }))
+    expect(rankByFactors({ ...universe, THIN: thin, NEW: bars(0.003, 0.01).slice(0, 200) }, ['momentum']).map(r => r.symbol)).not.toContain('THIN')
+    expect(rankByFactors({ NEW: bars(0.003, 0.01).slice(0, 200) }, ['momentum'])).toEqual([])
+  })
+})
+
+describe('strategy builders', () => {
+  const sessions = weekdays('2019-01-01', 560)
+  const names = ['A', 'B', 'C', 'D', 'E', 'F']
+  // Six stocks with steadily different drifts, so the momentum order is A > B > ... > F
+  const m = market(sessions, names.map((s, k) => stock(s, sessions, i => 100 * (1 + (0.002 - k * 0.0006)) ** i)))
+  const range = { ...FRICTIONLESS, start: sessions[0], end: sessions.at(-1)! }
+
+  it('the generic momentum portfolio trades exactly like the Monthly Plan stock book', () => {
+    const app = simulate(m, stockMomentum({ topN: 2 }), range)
+    const generic = simulate(m, factorPortfolio({ factors: ['momentum'], topN: 2 }), range)
+    expect(generic.trades).toEqual(app.trades)
+    expect(app.trades.length).toBeGreaterThan(0)
+  })
+
+  it('a holding buffer keeps a stock that has slipped but is still inside the exit rank', () => {
+    const ctx = (holdings: string[]): StrategyContext => ({
+      date: sessions.at(-1)!, universe: () => names, holdings: new Map(holdings.map(s => [s, 0.5])),
+      bars: (symbol, count) => {
+        const s = m.stocks.get(symbol)!
+        return Array.from(s.close).slice(-count).map((close, i) => ({ date: `d${i}`, close, volume: 1e9 / close }))
+      },
+      indexBars: () => [], resultsDates: () => [],
+    })
+    const plain = factorPortfolio({ factors: ['momentumRaw'], topN: 2 })
+    const buffered = factorPortfolio({ factors: ['momentumRaw'], topN: 2, exitRank: 4 })
+    expect(Object.keys(plain.targets(ctx(['C', 'D']))).sort()).toEqual(['A', 'B'])
+    expect(Object.keys(buffered.targets(ctx(['C', 'D']))).sort()).toEqual(['C', 'D'])
+    // F is below the exit rank: it goes, and the freed slot is filled from the top
+    expect(Object.keys(buffered.targets(ctx(['C', 'F']))).sort()).toEqual(['A', 'C'])
+  })
+
+  it('a volatility target scales the book down in a turbulent market and never above fully invested', () => {
+    const base: Strategy = { name: 'base', targets: () => ({ A: 0.5, B: 0.5 }) }
+    const index = (swing: number) => Array.from({ length: 61 }, (_, i) => ({ date: `d${i}`, close: 100 * (1 + (i % 2 ? swing : -swing)) }))
+    const ctx = (swing: number): StrategyContext => ({ date: 0, universe: () => [], bars: () => [], holdings: new Map(), resultsDates: () => [], indexBars: () => index(swing) })
+    const wild = withVolatilityTarget(base, 0.15).targets(ctx(0.02))
+    expect(wild.A + wild.B).toBeLessThan(0.5)
+    expect(wild.A).toBeCloseTo(wild.B, 12)
+    const calm = withVolatilityTarget(base, 0.15).targets(ctx(0.001))
+    expect(calm).toEqual({ A: 0.5, B: 0.5 })
+  })
+})
+
+describe('earningsReaction', () => {
+  const day = (i: number) => `2024-05-${String(i + 1).padStart(2, '0')}`
+  const bars = (closes: number[]): DailyBar[] => closes.map((close, i) => ({ date: day(i), close, volume: 1e6 }))
+  const flatMarket = new Map(Array.from({ length: 10 }, (_, i) => [day(i), 1000]))
+
+  it('is the move from the close before results to the close after, less the market', () => {
+    // Results on the 3rd: 100 the day before, 112 the day after
+    expect(earningsReaction(bars([100, 100, 108, 112, 113]), [day(2)], flatMarket)).toBeCloseTo(0.12, 10)
+    const rising = new Map(flatMarket).set(day(3), 1050)
+    expect(earningsReaction(bars([100, 100, 108, 112, 113]), [day(2)], rising)).toBeCloseTo(0.07, 10)
+  })
+
+  it('waits for the session after the results before using them', () => {
+    expect(earningsReaction(bars([100, 100, 108]), [day(2)], flatMarket)).toBeNull()
+  })
+
+  it('ignores results older than the window and stocks with none', () => {
+    expect(earningsReaction(bars([100, 100, 108, 112, 113, 114, 115]), [day(1)], flatMarket, 3)).toBeNull()
+    expect(earningsReaction(bars([100, 101]), [], flatMarket)).toBeNull()
   })
 })

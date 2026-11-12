@@ -1,6 +1,6 @@
 /**
  * POST /api/model-portfolio/rebalance
- * Body: { kind: 'core' | 'satellite', mode, trendFilter?, capital?, force? }
+ * Body: { mode, trendFilter?, capital?, force? }
  *
  * Executes this month's orders on the paper book at current prices, with
  * slippage and Indian delivery charges. Refuses when the book was already
@@ -22,14 +22,10 @@ export async function POST(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  if (body.kind !== 'core' && body.kind !== 'satellite') {
-    return NextResponse.json({ error: "kind must be 'core' or 'satellite'" }, { status: 400 })
-  }
 
   try {
     const result = await executeRebalance({
       userId,
-      kind: body.kind,
       mode: parseMode(body.mode),
       trendFilter: body.trendFilter === true,
       capital: parseCapital(body.capital),
@@ -41,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof RebalanceRefused) {
       return NextResponse.json({ success: false, error: error.message }, { status: 409 })
     }
-    logger.error('Rebalance failed', { userId, kind: body.kind, error: error.message })
+    logger.error('Rebalance failed', { userId, error: error.message })
     return NextResponse.json({ success: false, error: 'Rebalance failed', details: error.message }, { status: 500 })
   }
 }

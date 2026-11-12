@@ -15,7 +15,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { gunzipSync } from 'zlib'
 import {
-  continuity, parseCorporateActionsFile, parseDeliveryFile, parseIndexCloseFile, parseLegacyBhavcopy,
+  continuity, parseBoardMeetings, parseCorporateActionsFile, parseDeliveryFile, parseIndexCloseFile, parseLegacyBhavcopy,
   parseMarketCapFile, parsePriceFile, parseSymbolChanges,
 } from '../../lib/market-data/nse-parse'
 import { openStore, toDateInt } from '../../lib/market-data/store'
@@ -71,6 +71,24 @@ if (process.argv.includes('--names')) {
   }
   db.exec('commit')
   console.log(`Names stored for ${(db.prepare('select count(*) n from security_names').get() as { n: number }).n} symbols`)
+  process.exit(0)
+}
+
+const insResults = db.prepare('insert or ignore into results_dates (symbol, date, first_seen) values (?, ?, ?)')
+const loadResultsDates = (stem: string, date: number) => {
+  const bm = read(`${stem}.bm.txt.gz`)
+  for (const m of bm ? parseBoardMeetings(bm) : []) if (m.results) insResults.run(m.symbol, toDateInt(m.date), date)
+}
+
+// One-off for stores built before results dates were kept
+if (process.argv.includes('--results-dates')) {
+  db.exec('begin')
+  for (const day of Object.keys(manifest).filter(d => manifest[d] === 'ok').sort()) {
+    loadResultsDates(`data/nse/raw/${day.slice(0, 4)}/${day.replaceAll('-', '')}`, toDateInt(day))
+  }
+  db.exec('commit')
+  const n = db.prepare('select count(*) n, count(distinct symbol) s, min(date) a, max(date) b from results_dates').get() as any
+  console.log(`${n.n} results dates for ${n.s} symbols, ${n.a} to ${n.b}`)
   process.exit(0)
 }
 
@@ -152,6 +170,7 @@ for (const [i, day] of days.entries()) {
   for (const a of bc ? parseCorporateActionsFile(bc) : []) {
     insAction.run(a.symbol, toDateInt(a.exDate), a.purpose, date)
   }
+  loadResultsDates(stem, date)
   for (const m of mcap ? parseMarketCapFile(mcap) : []) {
     const prev = lastCapital.get(m.symbol, date) as { face_value: number; shares: number } | undefined
     if (!prev || prev.face_value !== m.faceValue || prev.shares !== m.shares) {
