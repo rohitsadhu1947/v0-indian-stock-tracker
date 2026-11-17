@@ -4,13 +4,14 @@
  * Monthly Plan: the portfolio engine's landing screen.
  *
  * Three modes, each a strategy that went through the research harness. The
- * page shows that mode's backtest, the ranking at the last month-end, the
- * exact buy/sell orders for the paper book, and the book's value against
- * NIFTY 500.
+ * page keeps three things apart: the paper book as it stands at current
+ * prices, the picks of the mode being looked at, and the trades that would
+ * take the book there. Real Zerodha holdings are shown read only.
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
-import type { MonthlyPlan } from '@/lib/portfolio/service'
+import type { MonthlyPlan, BrokerHoldingRow } from '@/lib/portfolio/service'
+import { holdingValue } from '@/lib/portfolio/plan-core'
 import type { TrackRecord } from '@/lib/portfolio/signals'
 import { MODES, DEFAULT_MODE, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
@@ -58,10 +59,33 @@ function backtestFor(mode: Mode, trendFilter: boolean): Backtest | undefined {
   return (research.strategies as unknown as Backtest[]).find(s => s.key === key)
 }
 
+/** Prices from /api/model-portfolio/live, polled while the market is open. */
+interface LiveView {
+  brokerConnected: boolean
+  marketOpen: boolean
+  source: 'live' | 'last close'
+  at: string
+  lastCloseFor: string[]
+  quotes: Record<string, { price: number; previousClose: number | null }>
+  cash: number
+  brokerHoldings: BrokerHoldingRow[] | null
+}
+
+const LIVE_POLL_MS = 15000
+const KITE_LOGIN = '/api/auth/kite/login'
+const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })
+const price = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const gain = (n: number): React.CSSProperties => ({ color: n > 0 ? '#34d399' : n < 0 ? '#f87171' : undefined })
+const smallButton: React.CSSProperties = {
+  padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.25)', background: 'transparent',
+  color: '#fff', cursor: 'pointer', fontSize: '0.85em', marginRight: 6, whiteSpace: 'nowrap',
+}
+
 export default function MonthlyPlanTab() {
   const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
   const [trendFilter, setTrendFilter] = useState(false)
   const [plan, setPlan] = useState<MonthlyPlan | null>(null)
+  const [live, setLive] = useState<LiveView | null>(null)
   const [perf, setPerf] = useState<Performance | null>(null)
   const [record, setRecord] = useState<TrackRecord | null>(null)
   const [loading, setLoading] = useState(true)
@@ -77,8 +101,8 @@ export default function MonthlyPlanTab() {
     } catch { /* storage unavailable */ }
   }, [])
 
-  const load = useCallback(async (m: Mode, trend: boolean) => {
-    setLoading(true)
+  const load = useCallback(async (m: Mode, trend: boolean, quiet = false) => {
+    if (!quiet) setLoading(true)
     setError(null)
     try {
       const [planRes, perfRes, recordRes] = await Promise.all([
@@ -105,8 +129,27 @@ export default function MonthlyPlanTab() {
 
   useEffect(() => { load(mode, trendFilter) }, [mode, trendFilter, load])
 
+  const loadLive = useCallback(async () => {
+    try {
+      const json = await fetch('/api/model-portfolio/live').then(r => r.json())
+      if (json.success) setLive(json)
+    } catch { /* keep the last prices on screen */ }
+  }, [])
+
+  // Real holdings once, then fresh prices every few seconds while the market is open
+  const connected = plan?.brokerConnected ?? false
+  const polling = connected && (plan?.marketOpen ?? false)
+  useEffect(() => {
+    if (!connected) { setLive(null); return }
+    loadLive()
+    if (!polling) return
+    const timer = setInterval(() => { if (!document.hidden) loadLive() }, LIVE_POLL_MS)
+    return () => clearInterval(timer)
+  }, [connected, polling, loadLive])
+
   const chooseMode = (m: Mode) => {
     setMode(m)
+    setMessage(null)
     try { localStorage.setItem(MODE_KEY, m) } catch { /* ignore */ }
   }
 
@@ -115,31 +158,50 @@ export default function MonthlyPlanTab() {
     try { localStorage.setItem(TREND_KEY, on ? '1' : '0') } catch { /* ignore */ }
   }
 
-  const rebalance = async () => {
-    if (!plan) return
-    const ok = window.confirm(
-      `Record a paper rebalance in ${MODES[mode].label} mode?\n\n` +
-      `${plan.book.plan.orders.length} orders at ${plan.book.priceSource} prices, with slippage and charges.\n` +
-      `No real orders are placed.`
-    )
-    if (!ok) return
+  const post = async (url: string, body: object, done: (json: any) => string) => {
     setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/api/model-portfolio/rebalance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, trendFilter }),
-      })
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Rebalance failed')
-      setMessage(`Paper rebalance recorded: ${json.fills.length} fills, book value ${inr(json.value)}.`)
-      await load(mode, trendFilter)
+      if (!json.success) throw new Error(json.error || 'Failed')
+      setMessage(done(json))
+      await Promise.all([load(mode, trendFilter, true), loadLive()])
     } catch (e: any) {
-      setMessage(`Not rebalanced: ${e.message}`)
+      setMessage(`Not done: ${e.message}`)
     } finally {
       setBusy(false)
     }
+  }
+
+  const runAction = () => {
+    if (!plan) return
+    const { kind, orders } = plan.action
+    const what =
+      kind === 'start' ? `Start the paper book in ${MODES[mode].label} mode?`
+      : kind === 'switch' ? `Switch the paper book from ${MODES[plan.book.mode!].label} to ${MODES[mode].label}?`
+      : `Record this month's paper rebalance in ${MODES[mode].label} mode?`
+    const ok = window.confirm(
+      `${what}\n\n${orders.length} orders at ${plan.prices.source === 'live' ? 'current' : 'last close'} prices, with slippage and charges.\n` +
+      `No real orders are placed.`
+    )
+    if (!ok) return
+    post('/api/model-portfolio/rebalance', { mode, trendFilter },
+      json => `Recorded: ${json.fills.length} fills, book value ${inr(json.value)}.`)
+  }
+
+  const trade = (symbol: string, side: 'BUY' | 'SELL', held: number) => {
+    const answer = window.prompt(
+      side === 'SELL'
+        ? `Sell how many ${symbol}? The book holds ${held}. This is a paper trade at the current price.`
+        : `Buy how many more ${symbol}? This is a paper trade at the current price.`,
+      side === 'SELL' ? String(held) : ''
+    )
+    if (answer === null) return
+    const qty = Number(answer.trim())
+    if (!Number.isInteger(qty) || qty <= 0) { setMessage('Not done: enter a whole number of shares.'); return }
+    post('/api/model-portfolio/trade', { symbol, side, qty },
+      json => `${side === 'SELL' ? 'Sold' : 'Bought'} ${json.fill.qty} ${symbol} at ${price(json.fill.fillPrice)} after slippage, charges ${inr(json.fill.charges)}. Cash is now ${inr(json.cash)}.`)
   }
 
   const plain = backtestFor(mode, false)
@@ -152,8 +214,9 @@ export default function MonthlyPlanTab() {
         <p style={{ ...muted, margin: 0 }}>
           Once a month, hold the {PORTFOLIO_RULES.topN} best-ranked of the {PORTFOLIO_RULES.universeSize} most traded NSE stocks
           at equal weight, with at most {PORTFOLIO_RULES.maxPerSector} from any one sector. A stock you hold stays until it
-          falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves the trading. Each mode ranks stocks differently and
-          was backtested exactly as it runs here. The book is paper; no real orders are placed.
+          falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves the trading. Each mode ranks stocks differently, so
+          each has its own list. Choosing a mode here only shows you that mode. Your paper book changes only when you confirm
+          an action below. No real orders are placed.
         </p>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
@@ -173,7 +236,10 @@ export default function MonthlyPlanTab() {
                 background: mode === m ? 'rgba(96,165,250,0.15)' : 'rgba(0,0,0,0.2)',
               }}
             >
-              <div style={{ fontWeight: 700 }}>{MODES[m].label}{m === DEFAULT_MODE ? ' (default)' : ''}</div>
+              <div style={{ fontWeight: 700 }}>
+                {MODES[m].label}{m === DEFAULT_MODE ? ' (default)' : ''}
+                {plan?.book.mode === m && <span style={{ marginLeft: 8, fontSize: '0.75em', padding: '2px 8px', borderRadius: 10, background: '#2563eb' }}>your book</span>}
+              </div>
               <div style={{ fontSize: '0.8em', marginTop: 4, opacity: 0.85 }}>{MODES[m].description}</div>
             </button>
           ))}
@@ -201,6 +267,10 @@ export default function MonthlyPlanTab() {
 
       {plan && !loading && (
         <>
+          <PriceStatus plan={plan} live={live} />
+
+          <HoldingsCard plan={plan} live={live} busy={busy} onTrade={trade} />
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
             <div style={card}>
               <div style={muted}>Market trend (NIFTY 200 vs 200-day average)</div>
@@ -217,15 +287,15 @@ export default function MonthlyPlanTab() {
             </div>
 
             <div style={card}>
-              <div style={muted}>This month</div>
+              <div style={muted}>This month in {MODES[plan.mode].label}</div>
               <div style={{ fontSize: '1.1em', fontWeight: 700, marginTop: 6 }}>
-                {plan.exposure.invested ? `Invested: ${MODES[plan.mode].label}` : 'In cash'}
+                {plan.exposure.invested ? 'Invested' : 'In cash'}
               </div>
               <div style={muted}>{plan.exposure.reason} Decided on prices at {plan.asOf}, the last session of last month.</div>
             </div>
 
             <div style={{ ...card, borderColor: plan.freshness.ok ? 'rgba(255,255,255,0.1)' : '#f59e0b' }}>
-              <div style={muted}>Price data</div>
+              <div style={muted}>Nightly NSE data (used for the ranking)</div>
               <div style={{ fontWeight: 700, marginTop: 6, color: plan.freshness.ok ? '#34d399' : '#fbbf24' }}>
                 {plan.freshness.ok ? 'Current' : 'Stale'}
               </div>
@@ -233,44 +303,11 @@ export default function MonthlyPlanTab() {
             </div>
           </div>
 
-          <BookSection plan={plan} busy={busy} onRebalance={rebalance} />
+          <PicksCard plan={plan} />
 
-          <div style={card}>
-            <h3 style={{ marginTop: 0 }}>Ranking at {plan.asOf}</h3>
-            <p style={muted}>
-              {plan.universe.ranked} of the {plan.universe.size} most traded stocks have a year of history and trade at least ₹10 Cr a day.
-              Score is the stock&apos;s standing among them on {MODES[plan.mode].factors.length > 1 ? 'the average of ' : ''}
-              {MODES[plan.mode].factors.map(f => FACTOR_WORDS[f] ?? f).join(' and ')}: 100 is best.
-              {plan.book.skippedUnaffordable.length > 0 &&
-                ` Skipped because one share costs more than a position's budget: ${plan.book.skippedUnaffordable.join(', ')}.`}
-            </p>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>#</th><th style={th}>Stock</th><th style={th}>Industry</th>
-                    <th style={th}>12-1m return</th><th style={th}>Volatility</th><th style={th}>Score</th>
-                    <th style={th}>Traded/day</th><th style={th}>Close</th><th style={th}>Book</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {plan.book.ranking.map(r => (
-                    <tr key={r.symbol} style={{ opacity: r.selected || r.held ? 1 : 0.55 }}>
-                      <td style={td}>{r.rank}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
-                      <td style={td}>{r.industry}</td>
-                      <td style={{ ...td, color: (r.momentumPct ?? 0) >= 0 ? '#34d399' : '#f87171' }}>{r.momentumPct == null ? '' : pct(r.momentumPct)}</td>
-                      <td style={td}>{r.volatilityPct == null ? '' : `${r.volatilityPct.toFixed(0)}%`}</td>
-                      <td style={td}>{r.scorePct.toFixed(0)}</td>
-                      <td style={td}>₹{r.tradedValueCr.toFixed(0)} Cr</td>
-                      <td style={td}>{r.lastClose.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                      <td style={td}>{r.selected ? (r.held ? 'Keep' : 'Buy') : r.held ? 'Sell' : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ActionCard plan={plan} busy={busy} onRun={runAction} />
+
+          <BrokerHoldingsCard plan={plan} live={live} />
 
           <LiveRecordCard record={record} mode={mode} />
 
@@ -352,88 +389,336 @@ function BacktestTable({ mode, trendFilter }: { mode: Mode; trendFilter: boolean
   )
 }
 
-function BookSection({ plan, busy, onRebalance }: { plan: MonthlyPlan; busy: boolean; onRebalance: () => void }) {
+/** Where the prices on the page come from, and a warning when they are old during trading hours. */
+function PriceStatus({ plan, live }: { plan: MonthlyPlan; live: LiveView | null }) {
+  const source = live?.source ?? plan.prices.source
+  const at = live?.at ?? plan.prices.at
+  const isLive = source === 'live'
+  const onClose = (live?.lastCloseFor ?? plan.prices.lastCloseFor).filter(s => plan.book.holdings.some(h => h.symbol === s))
+  const warn = plan.marketOpen && !isLive
+  return (
+    <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderColor: warn ? '#f59e0b' : 'rgba(255,255,255,0.1)' }}>
+      <div>
+        <strong style={{ color: isLive ? '#34d399' : warn ? '#fbbf24' : undefined }}>
+          {isLive ? `Live prices from Zerodha, updated ${timeOf(at)}` : 'Prices are the last close'}
+        </strong>
+        <div style={muted}>
+          {isLive
+            ? plan.marketOpen ? `Refreshes every ${LIVE_POLL_MS / 1000} seconds while the market is open.` : 'The market is closed, so this is the final price of the last session.'
+            : warn ? 'The market is open and Zerodha is not connected. Prices and profit figures below are from the last close and can be far from the current price.'
+            : plan.brokerConnected ? 'Zerodha did not return prices, so the last close is shown.'
+            : 'Zerodha is not connected. Connect it to see current prices during market hours and your real holdings.'}
+          {isLive && onClose.length > 0 && ` Zerodha had no price for ${onClose.join(', ')}, so ${onClose.length === 1 ? 'it is' : 'they are'} shown at the last close.`}
+        </div>
+      </div>
+      {!plan.brokerConnected && (
+        <a href={KITE_LOGIN} style={{ padding: '8px 16px', borderRadius: 8, background: '#eab308', color: '#000', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          Connect Zerodha
+        </a>
+      )}
+    </div>
+  )
+}
+
+/** The paper book as it stands: what was bought, at what price, and what it is worth now. */
+function HoldingsCard({ plan, live, busy, onTrade }: {
+  plan: MonthlyPlan; live: LiveView | null; busy: boolean; onTrade: (symbol: string, side: 'BUY' | 'SELL', held: number) => void
+}) {
   const { book } = plan
-  const holdings = Object.entries(book.state.holdings)
-  const ret = ((book.value - book.startingCapital) / book.startingCapital) * 100
-  const canRebalance = book.rebalance.due && book.plan.orders.length > 0 && book.plan.missingPrices.length === 0
-  const why = { exit: `fell below rank ${PORTFOLIO_RULES.exitRank} or its sector is full`, entry: 'new pick', resize: 'resize to target' }
+  if (!book.exists) {
+    return (
+      <div style={card}>
+        <h3 style={{ margin: 0 }}>Your paper book</h3>
+        <p style={{ ...muted, marginBottom: 0 }}>
+          Not started yet. Pick a mode above, look at its picks, then use the start button further down. It begins with {inr(book.startingCapital)} of paper money.
+        </p>
+      </div>
+    )
+  }
+
+  // Latest prices from the poll, when there are any
+  const rows = book.holdings.map(h => {
+    const quote = live?.quotes[h.symbol]
+    return quote ? { ...h, price: quote.price, previousClose: quote.previousClose, ...holdingValue(h.qty, h.avgPrice, quote.price, quote.previousClose) } : h
+  })
+  const cash = live?.cash ?? book.cash
+  const invested = rows.reduce((sum, h) => sum + h.value, 0)
+  const cost = rows.reduce((sum, h) => sum + h.cost, 0)
+  const value = cash + invested
+  const total = value - book.startingCapital
+  const before = rows.reduce((sum, h) => sum + h.qty * (h.previousClose ?? h.price), 0)
+  const today = invested - before
+  const bookLabel = MODES[book.mode!].label
 
   return (
     <div style={card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ margin: 0 }}>Paper book</h3>
+          <h3 style={{ margin: 0 }}>Your paper book</h3>
           <p style={{ ...muted, margin: '4px 0 0' }}>
-            {book.exists && book.mode !== plan.mode
-              ? `Last rebalanced in ${MODES[book.mode]?.label ?? book.mode} mode. These orders would move it to ${MODES[plan.mode].label}.`
-              : `${MODES[plan.mode].label} mode, ${PORTFOLIO_RULES.topN} stocks at equal weight.`}
+            Follows {bookLabel} mode. {rows.length} holdings{book.lastRebalance ? `, last rebalanced on ${book.lastRebalance}` : ''}. Started with {inr(book.startingCapital)}.
           </p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '1.3em', fontWeight: 700 }}>{inr(book.value)}</div>
-          <div style={muted}>
-            {book.exists ? <>since start {pct(ret)} · {holdings.length} holdings</> : 'not started: first rebalance creates it'}
-          </div>
+          <div style={{ fontSize: '1.4em', fontWeight: 700 }}>{inr(value)}</div>
+          <div style={{ ...gain(total), fontWeight: 600 }}>{total >= 0 ? '+' : '-'}{inr(Math.abs(total))} ({pct(total / book.startingCapital * 100)}) since start</div>
+          {before > 0 && <div style={{ ...muted, ...gain(today) }}>Today {today >= 0 ? '+' : '-'}{inr(Math.abs(today))} ({pct(today / before * 100, 2)})</div>}
         </div>
       </div>
 
-      {book.notes.map(n => <p key={n} style={{ ...muted, color: '#fbbf24' }}>{n}</p>)}
-
-      <p style={muted}>
-        {book.rebalance.reason}
-        {book.plan.orders.length > 0 && <> {book.plan.orders.length} orders at {book.priceSource} prices, estimated costs {inr(book.plan.estimatedCosts)}.</>}
-      </p>
-
-      {book.plan.orders.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
+      {rows.length === 0 ? (
+        <p style={muted}>The book holds no shares. Cash {inr(cash)}.</p>
+      ) : (
+        <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr><th style={th}>Action</th><th style={th}>Stock</th><th style={th}>Qty</th><th style={th}>Price</th><th style={th}>Value</th><th style={th}>Why</th></tr>
+              <tr>
+                <th style={th}>Stock</th><th style={th}>Qty</th><th style={th}>Bought at</th><th style={th}>Now</th>
+                <th style={th}>Today</th><th style={th}>Value</th><th style={th}>Profit / loss</th>
+                <th style={th}>Rank in {bookLabel}</th><th style={th}>At next rebalance</th><th style={th}></th>
+              </tr>
             </thead>
             <tbody>
-              {book.plan.orders.map(o => (
-                <tr key={o.side + o.symbol}>
-                  <td style={{ ...td, color: o.side === 'BUY' ? '#34d399' : '#f87171', fontWeight: 700 }}>{o.side}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{o.symbol}</td>
-                  <td style={td}>{o.qty}</td>
-                  <td style={td}>{o.price.toLocaleString('en-IN')}</td>
-                  <td style={td}>{inr(o.value)}</td>
-                  <td style={td}>{why[o.reason]}</td>
+              {rows.map(h => (
+                <tr key={h.symbol}>
+                  <td style={td}><span style={{ fontWeight: 600 }}>{h.symbol}</span><div style={{ ...muted, fontSize: '0.8em' }}>{h.sector}</div></td>
+                  <td style={td}>{h.qty}</td>
+                  <td style={td}>{price(h.avgPrice)}</td>
+                  <td style={td}>{price(h.price)}</td>
+                  <td style={{ ...td, ...gain(h.dayChangePct ?? 0) }}>{h.dayChangePct == null ? '' : pct(h.dayChangePct, 2)}</td>
+                  <td style={td}>{inr(h.value)}</td>
+                  <td style={{ ...td, ...gain(h.pnl), whiteSpace: 'nowrap' }}>{h.pnl >= 0 ? '+' : '-'}{inr(Math.abs(h.pnl))} ({pct(h.pnlPct)})</td>
+                  <td style={td}>{h.rank ?? 'Not ranked'}</td>
+                  <td style={td}>{h.keep ? 'Keep' : <span style={{ color: '#fbbf24' }}>Sell. {h.note}</span>}</td>
+                  <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                    <button style={smallButton} disabled={busy} onClick={() => onTrade(h.symbol, 'SELL', h.qty)}>Exit</button>
+                    <button style={smallButton} disabled={busy} onClick={() => onTrade(h.symbol, 'BUY', h.qty)}>Buy more</button>
+                  </td>
                 </tr>
               ))}
+              <tr>
+                <td style={{ ...td, fontWeight: 700 }} colSpan={5}>Shares</td>
+                <td style={{ ...td, fontWeight: 700 }}>{inr(invested)}</td>
+                <td style={{ ...td, fontWeight: 700, ...gain(invested - cost) }} colSpan={4}>
+                  {invested - cost >= 0 ? '+' : '-'}{inr(Math.abs(invested - cost))}{cost > 0 ? ` (${pct((invested / cost - 1) * 100)})` : ''}
+                </td>
+              </tr>
+              <tr>
+                <td style={td} colSpan={5}>Cash</td>
+                <td style={td} colSpan={5}>{inr(cash)}</td>
+              </tr>
             </tbody>
           </table>
         </div>
       )}
+      <p style={{ ...muted, marginBottom: 0 }}>
+        Exit and Buy more are paper trades at the price shown, with slippage and charges. They step outside the monthly rule, so the
+        next rebalance will bring the book back to the plan.
+      </p>
+    </div>
+  )
+}
 
-      <button
-        onClick={onRebalance}
-        disabled={!canRebalance || busy}
-        style={{
-          marginTop: 14, padding: '10px 18px', borderRadius: 8, border: 'none', fontWeight: 700,
-          cursor: canRebalance && !busy ? 'pointer' : 'not-allowed',
-          background: canRebalance ? '#2563eb' : 'rgba(255,255,255,0.1)', color: '#fff',
-        }}
-      >
-        {busy ? 'Recording…' : 'Record paper rebalance'}
-      </button>
+/** What the mode being looked at would hold this month. */
+function PicksCard({ plan }: { plan: MonthlyPlan }) {
+  const label = MODES[plan.mode].label
+  const mine = new Set(plan.picks.map(p => p.symbol))
+  const others = MODE_IDS.filter(m => m !== plan.mode)
+    .map(m => { const n = plan.modePicks[m].filter(s => mine.has(s)).length; return `${n} ${n === 1 ? 'is' : 'are'} also in ${MODES[m].label}` })
+  const heldCount = plan.picks.filter(p => p.held).length
 
-      {holdings.length > 0 && (
-        <details style={{ marginTop: 14 }}>
-          <summary style={{ cursor: 'pointer' }}>Current holdings ({holdings.length})</summary>
+  return (
+    <div style={card}>
+      <h3 style={{ marginTop: 0 }}>What {label} would hold this month</h3>
+      <p style={muted}>
+        Ranked on prices at {plan.asOf}. {plan.universe.ranked} of the {plan.universe.size} most traded stocks have a year of history and
+        trade at least ₹10 Cr a day. {label} ranks them on {MODES[plan.mode].factors.length > 1 ? 'the average of ' : ''}
+        {MODES[plan.mode].factors.map(f => FACTOR_WORDS[f] ?? f).join(' and ')}. Of these {plan.picks.length} picks, {others.join(' and ')}.
+        {plan.book.exists && ` Your book holds ${heldCount} of them.`}
+        {plan.action.kind === 'rebalance' && ' A stock you already hold stays on this list while it ranks ' + PORTFOLIO_RULES.exitRank + ' or better.'}
+        {plan.action.skippedUnaffordable.length > 0 &&
+          ` Skipped because one share costs more than a position's budget: ${plan.action.skippedUnaffordable.join(', ')}.`}
+      </p>
+      <RankingTable rows={plan.picks} />
+      <details style={{ marginTop: 12 }}>
+        <summary style={{ cursor: 'pointer' }}>Full ranking, top {plan.ranking.length}</summary>
+        <RankingTable rows={plan.ranking} dim />
+      </details>
+    </div>
+  )
+}
+
+function RankingTable({ rows, dim }: { rows: MonthlyPlan['ranking']; dim?: boolean }) {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={th}>Rank</th><th style={th}>Stock</th><th style={th}>Industry</th>
+            <th style={th}>12-1m return</th><th style={th}>Volatility</th><th style={th}>Score</th>
+            <th style={th}>Traded/day</th><th style={th}>Close</th><th style={th}>Pick</th><th style={th}>In your book</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.symbol} style={{ opacity: !dim || r.selected || r.held ? 1 : 0.55 }}>
+              <td style={td}>{r.rank}</td>
+              <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+              <td style={td}>{r.industry}</td>
+              <td style={{ ...td, ...gain(r.momentumPct ?? 0) }}>{r.momentumPct == null ? '' : pct(r.momentumPct)}</td>
+              <td style={td}>{r.volatilityPct == null ? '' : `${r.volatilityPct.toFixed(0)}%`}</td>
+              <td style={td}>{r.scorePct.toFixed(0)}</td>
+              <td style={td}>₹{r.tradedValueCr.toFixed(0)} Cr</td>
+              <td style={td}>{price(r.lastClose)}</td>
+              <td style={td}>{r.selected ? 'Yes' : ''}</td>
+              <td style={td}>{r.held ? 'Held' : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** The trades that would take the book to the mode being looked at. Nothing happens until the button is pressed. */
+function ActionCard({ plan, busy, onRun }: { plan: MonthlyPlan; busy: boolean; onRun: () => void }) {
+  const { action, book } = plan
+  const label = MODES[plan.mode].label
+  const title =
+    action.kind === 'start' ? `Start your paper book in ${label}`
+    : action.kind === 'switch' ? `Switch your book from ${MODES[book.mode!].label} to ${label}`
+    : `This month's rebalance (${label})`
+  const intro =
+    action.kind === 'start' ? `Buys ${label}'s picks in equal amounts with ${inr(book.startingCapital)} of paper money.`
+    : action.kind === 'switch' ? `Your book follows ${MODES[book.mode!].label}. These orders would sell what ${label} does not pick and buy what it does. Leave this alone if you only wanted to look.`
+    : 'The monthly update of your book: sell what the rule drops, buy the replacements.'
+  const button = action.kind === 'start' ? 'Start paper book' : action.kind === 'switch' ? `Switch book to ${label}` : 'Record paper rebalance'
+  const sells = action.orders.filter(o => o.side === 'SELL').length
+
+  return (
+    <div style={{ ...card, borderColor: action.kind === 'switch' ? '#f59e0b' : 'rgba(255,255,255,0.1)' }}>
+      <h3 style={{ marginTop: 0 }}>{title}</h3>
+      <p style={muted}>{intro}</p>
+      {action.notes.map(n => <p key={n} style={{ ...muted, color: '#fbbf24' }}>{n}</p>)}
+      {action.blocked && (
+        <p style={{ fontWeight: 600 }}>
+          Not available now: {action.blocked}
+          {action.orders.length > 0 && ' The orders below only show what it would do at today\'s prices.'}
+        </p>
+      )}
+
+      {action.orders.length > 0 && (
+        <>
+          <p style={muted}>
+            {sells} to sell and {action.orders.length - sells} to buy, at {plan.prices.source === 'live' ? 'current' : 'last close'} prices.
+            Estimated costs {inr(action.estimatedCosts)}. Cash left after: {inr(action.cashAfter)}.
+          </p>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-              <thead><tr><th style={th}>Stock</th><th style={th}>Qty</th><th style={th}>Avg price</th></tr></thead>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr><th style={th}>Action</th><th style={th}>Stock</th><th style={th}>Qty</th><th style={th}>Price</th><th style={th}>Value</th><th style={th}>Why</th></tr>
+              </thead>
               <tbody>
-                {holdings.map(([s, h]) => (
-                  <tr key={s}><td style={td}>{s}</td><td style={td}>{h.qty}</td><td style={td}>{h.avgPrice.toFixed(2)}</td></tr>
+                {action.orders.map(o => (
+                  <tr key={o.side + o.symbol}>
+                    <td style={{ ...td, color: o.side === 'BUY' ? '#34d399' : '#f87171', fontWeight: 700 }}>{o.side === 'BUY' ? 'Buy' : 'Sell'}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{o.symbol}</td>
+                    <td style={td}>{o.qty}</td>
+                    <td style={td}>{price(o.price)}</td>
+                    <td style={td}>{inr(o.value)}</td>
+                    <td style={td}>{o.why}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style={muted}>Cash {inr(book.state.cash)}</div>
-        </details>
+        </>
+      )}
+
+      {action.canExecute && (
+        <button
+          onClick={onRun}
+          disabled={busy}
+          style={{
+            marginTop: 14, padding: '10px 18px', borderRadius: 8, border: 'none', fontWeight: 700,
+            cursor: busy ? 'not-allowed' : 'pointer', background: '#2563eb', color: '#fff',
+          }}
+        >
+          {busy ? 'Recording…' : button}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** The user's real Zerodha holdings, read only, placed against each mode's ranking. */
+function BrokerHoldingsCard({ plan, live }: { plan: MonthlyPlan; live: LiveView | null }) {
+  const rows = live?.brokerHoldings
+  const value = rows?.reduce((sum, h) => sum + h.value, 0) ?? 0
+  const cost = rows?.reduce((sum, h) => sum + h.cost, 0) ?? 0
+
+  return (
+    <div style={card}>
+      <h3 style={{ marginTop: 0 }}>Your Zerodha holdings against the plan</h3>
+      {!plan.brokerConnected ? (
+        <p style={{ ...muted, marginBottom: 0 }}>
+          Connect Zerodha to see the shares you really own here, with current price, profit and where each one ranks in the three
+          modes. This only reads your holdings. <a href={KITE_LOGIN} style={{ color: '#60a5fa' }}>Connect Zerodha</a>
+        </p>
+      ) : !live ? (
+        <p style={{ ...muted, marginBottom: 0 }}>Loading your holdings…</p>
+      ) : !rows ? (
+        <p style={{ ...muted, marginBottom: 0 }}>Zerodha did not return your holdings. Try reconnecting.</p>
+      ) : rows.length === 0 ? (
+        <p style={{ ...muted, marginBottom: 0 }}>Your Zerodha account has no delivery holdings.</p>
+      ) : (
+        <>
+          <p style={muted}>
+            Read only: nothing here places an order. The last three columns show each share&apos;s rank at {plan.asOf} out of {plan.universe.ranked} ranked
+            stocks. &quot;Pick&quot; means that mode would hold it this month. &quot;Not ranked&quot; means it is outside the {plan.universe.size} most
+            traded stocks, or has too little history.
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={th}>Stock</th><th style={th}>Qty</th><th style={th}>Bought at</th><th style={th}>Now</th>
+                  <th style={th}>Today</th><th style={th}>Value</th><th style={th}>Profit / loss</th>
+                  {MODE_IDS.map(m => <th key={m} style={th}>{MODES[m].label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice().sort((a, b) => b.value - a.value).map(h => (
+                  <tr key={h.exchange + h.symbol}>
+                    <td style={{ ...td, fontWeight: 600 }}>{h.symbol}</td>
+                    <td style={td}>{h.quantity}</td>
+                    <td style={td}>{price(h.averagePrice)}</td>
+                    <td style={td}>{price(h.lastPrice)}</td>
+                    <td style={{ ...td, ...gain(h.dayChangePct ?? 0) }}>{h.dayChangePct == null ? '' : pct(h.dayChangePct, 2)}</td>
+                    <td style={td}>{inr(h.value)}</td>
+                    <td style={{ ...td, ...gain(h.pnl), whiteSpace: 'nowrap' }}>{h.pnl >= 0 ? '+' : '-'}{inr(Math.abs(h.pnl))} ({pct(h.pnlPct)})</td>
+                    {MODE_IDS.map(m => {
+                      const rank = plan.modeRanks[h.symbol]?.[m]
+                      const pick = plan.modePicks[m].includes(h.symbol)
+                      return (
+                        <td key={m} style={{ ...td, color: pick ? '#34d399' : undefined, fontWeight: pick ? 700 : undefined, opacity: rank ? 1 : 0.6 }}>
+                          {rank ? `${rank}${pick ? ' · Pick' : ''}` : 'Not ranked'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                <tr>
+                  <td style={{ ...td, fontWeight: 700 }} colSpan={5}>Total</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{inr(value)}</td>
+                  <td style={{ ...td, fontWeight: 700, ...gain(value - cost) }} colSpan={4}>
+                    {value - cost >= 0 ? '+' : '-'}{inr(Math.abs(value - cost))}{cost > 0 ? ` (${pct((value / cost - 1) * 100)})` : ''}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

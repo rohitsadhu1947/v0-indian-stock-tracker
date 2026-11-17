@@ -20,6 +20,7 @@ import type {
   HistoricalParams,
   CandleData,
   InstrumentData,
+  BrokerHolding,
 } from './types'
 
 // SmartAPI SDK types (the SDK uses CommonJS require pattern)
@@ -133,6 +134,10 @@ export class AngelBrokerClient implements BrokerClient {
       access_token: config.accessToken,
       refresh_token: config.refreshToken || '',
     })
+  }
+
+  async getHoldings(): Promise<BrokerHolding[]> {
+    throw new Error('Reading holdings is not supported for Angel One yet')
   }
 
   isConnected(): boolean {
