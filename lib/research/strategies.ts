@@ -72,18 +72,94 @@ export function factorPortfolio(params: {
   topN?: number
   universeSize?: number
   exitRank?: number
+  /** Sector of a stock, when known. Needed by the two options below. */
+  sectorOf?: (symbol: string) => string | undefined
+  /** At most this many picks from one sector. */
+  maxPerSector?: number
+  /**
+   * Pick only from the strongest sectors: this share of sectors (0 to 1),
+   * ranked by the median 12-month momentum of their stocks.
+   */
+  topSectorShare?: number
 }): Strategy {
-  const { factors, exitRank } = params
+  const { factors, exitRank, sectorOf, maxPerSector, topSectorShare } = params
   const topN = params.topN ?? STOCK_MOMENTUM.topN
   const universeSize = params.universeSize ?? 500
   const needed = STOCK_MOMENTUM.lookbackDays + 2
   const label = factors.map(f => FACTORS[f].label).join(' + ')
+  const cap = sectorOf && maxPerSector ? { groupOf: sectorOf, max: maxPerSector } : undefined
   return {
-    name: `${label}, top ${topN}${exitRank ? `, held to rank ${exitRank}` : ''}`,
+    name: `${label}, top ${topN}${exitRank ? `, held to rank ${exitRank}` : ''}` +
+      `${cap ? `, max ${maxPerSector} a sector` : ''}${topSectorShare ? `, strongest ${Math.round(topSectorShare * 100)}% of sectors` : ''}`,
     targets(ctx) {
-      const ranked = rankByFactors(barsFor(ctx, universeSize, needed), factors)
-      const picks = selectWithBuffer(ranked, ctx.holdings.keys(), topN, exitRank)
+      const bars = barsFor(ctx, universeSize, needed)
+      let ranked = rankByFactors(bars, factors)
+      if (sectorOf && topSectorShare) {
+        const strong = strongestSectors(ranked.map(r => r.symbol), bars, sectorOf, topSectorShare)
+        ranked = ranked.filter(r => strong.has(sectorOf(r.symbol) ?? ''))
+      }
+      const picks = selectWithBuffer(ranked, ctx.holdings.keys(), topN, exitRank, undefined, cap)
       return Object.fromEntries(picks.map(symbol => [symbol, 1 / topN]))
+    },
+  }
+}
+
+/** Sectors ranked by the median 12-month momentum of their rankable stocks; the top `share` of them. */
+export function strongestSectors(
+  symbols: string[], bars: Record<string, DailyBar[]>, sectorOf: (symbol: string) => string | undefined, share: number, minStocks = 5
+): Set<string> {
+  const bySector = new Map<string, number[]>()
+  for (const symbol of symbols) {
+    const sector = sectorOf(symbol)
+    const momentum = FACTORS.momentumRaw.score(bars[symbol])
+    if (!sector || momentum == null) continue
+    bySector.set(sector, [...(bySector.get(sector) ?? []), momentum])
+  }
+  const medians = [...bySector.entries()]
+    .filter(([, values]) => values.length >= minStocks)
+    .map(([sector, values]) => {
+      const sorted = values.slice().sort((a, b) => a - b)
+      return { sector, median: sorted[sorted.length >> 1] }
+    })
+    .sort((a, b) => b.median - a.median || a.sector.localeCompare(b.sector))
+  return new Set(medians.slice(0, Math.max(1, Math.ceil(medians.length * share))).map(m => m.sector))
+}
+
+/**
+ * Hold cash while few stocks are in an uptrend: when under `threshold` of
+ * the universe trades above its own 200-day average. A broader version of
+ * the index trend filter.
+ */
+export function withBreadthFilter(strategy: Strategy, threshold = 0.4, universeSize = 500): Strategy {
+  return {
+    name: `${strategy.name} + breadth filter`,
+    targets(ctx) {
+      let counted = 0, above = 0
+      for (const symbol of ctx.universe(universeSize)) {
+        const bars = ctx.bars(symbol, 200)
+        if (bars.length < 200) continue
+        counted++
+        if (bars[199].close > bars.reduce((sum, b) => sum + b.close, 0) / 200) above++
+      }
+      return counted > 0 && above / counted < threshold ? {} : strategy.targets(ctx)
+    },
+  }
+}
+
+/**
+ * Halve the book when fear is unusually high: India VIX above the 90th
+ * percentile of its last year.
+ */
+export function withVixFilter(strategy: Strategy, percentile = 0.9): Strategy {
+  return {
+    name: `${strategy.name} + VIX filter`,
+    targets(ctx) {
+      const vix = ctx.indexBars('IDX:INDIA VIX', 252).map(b => b.close)
+      const targets = strategy.targets(ctx)
+      if (vix.length < 252) return targets
+      const sorted = vix.slice().sort((a, b) => a - b)
+      const high = vix[vix.length - 1] > sorted[Math.floor(sorted.length * percentile)]
+      return high ? Object.fromEntries(Object.entries(targets).map(([symbol, w]) => [symbol, w / 2])) : targets
     },
   }
 }

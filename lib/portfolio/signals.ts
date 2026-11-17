@@ -15,6 +15,7 @@ import { loadBars, liveUniverse, signalDate } from './data'
 import { rankByFactors, selectWithBuffer, type FactorRanked } from './factors'
 import type { DailyBar } from './momentum'
 import { trendRegime, type TrendRegime } from './regime'
+import { sectorOf } from './sectors'
 import { marketFromBars, modeRecord, type FrozenSignal, type ModeRecord } from './track-record-core'
 
 const BENCHMARKS = ['IDX:NIFTY 500', 'IDX:NIFTY500 EW']
@@ -46,10 +47,13 @@ export async function rankingInputs(asOf: string): Promise<RankingInputs> {
   }
 }
 
-/** The model's picks for a mode: the top names, keeping previous picks that are still inside the exit rank. */
+/** The model's picks for a mode: the top names within the sector limit, keeping previous picks still inside the exit rank. */
 export function modelPicks(ranked: FactorRanked[], previousPicks: string[]): string[] {
-  return selectWithBuffer(ranked, previousPicks, PORTFOLIO_RULES.topN, PORTFOLIO_RULES.exitRank)
+  return selectWithBuffer(ranked, previousPicks, PORTFOLIO_RULES.topN, PORTFOLIO_RULES.exitRank, undefined, SECTOR_CAP)
 }
+
+/** The sector limit every mode applies, as backtested. */
+export const SECTOR_CAP = { groupOf: sectorOf, max: PORTFOLIO_RULES.maxPerSector }
 
 /**
  * Record this month's picks for every mode that has none yet. Returns the

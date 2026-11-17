@@ -160,24 +160,39 @@ export function rankByFactors(barsBySymbol: Record<string, DailyBar[]>, factors:
  *
  * `canBuy` filters new entries only (for example a share price above the
  * per-position budget); it never forces a sale.
+ *
+ * `cap` limits how many picks may come from one group (a sector). A stock
+ * with no known group is not limited.
  */
 export function selectWithBuffer(
   ranked: Array<{ symbol: string }>,
   held: Iterable<string>,
   topN: number,
   exitRank?: number,
-  canBuy: (symbol: string) => boolean = () => true
+  canBuy: (symbol: string) => boolean = () => true,
+  cap?: { groupOf: (symbol: string) => string | undefined; max: number }
 ): string[] {
   const picks: string[] = []
+  const perGroup = new Map<string, number>()
+  const take = (symbol: string): boolean => {
+    const group = cap?.groupOf(symbol)
+    if (group && (perGroup.get(group) ?? 0) >= cap!.max) return false
+    if (group) perGroup.set(group, (perGroup.get(group) ?? 0) + 1)
+    picks.push(symbol)
+    return true
+  }
+
   if (exitRank) {
     const rankOf = new Map(ranked.map((r, i) => [r.symbol, i + 1]))
-    for (const symbol of held) {
-      if ((rankOf.get(symbol) ?? Infinity) <= exitRank && picks.length < topN) picks.push(symbol)
-    }
+    // Best-ranked holdings first, so a cap drops the weakest of a crowded group
+    const keep = [...held]
+      .filter(symbol => (rankOf.get(symbol) ?? Infinity) <= exitRank)
+      .sort((x, y) => rankOf.get(x)! - rankOf.get(y)!)
+    for (const symbol of keep) if (picks.length < topN) take(symbol)
   }
   for (const r of ranked) {
     if (picks.length >= topN) break
-    if (!picks.includes(r.symbol) && canBuy(r.symbol)) picks.push(r.symbol)
+    if (!picks.includes(r.symbol) && canBuy(r.symbol)) take(r.symbol)
   }
   return picks
 }

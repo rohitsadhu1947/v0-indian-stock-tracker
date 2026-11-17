@@ -17,8 +17,8 @@ import { exposure, rebalanceStatus, type Exposure } from './allocation'
 import { rankByFactors, selectWithBuffer, stockFacts, type StockFacts } from './factors'
 import { planRebalance, applyOrders, bookValue, type BookState, type RebalancePlan } from './rebalance'
 import { loadBars, dataFreshness, latestPrices, signalDate, istDate, type DataFreshness } from './data'
-import { rankingInputs } from './signals'
-import { INDUSTRY_BY_SYMBOL } from './universe'
+import { rankingInputs, SECTOR_CAP } from './signals'
+import { SECTOR_BY_SYMBOL } from './sectors'
 
 /** One paper book per user. */
 const BOOK_KIND = 'stock'
@@ -97,9 +97,12 @@ export async function buildMonthlyPlan(params: {
   // A share that costs more than one position's budget cannot be bought even once
   const budget = (portfolio ? bookValue(state, {}) : capital) / topN
   const lastClose = new Map(ranked.map(r => [r.symbol, r.lastClose]))
-  const picks = selectWithBuffer(ranked, held, topN, exitRank, symbol => lastClose.get(symbol)! <= budget)
+  const picks = selectWithBuffer(ranked, held, topN, exitRank, symbol => lastClose.get(symbol)! <= budget, SECTOR_CAP)
   const selected = new Set(picks)
   const skippedUnaffordable = ranked.slice(0, topN).filter(r => !selected.has(r.symbol) && r.lastClose > budget).map(r => r.symbol)
+
+  // Show the ranking far enough down to include every pick: the sector limit can reach past the exit rank
+  const rankingRows = Math.max(RANKING_ROWS, ...picks.map(symbol => ranked.findIndex(r => r.symbol === symbol) + 1))
 
   const notes: string[] = []
   if (!freshness.ok) notes.push(`No orders: ${freshness.message}`)
@@ -133,12 +136,12 @@ export async function buildMonthlyPlan(params: {
       plan,
       priceSource: source,
       notes,
-      ranking: ranked.slice(0, RANKING_ROWS).map((r, i) => ({
+      ranking: ranked.slice(0, rankingRows).map((r, i) => ({
         ...stockFacts(bars[r.symbol]),
         symbol: r.symbol,
         rank: i + 1,
         scorePct: r.score * 100,
-        industry: INDUSTRY_BY_SYMBOL[r.symbol] ?? '',
+        industry: SECTOR_BY_SYMBOL[r.symbol] ?? '',
         selected: selected.has(r.symbol),
         held: r.symbol in state.holdings,
       })),

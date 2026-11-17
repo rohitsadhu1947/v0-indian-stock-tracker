@@ -117,6 +117,16 @@ describe('selectWithBuffer', () => {
     expect(selectWithBuffer(ranked, ['GONE'], 2, 4)).toEqual(['A', 'B'])
   })
 
+  it('caps picks from one sector and drops the weakest holding of a crowded one', () => {
+    const sector = (s: string) => ({ A: 'Pharma', B: 'Pharma', C: 'Pharma', D: 'Bank', E: 'Bank' } as Record<string, string>)[s]
+    const cap = { groupOf: sector, max: 2 }
+    expect(selectWithBuffer(ranked, [], 4, undefined, undefined, cap)).toEqual(['A', 'B', 'D', 'E'])
+    // C is held and inside the exit rank, but A and B rank higher in the same sector
+    expect(selectWithBuffer(ranked, ['C', 'B', 'A'], 4, 6, undefined, cap)).toEqual(['A', 'B', 'D', 'E'])
+    // F has no known sector, so the cap does not apply to it
+    expect(selectWithBuffer(ranked, [], 5, undefined, undefined, { groupOf: sector, max: 1 })).toEqual(['A', 'D', 'F'])
+  })
+
   it('skips names that cannot be bought without forcing a held one out', () => {
     expect(selectWithBuffer(ranked, ['A'], 3, 4, s => s !== 'A' && s !== 'B')).toEqual(['A', 'C', 'D'])
   })

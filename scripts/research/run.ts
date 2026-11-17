@@ -15,12 +15,15 @@
  */
 import { mkdirSync, writeFileSync } from 'fs'
 import { DEFAULT_COSTS } from '@/lib/backtest/costs'
+import { PORTFOLIO_RULES } from '@/lib/portfolio/config'
+import { sectorOf } from '@/lib/portfolio/sectors'
 import { loadMarketCached } from '@/lib/research/load'
 import type { Market } from '@/lib/research/market'
 import { align, calendarYearReturns, compare, monthly, periodStats, slice, type Curve } from '@/lib/research/metrics'
 import { DEFAULT_SIM, simulate, type SimResult, type Strategy } from '@/lib/research/simulate'
 import {
-  earningsDrift, equalWeightUniverse, factorPortfolio, stockMomentum, withTrendFilter, withVolatilityTarget,
+  earningsDrift, equalWeightUniverse, factorPortfolio, stockMomentum, withBreadthFilter, withTrendFilter, withVixFilter,
+  withVolatilityTarget,
 } from '@/lib/research/strategies'
 import { yearsBetween } from '@/lib/research/dates'
 
@@ -73,6 +76,31 @@ const CANDIDATES: Array<{ key: string; group: string; strategy: Strategy }> = [
   { key: 'momentum-lowvol-buffer-trend', group: 'Risk overlay', strategy: withTrendFilter(factorPortfolio({ factors: ['momentum', 'lowVolatility'], exitRank: 60 })) },
   { key: 'low-volatility-buffer-trend', group: 'Risk overlay', strategy: withTrendFilter(factorPortfolio({ factors: ['lowVolatility'], exitRank: 60 })) },
 ]
+
+// Sectors come from NSE's Total Market list (lib/portfolio/sectors.ts), which covers
+// today's 750 largest companies. About half of the 2010 universe has no sector there,
+// so the sector strategies are less reliable before about 2018.
+const cap = PORTFOLIO_RULES.maxPerSector
+const buffered = (factors: Parameters<typeof factorPortfolio>[0]['factors'], extra: Partial<Parameters<typeof factorPortfolio>[0]> = {}) =>
+  factorPortfolio({ factors, exitRank: PORTFOLIO_RULES.exitRank, sectorOf, ...extra })
+
+CANDIDATES.push(
+  // The Monthly Plan's three modes as they run: holding buffer and sector cap
+  { key: 'momentum-buffer-sectorcap', group: 'Sector', strategy: buffered(['momentum'], { maxPerSector: cap }) },
+  { key: 'momentum-lowvol-buffer-sectorcap', group: 'Sector', strategy: buffered(['momentum', 'lowVolatility'], { maxPerSector: cap }) },
+  { key: 'low-volatility-buffer-sectorcap', group: 'Sector', strategy: buffered(['lowVolatility'], { maxPerSector: cap }) },
+  { key: 'momentum-buffer-sectorcap-trend', group: 'Sector', strategy: withTrendFilter(buffered(['momentum'], { maxPerSector: cap })) },
+  { key: 'momentum-lowvol-buffer-sectorcap-trend', group: 'Sector', strategy: withTrendFilter(buffered(['momentum', 'lowVolatility'], { maxPerSector: cap })) },
+  { key: 'low-volatility-buffer-sectorcap-trend', group: 'Sector', strategy: withTrendFilter(buffered(['lowVolatility'], { maxPerSector: cap })) },
+  { key: 'momentum-buffer-topsectors', group: 'Sector', strategy: buffered(['momentum'], { topSectorShare: 1 / 3 }) },
+  { key: 'momentum-lowvol-buffer-topsectors', group: 'Sector', strategy: buffered(['momentum', 'lowVolatility'], { topSectorShare: 1 / 3 }) },
+)
+CANDIDATES.push(
+  { key: 'momentum-buffer-breadth', group: 'Macro', strategy: withBreadthFilter(buffered(['momentum'])) },
+  { key: 'momentum-lowvol-buffer-breadth', group: 'Macro', strategy: withBreadthFilter(buffered(['momentum', 'lowVolatility'])) },
+  { key: 'momentum-buffer-vix', group: 'Macro', strategy: withVixFilter(buffered(['momentum'])) },
+  { key: 'momentum-lowvol-buffer-vix', group: 'Macro', strategy: withVixFilter(buffered(['momentum', 'lowVolatility'])) },
+)
 
 const INDEX_REFERENCES = [
   { key: 'nifty-50', symbol: 'IDX:NIFTY 50', name: 'NIFTY 50 index' },
