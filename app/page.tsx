@@ -567,7 +567,7 @@ export default function StockTracker() {
           <div>
             <strong style={{ color: '#eab308' }}>Zerodha not connected today</strong>
             <span style={{ color: '#a3a3a3', fontSize: '13px', marginLeft: '8px' }}>
-              Live quotes are off until you reconnect. The Monthly Plan does not need it: its prices come from NSE each night.
+              Until you reconnect, prices are the last close, not the current price. The ranking itself comes from NSE data each night.
             </span>
           </div>
           <button

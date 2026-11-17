@@ -12,6 +12,7 @@ import type {
   HistoricalParams,
   CandleData,
   InstrumentData,
+  BrokerHolding,
 } from './types'
 
 export class KiteBrokerClient implements BrokerClient {
@@ -66,6 +67,26 @@ export class KiteBrokerClient implements BrokerClient {
       if (error.message?.includes('Token')) {
         this.connected = false
       }
+      throw error
+    }
+  }
+
+  /** Delivery holdings in the Zerodha account. Read only. */
+  async getHoldings(): Promise<BrokerHolding[]> {
+    try {
+      const holdings = (await this.kc.getHoldings()) as Array<Record<string, any>>
+      return holdings
+        .map(h => ({
+          symbol: String(h.tradingsymbol),
+          exchange: String(h.exchange),
+          quantity: (h.quantity ?? 0) + (h.t1_quantity ?? 0),
+          averagePrice: h.average_price ?? 0,
+          lastPrice: h.last_price ?? 0,
+          previousClose: h.close_price ?? 0,
+        }))
+        .filter(h => h.quantity > 0)
+    } catch (error: any) {
+      if (error.message?.includes('Token')) this.connected = false
       throw error
     }
   }

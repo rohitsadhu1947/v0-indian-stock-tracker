@@ -41,9 +41,26 @@ export interface BrokerClient {
   getInstruments(exchange?: string): Promise<InstrumentData[]>
 
   /**
+   * The user's delivery holdings at the broker (read only).
+   */
+  getHoldings(): Promise<BrokerHolding[]>
+
+  /**
    * Check if the broker client has a valid, non-expired connection.
    */
   isConnected(): boolean
+}
+
+/** One stock held in the user's broker account. */
+export interface BrokerHolding {
+  symbol: string
+  exchange: string
+  /** Shares held, including ones bought but not yet delivered. */
+  quantity: number
+  averagePrice: number
+  lastPrice: number
+  /** Previous session's close. */
+  previousClose: number
 }
 
 // ============================================================================

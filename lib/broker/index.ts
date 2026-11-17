@@ -34,6 +34,7 @@ export type {
   InstrumentData,
   BrokerConnectionConfig,
   BrokerDefinition,
+  BrokerHolding,
 } from './types'
 
 /**

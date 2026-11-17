@@ -1,11 +1,12 @@
 /**
  * POST /api/model-portfolio/rebalance
- * Body: { mode, trendFilter?, capital?, force? }
+ * Body: { mode, trendFilter?, capital? }
  *
- * Executes this month's orders on the paper book at current prices, with
- * slippage and Indian delivery charges. Refuses when the book was already
- * rebalanced this month (unless force), when price data is stale, or when any
- * instrument has no price.
+ * Carries out the plan's action for that mode on the paper book at current
+ * prices, with slippage and Indian delivery charges: starts the book, does
+ * the monthly rebalance, or switches the book to that mode. Refuses when the
+ * monthly rebalance was already done, when price data is stale, or when any
+ * stock has no price. No real orders are placed.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
@@ -30,7 +31,6 @@ export async function POST(request: NextRequest) {
       trendFilter: body.trendFilter === true,
       capital: parseCapital(body.capital),
       client: await brokerClientFor(userId),
-      force: body.force === true,
     })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
