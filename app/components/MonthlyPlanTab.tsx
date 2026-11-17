@@ -151,9 +151,9 @@ export default function MonthlyPlanTab() {
         <h2 style={{ margin: '0 0 6px' }}>🧭 Monthly Plan</h2>
         <p style={{ ...muted, margin: 0 }}>
           Once a month, hold the {PORTFOLIO_RULES.topN} best-ranked of the {PORTFOLIO_RULES.universeSize} most traded NSE stocks
-          at equal weight. A stock you hold stays until it falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves
-          the trading. Each mode ranks stocks differently and was backtested exactly as it runs here. The book is paper; no
-          real orders are placed.
+          at equal weight, with at most {PORTFOLIO_RULES.maxPerSector} from any one sector. A stock you hold stays until it
+          falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves the trading. Each mode ranks stocks differently and
+          was backtested exactly as it runs here. The book is paper; no real orders are placed.
         </p>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
@@ -357,7 +357,7 @@ function BookSection({ plan, busy, onRebalance }: { plan: MonthlyPlan; busy: boo
   const holdings = Object.entries(book.state.holdings)
   const ret = ((book.value - book.startingCapital) / book.startingCapital) * 100
   const canRebalance = book.rebalance.due && book.plan.orders.length > 0 && book.plan.missingPrices.length === 0
-  const why = { exit: `fell below rank ${PORTFOLIO_RULES.exitRank}`, entry: 'new pick', resize: 'resize to target' }
+  const why = { exit: `fell below rank ${PORTFOLIO_RULES.exitRank} or its sector is full`, entry: 'new pick', resize: 'resize to target' }
 
   return (
     <div style={card}>

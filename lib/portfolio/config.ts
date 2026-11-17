@@ -27,24 +27,24 @@ export const MODES: Record<RiskMode, ModeDefinition> = {
     id: 'growth',
     label: 'Growth',
     factors: ['momentum'],
-    researchKey: 'momentum-buffer',
-    researchKeyWithTrendFilter: 'momentum-buffer-trend',
+    researchKey: 'momentum-buffer-sectorcap',
+    researchKeyWithTrendFilter: 'momentum-buffer-sectorcap-trend',
     description: 'Momentum: the 20 stocks with the strongest risk-adjusted 12-month trend. Highest return in the backtest, and falls of about half the portfolio.',
   },
   balanced: {
     id: 'balanced',
     label: 'Balanced',
     factors: ['momentum', 'lowVolatility'],
-    researchKey: 'momentum-lowvol-buffer',
-    researchKeyWithTrendFilter: 'momentum-lowvol-buffer-trend',
+    researchKey: 'momentum-lowvol-buffer-sectorcap',
+    researchKeyWithTrendFilter: 'momentum-lowvol-buffer-sectorcap-trend',
     description: 'Stocks that are both trending and steady. Lower return than Growth, with much smaller falls. Lagged in the 2020-21 boom.',
   },
   defensive: {
     id: 'defensive',
     label: 'Defensive',
     factors: ['lowVolatility'],
-    researchKey: 'low-volatility-buffer',
-    researchKeyWithTrendFilter: 'low-volatility-buffer-trend',
+    researchKey: 'low-volatility-buffer-sectorcap',
+    researchKeyWithTrendFilter: 'low-volatility-buffer-sectorcap-trend',
     description: 'The 20 steadiest stocks. Lowest return of the three and the smallest falls; trails badly when the market runs up.',
   },
 }
@@ -59,6 +59,12 @@ export const PORTFOLIO_RULES = {
   exitRank: 60,
   /** The most traded NSE stocks the ranking draws from. */
   universeSize: 500,
+  /**
+   * At most this many holdings from one sector (lib/portfolio/sectors.ts).
+   * In the backtests it lowered concentration and slightly raised returns in
+   * every mode. A stock whose sector is not known is not limited.
+   */
+  maxPerSector: 4,
 }
 
 /** Kite instrument tokens for the indices the engine reads. */
