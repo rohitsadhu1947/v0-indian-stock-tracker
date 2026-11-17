@@ -50,6 +50,9 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
         const vwap = shares > 0 ? (b.value / shares) * b.priceFactor : b.close
         return Math.min(b.high, Math.max(b.low, vwap))
       })),
+      open: Float64Array.from(bars.map(b => b.open)),
+      high: Float64Array.from(bars.map(b => b.high)),
+      low: Float64Array.from(bars.map(b => b.low)),
       turnover: Float64Array.from(bars.map(b => b.value)),
       // Delivered and traded quantities are on the same share basis, so the ratio needs no adjustment
       deliveryShare: Float64Array.from(bars.map(b => (b.delivQty != null && b.volume > 0 ? Math.min(1, (b.delivQty / b.shareFactor) / b.volume) : NaN))),
@@ -73,7 +76,7 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
 }
 
 /** Bump when the shape of Market changes, so an old cache is not read. */
-const CACHE_VERSION = 3
+const CACHE_VERSION = 4
 
 /**
  * loadMarket with a disk cache (data/cache), rebuilt whenever the store file

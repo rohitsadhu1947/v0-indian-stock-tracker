@@ -1,0 +1,7782 @@
+{
+ "generatedFrom": {
+  "start": 20110101,
+  "end": 20261111,
+  "universe": 500
+ },
+ "note": "Returns are per trade, after slippage and charges, before tax. Excess is against buying every stock in the universe on the same morning with the same exits.",
+ "exits": [
+  {
+   "key": "target3-stop3-7d",
+   "targetPct": 3,
+   "stopPct": 3,
+   "maxSessions": 7,
+   "entry": "open"
+  },
+  {
+   "key": "target3-stop2-7d",
+   "targetPct": 3,
+   "stopPct": 2,
+   "maxSessions": 7,
+   "entry": "open"
+  },
+  {
+   "key": "target2-stop2-5d",
+   "targetPct": 2,
+   "stopPct": 2,
+   "maxSessions": 5,
+   "entry": "open"
+  },
+  {
+   "key": "target6-stop3-7d",
+   "targetPct": 6,
+   "stopPct": 3,
+   "maxSessions": 7,
+   "entry": "open"
+  },
+  {
+   "key": "hold-5d",
+   "targetPct": null,
+   "stopPct": null,
+   "maxSessions": 5,
+   "entry": "open"
+  },
+  {
+   "key": "hold-5d-stop8",
+   "targetPct": null,
+   "stopPct": 8,
+   "maxSessions": 5,
+   "entry": "open"
+  },
+  {
+   "key": "hold-5d-vwap",
+   "targetPct": null,
+   "stopPct": null,
+   "maxSessions": 5,
+   "entry": "vwap"
+  },
+  {
+   "key": "target3-stop3-7d-vwap",
+   "targetPct": 3,
+   "stopPct": 3,
+   "maxSessions": 7,
+   "entry": "vwap"
+  }
+ ],
+ "baseline": {
+  "target3-stop3-7d": {
+   "avgReturnPct": -0.57,
+   "days": 3930
+  },
+  "target3-stop2-7d": {
+   "avgReturnPct": -0.58,
+   "days": 3930
+  },
+  "target2-stop2-5d": {
+   "avgReturnPct": -0.66,
+   "days": 3930
+  },
+  "target6-stop3-7d": {
+   "avgReturnPct": -0.47,
+   "days": 3930
+  },
+  "hold-5d": {
+   "avgReturnPct": -0.42,
+   "days": 3930
+  },
+  "hold-5d-stop8": {
+   "avgReturnPct": -0.51,
+   "days": 3930
+  },
+  "hold-5d-vwap": {
+   "avgReturnPct": -0.44,
+   "days": 3930
+  },
+  "target3-stop3-7d-vwap": {
+   "avgReturnPct": -0.72,
+   "days": 3930
+  }
+ },
+ "signals": [
+  {
+   "key": "pullback-rsi2",
+   "label": "Sharp dip in an uptrend",
+   "basis": "Above the 200-day average with a 2-day RSI under 10 (Connors and Alvarez, 2009).",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 80298,
+     "days": 3816,
+     "winRatePct": 48.38,
+     "avgReturnPct": -0.51,
+     "avgExcessPct": 0.15,
+     "dailyExcessPct": 0.08,
+     "tStat": 3.93,
+     "tradesPerMonth": 425.6,
+     "avgSessions": 2.3,
+     "exitsPct": {
+      "target": 46.79,
+      "stop": 48.17,
+      "time": 5.04
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 42444,
+       "days": 2167,
+       "winRatePct": 47.43,
+       "avgReturnPct": -0.57,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.08,
+       "tStat": 2.9
+      },
+      "2020-2022": {
+       "trades": 17529,
+       "days": 723,
+       "winRatePct": 48.88,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.07,
+       "tStat": 1.53
+      },
+      "2023-now": {
+       "trades": 20325,
+       "days": 926,
+       "winRatePct": 49.93,
+       "avgReturnPct": -0.39,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.08,
+       "tStat": 2.24
+      }
+     },
+     "marketUp": {
+      "trades": 49180,
+      "days": 2433,
+      "winRatePct": 48.82,
+      "avgReturnPct": -0.46,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.07,
+      "tStat": 3.05
+     },
+     "marketDown": {
+      "trades": 31118,
+      "days": 1383,
+      "winRatePct": 47.68,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.09,
+      "tStat": 2.49
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 91171,
+     "days": 3837,
+     "winRatePct": 38.33,
+     "avgReturnPct": -0.54,
+     "avgExcessPct": 0.12,
+     "dailyExcessPct": 0.08,
+     "tStat": 5.37,
+     "tradesPerMonth": 483.2,
+     "avgSessions": 1.9,
+     "exitsPct": {
+      "target": 37.37,
+      "stop": 60.37,
+      "time": 2.25
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 48121,
+       "days": 2178,
+       "winRatePct": 37.47,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": 0.11,
+       "dailyExcessPct": 0.08,
+       "tStat": 3.97
+      },
+      "2020-2022": {
+       "trades": 19763,
+       "days": 727,
+       "winRatePct": 38.73,
+       "avgReturnPct": -0.53,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.09,
+       "tStat": 2.36
+      },
+      "2023-now": {
+       "trades": 23287,
+       "days": 932,
+       "winRatePct": 39.77,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.08,
+       "tStat": 2.79
+      }
+     },
+     "marketUp": {
+      "trades": 56169,
+      "days": 2444,
+      "winRatePct": 39.02,
+      "avgReturnPct": -0.5,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.07,
+      "tStat": 3.63
+     },
+     "marketDown": {
+      "trades": 35002,
+      "days": 1393,
+      "winRatePct": 37.23,
+      "avgReturnPct": -0.61,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.11,
+      "tStat": 4
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 94246,
+     "days": 3840,
+     "winRatePct": 45.19,
+     "avgReturnPct": -0.63,
+     "avgExcessPct": 0.11,
+     "dailyExcessPct": 0.08,
+     "tStat": 6.23,
+     "tradesPerMonth": 499.5,
+     "avgSessions": 1.5,
+     "exitsPct": {
+      "target": 44.7,
+      "stop": 53.34,
+      "time": 1.95
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 49955,
+       "days": 2181,
+       "winRatePct": 44.54,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.09,
+       "tStat": 5.03
+      },
+      "2020-2022": {
+       "trades": 20335,
+       "days": 727,
+       "winRatePct": 44.77,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.08,
+       "tStat": 2.66
+      },
+      "2023-now": {
+       "trades": 23956,
+       "days": 932,
+       "winRatePct": 46.91,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.06,
+       "tStat": 2.54
+      }
+     },
+     "marketUp": {
+      "trades": 58070,
+      "days": 2444,
+      "winRatePct": 45.99,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.06,
+      "tStat": 4.08
+     },
+     "marketDown": {
+      "trades": 36176,
+      "days": 1396,
+      "winRatePct": 43.9,
+      "avgReturnPct": -0.7,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.11,
+      "tStat": 4.76
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 77342,
+     "days": 3804,
+     "winRatePct": 36.79,
+     "avgReturnPct": -0.39,
+     "avgExcessPct": 0.19,
+     "dailyExcessPct": 0.08,
+     "tStat": 3.09,
+     "tradesPerMonth": 409.9,
+     "avgSessions": 3.4,
+     "exitsPct": {
+      "target": 26.79,
+      "stop": 56.68,
+      "time": 16.52
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 40742,
+       "days": 2158,
+       "winRatePct": 35.78,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.07,
+       "tStat": 2.07
+      },
+      "2020-2022": {
+       "trades": 16898,
+       "days": 721,
+       "winRatePct": 36.9,
+       "avgReturnPct": -0.33,
+       "avgExcessPct": 0.17,
+       "dailyExcessPct": 0.06,
+       "tStat": 0.86
+      },
+      "2023-now": {
+       "trades": 19702,
+       "days": 925,
+       "winRatePct": 38.8,
+       "avgReturnPct": -0.25,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.12,
+       "tStat": 2.44
+      }
+     },
+     "marketUp": {
+      "trades": 47498,
+      "days": 2426,
+      "winRatePct": 37.1,
+      "avgReturnPct": -0.35,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.05,
+      "tStat": 1.66
+     },
+     "marketDown": {
+      "trades": 29844,
+      "days": 1378,
+      "winRatePct": 36.3,
+      "avgReturnPct": -0.45,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.14,
+      "tStat": 2.76
+     }
+    },
+    "hold-5d": {
+     "trades": 55599,
+     "days": 3762,
+     "winRatePct": 46.09,
+     "avgReturnPct": -0.2,
+     "avgExcessPct": 0.25,
+     "dailyExcessPct": 0.19,
+     "tStat": 4.7,
+     "tradesPerMonth": 294.7,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 29086,
+       "days": 2135,
+       "winRatePct": 45.47,
+       "avgReturnPct": -0.31,
+       "avgExcessPct": 0.33,
+       "dailyExcessPct": 0.27,
+       "tStat": 4.81
+      },
+      "2020-2022": {
+       "trades": 11846,
+       "days": 709,
+       "winRatePct": 46.29,
+       "avgReturnPct": -0.1,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.08,
+       "tStat": 0.81
+      },
+      "2023-now": {
+       "trades": 14667,
+       "days": 918,
+       "winRatePct": 47.16,
+       "avgReturnPct": -0.07,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.1,
+       "tStat": 1.38
+      }
+     },
+     "marketUp": {
+      "trades": 35898,
+      "days": 2418,
+      "winRatePct": 45.69,
+      "avgReturnPct": -0.14,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.11,
+      "tStat": 2.31
+     },
+     "marketDown": {
+      "trades": 19701,
+      "days": 1344,
+      "winRatePct": 46.82,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": 0.35,
+      "dailyExcessPct": 0.33,
+      "tStat": 4.55
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 58999,
+     "days": 3763,
+     "winRatePct": 45.23,
+     "avgReturnPct": -0.37,
+     "avgExcessPct": 0.23,
+     "dailyExcessPct": 0.14,
+     "tStat": 3.49,
+     "tradesPerMonth": 312.7,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 15.29,
+      "time": 84.71
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 30990,
+       "days": 2136,
+       "winRatePct": 44.5,
+       "avgReturnPct": -0.51,
+       "avgExcessPct": 0.29,
+       "dailyExcessPct": 0.18,
+       "tStat": 3.39
+      },
+      "2020-2022": {
+       "trades": 12645,
+       "days": 710,
+       "winRatePct": 45.05,
+       "avgReturnPct": -0.3,
+       "avgExcessPct": 0.17,
+       "dailyExcessPct": 0.03,
+       "tStat": 0.31
+      },
+      "2023-now": {
+       "trades": 15364,
+       "days": 917,
+       "winRatePct": 46.86,
+       "avgReturnPct": -0.17,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.12,
+       "tStat": 1.73
+      }
+     },
+     "marketUp": {
+      "trades": 37338,
+      "days": 2415,
+      "winRatePct": 44.97,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.07,
+      "tStat": 1.44
+     },
+     "marketDown": {
+      "trades": 21661,
+      "days": 1348,
+      "winRatePct": 45.69,
+      "avgReturnPct": -0.47,
+      "avgExcessPct": 0.33,
+      "dailyExcessPct": 0.26,
+      "tStat": 3.69
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 55599,
+     "days": 3762,
+     "winRatePct": 46.2,
+     "avgReturnPct": -0.17,
+     "avgExcessPct": 0.21,
+     "dailyExcessPct": 0.21,
+     "tStat": 5.74,
+     "tradesPerMonth": 294.7,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 29086,
+       "days": 2135,
+       "winRatePct": 45.63,
+       "avgReturnPct": -0.24,
+       "avgExcessPct": 0.3,
+       "dailyExcessPct": 0.31,
+       "tStat": 6.06
+      },
+      "2020-2022": {
+       "trades": 11846,
+       "days": 709,
+       "winRatePct": 46.49,
+       "avgReturnPct": -0.09,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.08,
+       "tStat": 0.93
+      },
+      "2023-now": {
+       "trades": 14667,
+       "days": 918,
+       "winRatePct": 47.12,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": 0.07,
+       "dailyExcessPct": 0.08,
+       "tStat": 1.33
+      }
+     },
+     "marketUp": {
+      "trades": 35898,
+      "days": 2418,
+      "winRatePct": 45.72,
+      "avgReturnPct": -0.12,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.15,
+      "tStat": 3.42
+     },
+     "marketDown": {
+      "trades": 19701,
+      "days": 1344,
+      "winRatePct": 47.08,
+      "avgReturnPct": -0.26,
+      "avgExcessPct": 0.27,
+      "dailyExcessPct": 0.32,
+      "tStat": 4.84
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 74066,
+     "days": 3803,
+     "winRatePct": 44.77,
+     "avgReturnPct": -0.72,
+     "avgExcessPct": 0.02,
+     "dailyExcessPct": 0.09,
+     "tStat": 4.22,
+     "tradesPerMonth": 392.5,
+     "avgSessions": 2.8,
+     "exitsPct": {
+      "target": 42.7,
+      "stop": 50.74,
+      "time": 6.57
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 39076,
+       "days": 2160,
+       "winRatePct": 44.19,
+       "avgReturnPct": -0.76,
+       "avgExcessPct": 0.04,
+       "dailyExcessPct": 0.12,
+       "tStat": 4.4
+      },
+      "2020-2022": {
+       "trades": 16170,
+       "days": 718,
+       "winRatePct": 44.42,
+       "avgReturnPct": -0.76,
+       "avgExcessPct": -0.03,
+       "dailyExcessPct": 0.06,
+       "tStat": 1.19
+      },
+      "2023-now": {
+       "trades": 18820,
+       "days": 925,
+       "winRatePct": 46.27,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": 0.02,
+       "dailyExcessPct": 0.02,
+       "tStat": 0.64
+      }
+     },
+     "marketUp": {
+      "trades": 45469,
+      "days": 2427,
+      "winRatePct": 45.81,
+      "avgReturnPct": -0.63,
+      "avgExcessPct": 0.07,
+      "dailyExcessPct": 0.11,
+      "tStat": 4.52
+     },
+     "marketDown": {
+      "trades": 28597,
+      "days": 1376,
+      "winRatePct": 43.11,
+      "avgReturnPct": -0.86,
+      "avgExcessPct": -0.05,
+      "dailyExcessPct": 0.05,
+      "tStat": 1.33
+     }
+    }
+   }
+  },
+  {
+   "key": "three-down-days",
+   "label": "Three falling days in an uptrend",
+   "basis": "Above the 200-day average with three lower closes in a row.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 85609,
+     "days": 3870,
+     "winRatePct": 48.37,
+     "avgReturnPct": -0.51,
+     "avgExcessPct": 0.16,
+     "dailyExcessPct": 0.13,
+     "tStat": 7.49,
+     "tradesPerMonth": 453.7,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 46.66,
+      "stop": 47.84,
+      "time": 5.5
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 45513,
+       "days": 2191,
+       "winRatePct": 47.47,
+       "avgReturnPct": -0.57,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.12,
+       "tStat": 5.14
+      },
+      "2020-2022": {
+       "trades": 18620,
+       "days": 739,
+       "winRatePct": 49.25,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.18,
+       "dailyExcessPct": 0.17,
+       "tStat": 4.21
+      },
+      "2023-now": {
+       "trades": 21476,
+       "days": 940,
+       "winRatePct": 49.51,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.11,
+       "tStat": 3.63
+      }
+     },
+     "marketUp": {
+      "trades": 56366,
+      "days": 2451,
+      "winRatePct": 49.03,
+      "avgReturnPct": -0.45,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.14,
+      "tStat": 7.31
+     },
+     "marketDown": {
+      "trades": 29243,
+      "days": 1419,
+      "winRatePct": 47.1,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.11,
+      "tStat": 3.24
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 96679,
+     "days": 3885,
+     "winRatePct": 38.56,
+     "avgReturnPct": -0.53,
+     "avgExcessPct": 0.13,
+     "dailyExcessPct": 0.11,
+     "tStat": 7.8,
+     "tradesPerMonth": 512.4,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 37.53,
+      "stop": 60.01,
+      "time": 2.47
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 51252,
+       "days": 2199,
+       "winRatePct": 37.7,
+       "avgReturnPct": -0.58,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.09,
+       "tStat": 5.12
+      },
+      "2020-2022": {
+       "trades": 21008,
+       "days": 740,
+       "winRatePct": 39.33,
+       "avgReturnPct": -0.49,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.16,
+       "tStat": 4.7
+      },
+      "2023-now": {
+       "trades": 24419,
+       "days": 946,
+       "winRatePct": 39.69,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.1,
+       "tStat": 3.8
+      }
+     },
+     "marketUp": {
+      "trades": 63940,
+      "days": 2455,
+      "winRatePct": 39.33,
+      "avgReturnPct": -0.48,
+      "avgExcessPct": 0.14,
+      "dailyExcessPct": 0.11,
+      "tStat": 7.47
+     },
+     "marketDown": {
+      "trades": 32739,
+      "days": 1430,
+      "winRatePct": 37.06,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": 0.13,
+      "dailyExcessPct": 0.1,
+      "tStat": 3.71
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 99670,
+     "days": 3889,
+     "winRatePct": 45.59,
+     "avgReturnPct": -0.62,
+     "avgExcessPct": 0.12,
+     "dailyExcessPct": 0.1,
+     "tStat": 9.07,
+     "tradesPerMonth": 528.2,
+     "avgSessions": 1.5,
+     "exitsPct": {
+      "target": 45.04,
+      "stop": 52.8,
+      "time": 2.16
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 52976,
+       "days": 2203,
+       "winRatePct": 44.93,
+       "avgReturnPct": -0.65,
+       "avgExcessPct": 0.11,
+       "dailyExcessPct": 0.09,
+       "tStat": 6.14
+      },
+      "2020-2022": {
+       "trades": 21597,
+       "days": 740,
+       "winRatePct": 45.59,
+       "avgReturnPct": -0.62,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.14,
+       "tStat": 5.31
+      },
+      "2023-now": {
+       "trades": 25097,
+       "days": 946,
+       "winRatePct": 46.96,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.09,
+       "tStat": 4.29
+      }
+     },
+     "marketUp": {
+      "trades": 65907,
+      "days": 2456,
+      "winRatePct": 46.51,
+      "avgReturnPct": -0.57,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.11,
+      "tStat": 9.05
+     },
+     "marketDown": {
+      "trades": 33763,
+      "days": 1433,
+      "winRatePct": 43.79,
+      "avgReturnPct": -0.7,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.09,
+      "tStat": 4.03
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 82208,
+     "days": 3865,
+     "winRatePct": 36.49,
+     "avgReturnPct": -0.4,
+     "avgExcessPct": 0.18,
+     "dailyExcessPct": 0.12,
+     "tStat": 4.97,
+     "tradesPerMonth": 435.7,
+     "avgSessions": 3.5,
+     "exitsPct": {
+      "target": 26.54,
+      "stop": 56.49,
+      "time": 16.97
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 43595,
+       "days": 2188,
+       "winRatePct": 35.27,
+       "avgReturnPct": -0.52,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.09,
+       "tStat": 2.59
+      },
+      "2020-2022": {
+       "trades": 17894,
+       "days": 738,
+       "winRatePct": 37.27,
+       "avgReturnPct": -0.28,
+       "avgExcessPct": 0.2,
+       "dailyExcessPct": 0.16,
+       "tStat": 2.8
+      },
+      "2023-now": {
+       "trades": 20719,
+       "days": 939,
+       "winRatePct": 38.37,
+       "avgReturnPct": -0.26,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.17,
+       "tStat": 3.89
+      }
+     },
+     "marketUp": {
+      "trades": 54177,
+      "days": 2451,
+      "winRatePct": 37.03,
+      "avgReturnPct": -0.34,
+      "avgExcessPct": 0.19,
+      "dailyExcessPct": 0.14,
+      "tStat": 5.27
+     },
+     "marketDown": {
+      "trades": 28031,
+      "days": 1414,
+      "winRatePct": 35.44,
+      "avgReturnPct": -0.52,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.08,
+      "tStat": 1.76
+     }
+    },
+    "hold-5d": {
+     "trades": 62599,
+     "days": 3822,
+     "winRatePct": 45.16,
+     "avgReturnPct": -0.25,
+     "avgExcessPct": 0.25,
+     "dailyExcessPct": 0.22,
+     "tStat": 6.22,
+     "tradesPerMonth": 331.8,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 33042,
+       "days": 2167,
+       "winRatePct": 44.2,
+       "avgReturnPct": -0.38,
+       "avgExcessPct": 0.3,
+       "dailyExcessPct": 0.24,
+       "tStat": 5.04
+      },
+      "2020-2022": {
+       "trades": 13338,
+       "days": 726,
+       "winRatePct": 46.13,
+       "avgReturnPct": -0.03,
+       "avgExcessPct": 0.24,
+       "dailyExcessPct": 0.23,
+       "tStat": 2.73
+      },
+      "2023-now": {
+       "trades": 16219,
+       "days": 929,
+       "winRatePct": 46.29,
+       "avgReturnPct": -0.16,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.16,
+       "tStat": 2.43
+      }
+     },
+     "marketUp": {
+      "trades": 42969,
+      "days": 2441,
+      "winRatePct": 44.71,
+      "avgReturnPct": -0.2,
+      "avgExcessPct": 0.19,
+      "dailyExcessPct": 0.19,
+      "tStat": 4.8
+     },
+     "marketDown": {
+      "trades": 19630,
+      "days": 1381,
+      "winRatePct": 46.13,
+      "avgReturnPct": -0.36,
+      "avgExcessPct": 0.38,
+      "dailyExcessPct": 0.28,
+      "tStat": 4
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 65637,
+     "days": 3829,
+     "winRatePct": 44.36,
+     "avgReturnPct": -0.42,
+     "avgExcessPct": 0.22,
+     "dailyExcessPct": 0.16,
+     "tStat": 4.56,
+     "tradesPerMonth": 347.9,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 14.48,
+      "time": 85.52
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 34719,
+       "days": 2168,
+       "winRatePct": 43.24,
+       "avgReturnPct": -0.58,
+       "avgExcessPct": 0.25,
+       "dailyExcessPct": 0.18,
+       "tStat": 3.69
+      },
+      "2020-2022": {
+       "trades": 14078,
+       "days": 727,
+       "winRatePct": 45.35,
+       "avgReturnPct": -0.21,
+       "avgExcessPct": 0.23,
+       "dailyExcessPct": 0.15,
+       "tStat": 1.83
+      },
+      "2023-now": {
+       "trades": 16840,
+       "days": 934,
+       "winRatePct": 45.83,
+       "avgReturnPct": -0.27,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.13,
+       "tStat": 1.96
+      }
+     },
+     "marketUp": {
+      "trades": 44417,
+      "days": 2439,
+      "winRatePct": 44.08,
+      "avgReturnPct": -0.36,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.14,
+      "tStat": 3.77
+     },
+     "marketDown": {
+      "trades": 21220,
+      "days": 1390,
+      "winRatePct": 44.93,
+      "avgReturnPct": -0.54,
+      "avgExcessPct": 0.32,
+      "dailyExcessPct": 0.19,
+      "tStat": 2.71
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 62599,
+     "days": 3822,
+     "winRatePct": 44.5,
+     "avgReturnPct": -0.28,
+     "avgExcessPct": 0.15,
+     "dailyExcessPct": 0.15,
+     "tStat": 4.74,
+     "tradesPerMonth": 331.8,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 33042,
+       "days": 2167,
+       "winRatePct": 43.59,
+       "avgReturnPct": -0.4,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": 0.18,
+       "tStat": 3.97
+      },
+      "2020-2022": {
+       "trades": 13338,
+       "days": 726,
+       "winRatePct": 45.68,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.15,
+       "tStat": 1.98
+      },
+      "2023-now": {
+       "trades": 16219,
+       "days": 929,
+       "winRatePct": 45.37,
+       "avgReturnPct": -0.2,
+       "avgExcessPct": 0.06,
+       "dailyExcessPct": 0.1,
+       "tStat": 1.74
+      }
+     },
+     "marketUp": {
+      "trades": 42969,
+      "days": 2441,
+      "winRatePct": 43.83,
+      "avgReturnPct": -0.26,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.12,
+      "tStat": 3.48
+     },
+     "marketDown": {
+      "trades": 19630,
+      "days": 1381,
+      "winRatePct": 45.95,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": 0.25,
+      "dailyExcessPct": 0.21,
+      "tStat": 3.24
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 78867,
+     "days": 3858,
+     "winRatePct": 44.51,
+     "avgReturnPct": -0.73,
+     "avgExcessPct": 0.02,
+     "dailyExcessPct": 0.07,
+     "tStat": 3.9,
+     "tradesPerMonth": 418,
+     "avgSessions": 2.9,
+     "exitsPct": {
+      "target": 42.38,
+      "stop": 50.57,
+      "time": 7.05
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 41799,
+       "days": 2184,
+       "winRatePct": 43.41,
+       "avgReturnPct": -0.8,
+       "avgExcessPct": 0.01,
+       "dailyExcessPct": 0.08,
+       "tStat": 3.16
+      },
+      "2020-2022": {
+       "trades": 17198,
+       "days": 735,
+       "winRatePct": 45.41,
+       "avgReturnPct": -0.7,
+       "avgExcessPct": 0.01,
+       "dailyExcessPct": 0.09,
+       "tStat": 2.19
+      },
+      "2023-now": {
+       "trades": 19870,
+       "days": 939,
+       "winRatePct": 46.04,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": 0.02,
+       "dailyExcessPct": 0.04,
+       "tStat": 1.15
+      }
+     },
+     "marketUp": {
+      "trades": 52102,
+      "days": 2446,
+      "winRatePct": 45.15,
+      "avgReturnPct": -0.66,
+      "avgExcessPct": 0.05,
+      "dailyExcessPct": 0.1,
+      "tStat": 4.99
+     },
+     "marketDown": {
+      "trades": 26765,
+      "days": 1412,
+      "winRatePct": 43.27,
+      "avgReturnPct": -0.85,
+      "avgExcessPct": -0.05,
+      "dailyExcessPct": 0.02,
+      "tStat": 0.55
+     }
+    }
+   }
+  },
+  {
+   "key": "weakest-week",
+   "label": "Among the weakest 5% this week",
+   "basis": "Short-term reversal: the worst 5-day returns in the universe tend to bounce (Lehmann, 1990; Jegadeesh, 1990).",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 73265,
+     "days": 3930,
+     "winRatePct": 45.17,
+     "avgReturnPct": -0.74,
+     "avgExcessPct": -0.17,
+     "dailyExcessPct": -0.16,
+     "tStat": -12.49,
+     "tradesPerMonth": 388.3,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 44.4,
+      "stop": 52.82,
+      "time": 2.79
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 42853,
+       "days": 2225,
+       "winRatePct": 44.17,
+       "avgReturnPct": -0.82,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.2,
+       "tStat": -11.81
+      },
+      "2020-2022": {
+       "trades": 13954,
+       "days": 748,
+       "winRatePct": 46.65,
+       "avgReturnPct": -0.65,
+       "avgExcessPct": -0.11,
+       "dailyExcessPct": -0.12,
+       "tStat": -4.34
+      },
+      "2023-now": {
+       "trades": 16458,
+       "days": 957,
+       "winRatePct": 46.51,
+       "avgReturnPct": -0.62,
+       "avgExcessPct": -0.1,
+       "dailyExcessPct": -0.09,
+       "tStat": -3.47
+      }
+     },
+     "marketUp": {
+      "trades": 44290,
+      "days": 2469,
+      "winRatePct": 46.02,
+      "avgReturnPct": -0.67,
+      "avgExcessPct": -0.15,
+      "dailyExcessPct": -0.15,
+      "tStat": -9.32
+     },
+     "marketDown": {
+      "trades": 28975,
+      "days": 1461,
+      "winRatePct": 43.87,
+      "avgReturnPct": -0.85,
+      "avgExcessPct": -0.2,
+      "dailyExcessPct": -0.18,
+      "tStat": -8.34
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 80813,
+     "days": 3930,
+     "winRatePct": 35.51,
+     "avgReturnPct": -0.71,
+     "avgExcessPct": -0.13,
+     "dailyExcessPct": -0.12,
+     "tStat": -12.2,
+     "tradesPerMonth": 428.3,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 35.07,
+      "stop": 63.78,
+      "time": 1.15
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 46883,
+       "days": 2225,
+       "winRatePct": 34.43,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.18,
+       "dailyExcessPct": -0.17,
+       "tStat": -12.77
+      },
+      "2020-2022": {
+       "trades": 15329,
+       "days": 748,
+       "winRatePct": 37.07,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.06,
+       "tStat": -2.94
+      },
+      "2023-now": {
+       "trades": 18601,
+       "days": 957,
+       "winRatePct": 36.96,
+       "avgReturnPct": -0.61,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.05,
+       "tStat": -2.64
+      }
+     },
+     "marketUp": {
+      "trades": 49428,
+      "days": 2469,
+      "winRatePct": 36.3,
+      "avgReturnPct": -0.66,
+      "avgExcessPct": -0.12,
+      "dailyExcessPct": -0.11,
+      "tStat": -9.26
+     },
+     "marketDown": {
+      "trades": 31385,
+      "days": 1461,
+      "winRatePct": 34.28,
+      "avgReturnPct": -0.8,
+      "avgExcessPct": -0.14,
+      "dailyExcessPct": -0.14,
+      "tStat": -7.95
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 85395,
+     "days": 3930,
+     "winRatePct": 41.46,
+     "avgReturnPct": -0.82,
+     "avgExcessPct": -0.16,
+     "dailyExcessPct": -0.15,
+     "tStat": -18.2,
+     "tradesPerMonth": 452.6,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 41.25,
+      "stop": 57.76,
+      "time": 0.99
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 49438,
+       "days": 2225,
+       "winRatePct": 40.23,
+       "avgReturnPct": -0.89,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.2,
+       "tStat": -17.74
+      },
+      "2020-2022": {
+       "trades": 16181,
+       "days": 748,
+       "winRatePct": 42.95,
+       "avgReturnPct": -0.75,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": -0.08,
+       "tStat": -4.39
+      },
+      "2023-now": {
+       "trades": 19776,
+       "days": 957,
+       "winRatePct": 43.29,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": -0.09,
+       "dailyExcessPct": -0.09,
+       "tStat": -5.68
+      }
+     },
+     "marketUp": {
+      "trades": 52591,
+      "days": 2469,
+      "winRatePct": 42.71,
+      "avgReturnPct": -0.76,
+      "avgExcessPct": -0.13,
+      "dailyExcessPct": -0.13,
+      "tStat": -12.98
+     },
+     "marketDown": {
+      "trades": 32804,
+      "days": 1461,
+      "winRatePct": 39.46,
+      "avgReturnPct": -0.92,
+      "avgExcessPct": -0.19,
+      "dailyExcessPct": -0.18,
+      "tStat": -12.89
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 66251,
+     "days": 3930,
+     "winRatePct": 33.3,
+     "avgReturnPct": -0.62,
+     "avgExcessPct": -0.14,
+     "dailyExcessPct": -0.14,
+     "tStat": -7.84,
+     "tradesPerMonth": 351.1,
+     "avgSessions": 2.8,
+     "exitsPct": {
+      "target": 27.6,
+      "stop": 62.3,
+      "time": 10.1
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 38654,
+       "days": 2225,
+       "winRatePct": 32.13,
+       "avgReturnPct": -0.72,
+       "avgExcessPct": -0.18,
+       "dailyExcessPct": -0.18,
+       "tStat": -7.46
+      },
+      "2020-2022": {
+       "trades": 12656,
+       "days": 748,
+       "winRatePct": 35.17,
+       "avgReturnPct": -0.43,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": -0.1,
+       "tStat": -2.35
+      },
+      "2023-now": {
+       "trades": 14941,
+       "days": 957,
+       "winRatePct": 34.74,
+       "avgReturnPct": -0.51,
+       "avgExcessPct": -0.09,
+       "dailyExcessPct": -0.09,
+       "tStat": -2.46
+      }
+     },
+     "marketUp": {
+      "trades": 39961,
+      "days": 2469,
+      "winRatePct": 33.72,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": -0.18,
+      "tStat": -7.74
+     },
+     "marketDown": {
+      "trades": 26290,
+      "days": 1461,
+      "winRatePct": 32.67,
+      "avgReturnPct": -0.65,
+      "avgExcessPct": -0.09,
+      "dailyExcessPct": -0.09,
+      "tStat": -2.83
+     }
+    },
+    "hold-5d": {
+     "trades": 42155,
+     "days": 3930,
+     "winRatePct": 43.97,
+     "avgReturnPct": -0.53,
+     "avgExcessPct": -0.13,
+     "dailyExcessPct": -0.13,
+     "tStat": -3.04,
+     "tradesPerMonth": 223.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 23647,
+       "days": 2225,
+       "winRatePct": 43.24,
+       "avgReturnPct": -0.78,
+       "avgExcessPct": -0.23,
+       "dailyExcessPct": -0.24,
+       "tStat": -3.82
+      },
+      "2020-2022": {
+       "trades": 8303,
+       "days": 748,
+       "winRatePct": 46.22,
+       "avgReturnPct": -0.1,
+       "avgExcessPct": 0.06,
+       "dailyExcessPct": 0.08,
+       "tStat": 0.88
+      },
+      "2023-now": {
+       "trades": 10205,
+       "days": 957,
+       "winRatePct": 43.85,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": -0.03,
+       "dailyExcessPct": -0.04,
+       "tStat": -0.53
+      }
+     },
+     "marketUp": {
+      "trades": 26810,
+      "days": 2469,
+      "winRatePct": 42.9,
+      "avgReturnPct": -0.54,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.29,
+      "tStat": -6
+     },
+     "marketDown": {
+      "trades": 15345,
+      "days": 1461,
+      "winRatePct": 45.85,
+      "avgReturnPct": -0.51,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.14,
+      "tStat": 1.81
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 46538,
+     "days": 3930,
+     "winRatePct": 41.9,
+     "avgReturnPct": -0.58,
+     "avgExcessPct": -0.07,
+     "dailyExcessPct": -0.1,
+     "tStat": -2.89,
+     "tradesPerMonth": 246.6,
+     "avgSessions": 4.5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 23.08,
+      "time": 76.92
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 26641,
+       "days": 2225,
+       "winRatePct": 40.46,
+       "avgReturnPct": -0.77,
+       "avgExcessPct": -0.13,
+       "dailyExcessPct": -0.15,
+       "tStat": -2.98
+      },
+      "2020-2022": {
+       "trades": 9072,
+       "days": 748,
+       "winRatePct": 44.5,
+       "avgReturnPct": -0.23,
+       "avgExcessPct": 0.04,
+       "dailyExcessPct": 0,
+       "tStat": 0.05
+      },
+      "2023-now": {
+       "trades": 10825,
+       "days": 957,
+       "winRatePct": 43.24,
+       "avgReturnPct": -0.38,
+       "avgExcessPct": -0.04,
+       "dailyExcessPct": -0.08,
+       "tStat": -1.22
+      }
+     },
+     "marketUp": {
+      "trades": 28644,
+      "days": 2469,
+      "winRatePct": 41.42,
+      "avgReturnPct": -0.65,
+      "avgExcessPct": -0.24,
+      "dailyExcessPct": -0.27,
+      "tStat": -6.34
+     },
+     "marketDown": {
+      "trades": 17894,
+      "days": 1461,
+      "winRatePct": 42.66,
+      "avgReturnPct": -0.47,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.17,
+      "tStat": 2.59
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 42155,
+     "days": 3930,
+     "winRatePct": 43.11,
+     "avgReturnPct": -0.55,
+     "avgExcessPct": -0.12,
+     "dailyExcessPct": -0.12,
+     "tStat": -3.21,
+     "tradesPerMonth": 223.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 23647,
+       "days": 2225,
+       "winRatePct": 41.79,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.21,
+       "tStat": -3.8
+      },
+      "2020-2022": {
+       "trades": 8303,
+       "days": 748,
+       "winRatePct": 45.54,
+       "avgReturnPct": -0.15,
+       "avgExcessPct": 0.06,
+       "dailyExcessPct": 0.08,
+       "tStat": 0.98
+      },
+      "2023-now": {
+       "trades": 10205,
+       "days": 957,
+       "winRatePct": 44.2,
+       "avgReturnPct": -0.32,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.07,
+       "tStat": -1.1
+      }
+     },
+     "marketUp": {
+      "trades": 26810,
+      "days": 2469,
+      "winRatePct": 41.81,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": -0.25,
+      "dailyExcessPct": -0.26,
+      "tStat": -6.07
+     },
+     "marketDown": {
+      "trades": 15345,
+      "days": 1461,
+      "winRatePct": 45.38,
+      "avgReturnPct": -0.48,
+      "avgExcessPct": 0.1,
+      "dailyExcessPct": 0.11,
+      "tStat": 1.6
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 67096,
+     "days": 3930,
+     "winRatePct": 40.37,
+     "avgReturnPct": -1.02,
+     "avgExcessPct": -0.3,
+     "dailyExcessPct": -0.26,
+     "tStat": -18.04,
+     "tradesPerMonth": 355.6,
+     "avgSessions": 2.3,
+     "exitsPct": {
+      "target": 39.44,
+      "stop": 56.92,
+      "time": 3.65
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 39405,
+       "days": 2225,
+       "winRatePct": 38.54,
+       "avgReturnPct": -1.15,
+       "avgExcessPct": -0.37,
+       "dailyExcessPct": -0.33,
+       "tStat": -17.75
+      },
+      "2020-2022": {
+       "trades": 12765,
+       "days": 748,
+       "winRatePct": 42.36,
+       "avgReturnPct": -0.9,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.16,
+       "tStat": -4.87
+      },
+      "2023-now": {
+       "trades": 14926,
+       "days": 957,
+       "winRatePct": 43.53,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.15,
+       "tStat": -5.26
+      }
+     },
+     "marketUp": {
+      "trades": 40433,
+      "days": 2469,
+      "winRatePct": 41.61,
+      "avgReturnPct": -0.92,
+      "avgExcessPct": -0.22,
+      "dailyExcessPct": -0.19,
+      "tStat": -10.89
+     },
+     "marketDown": {
+      "trades": 26663,
+      "days": 1461,
+      "winRatePct": 38.5,
+      "avgReturnPct": -1.17,
+      "avgExcessPct": -0.42,
+      "dailyExcessPct": -0.37,
+      "tStat": -15.25
+     }
+    }
+   }
+  },
+  {
+   "key": "strongest-week",
+   "label": "Among the strongest 5% this week",
+   "basis": "The opposite of the reversal rule: chase the best 5-day returns. Included as a check.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 77677,
+     "days": 3930,
+     "winRatePct": 42.44,
+     "avgReturnPct": -0.88,
+     "avgExcessPct": -0.31,
+     "dailyExcessPct": -0.3,
+     "tStat": -21.18,
+     "tradesPerMonth": 411.7,
+     "avgSessions": 1.7,
+     "exitsPct": {
+      "target": 41.94,
+      "stop": 56.59,
+      "time": 1.47
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 44624,
+       "days": 2225,
+       "winRatePct": 41.89,
+       "avgReturnPct": -0.91,
+       "avgExcessPct": -0.33,
+       "dailyExcessPct": -0.32,
+       "tStat": -17.33
+      },
+      "2020-2022": {
+       "trades": 15229,
+       "days": 748,
+       "winRatePct": 41.18,
+       "avgReturnPct": -0.94,
+       "avgExcessPct": -0.4,
+       "dailyExcessPct": -0.39,
+       "tStat": -10.98
+      },
+      "2023-now": {
+       "trades": 17824,
+       "days": 957,
+       "winRatePct": 44.9,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.19,
+       "tStat": -6.78
+      }
+     },
+     "marketUp": {
+      "trades": 48941,
+      "days": 2469,
+      "winRatePct": 42.84,
+      "avgReturnPct": -0.85,
+      "avgExcessPct": -0.33,
+      "dailyExcessPct": -0.32,
+      "tStat": -17.59
+     },
+     "marketDown": {
+      "trades": 28736,
+      "days": 1461,
+      "winRatePct": 41.76,
+      "avgReturnPct": -0.92,
+      "avgExcessPct": -0.28,
+      "dailyExcessPct": -0.27,
+      "tStat": -11.83
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 84401,
+     "days": 3930,
+     "winRatePct": 31.88,
+     "avgReturnPct": -0.85,
+     "avgExcessPct": -0.27,
+     "dailyExcessPct": -0.26,
+     "tStat": -23.45,
+     "tradesPerMonth": 447.3,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 31.65,
+      "stop": 67.84,
+      "time": 0.5
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 48331,
+       "days": 2225,
+       "winRatePct": 31.49,
+       "avgReturnPct": -0.87,
+       "avgExcessPct": -0.27,
+       "dailyExcessPct": -0.26,
+       "tStat": -18.65
+      },
+      "2020-2022": {
+       "trades": 16406,
+       "days": 748,
+       "winRatePct": 30.5,
+       "avgReturnPct": -0.9,
+       "avgExcessPct": -0.34,
+       "dailyExcessPct": -0.33,
+       "tStat": -12.01
+      },
+      "2023-now": {
+       "trades": 19664,
+       "days": 957,
+       "winRatePct": 34,
+       "avgReturnPct": -0.75,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.2,
+       "tStat": -8.57
+      }
+     },
+     "marketUp": {
+      "trades": 53214,
+      "days": 2469,
+      "winRatePct": 32.2,
+      "avgReturnPct": -0.83,
+      "avgExcessPct": -0.29,
+      "dailyExcessPct": -0.28,
+      "tStat": -20.07
+     },
+     "marketDown": {
+      "trades": 31187,
+      "days": 1461,
+      "winRatePct": 31.34,
+      "avgReturnPct": -0.88,
+      "avgExcessPct": -0.23,
+      "dailyExcessPct": -0.22,
+      "tStat": -12.36
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 89575,
+     "days": 3930,
+     "winRatePct": 36.96,
+     "avgReturnPct": -0.95,
+     "avgExcessPct": -0.29,
+     "dailyExcessPct": -0.29,
+     "tStat": -32.55,
+     "tradesPerMonth": 474.7,
+     "avgSessions": 1.2,
+     "exitsPct": {
+      "target": 36.84,
+      "stop": 62.72,
+      "time": 0.44
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 51278,
+       "days": 2225,
+       "winRatePct": 36.67,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.29,
+       "tStat": -25.96
+      },
+      "2020-2022": {
+       "trades": 17188,
+       "days": 748,
+       "winRatePct": 34.55,
+       "avgReturnPct": -1.03,
+       "avgExcessPct": -0.36,
+       "dailyExcessPct": -0.35,
+       "tStat": -16.08
+      },
+      "2023-now": {
+       "trades": 21109,
+       "days": 957,
+       "winRatePct": 39.62,
+       "avgReturnPct": -0.85,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.23,
+       "tStat": -12.48
+      }
+     },
+     "marketUp": {
+      "trades": 56473,
+      "days": 2469,
+      "winRatePct": 37.19,
+      "avgReturnPct": -0.94,
+      "avgExcessPct": -0.32,
+      "dailyExcessPct": -0.32,
+      "tStat": -28.43
+     },
+     "marketDown": {
+      "trades": 33102,
+      "days": 1461,
+      "winRatePct": 36.56,
+      "avgReturnPct": -0.97,
+      "avgExcessPct": -0.24,
+      "dailyExcessPct": -0.24,
+      "tStat": -16.5
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 64548,
+     "days": 3930,
+     "winRatePct": 30.16,
+     "avgReturnPct": -0.81,
+     "avgExcessPct": -0.36,
+     "dailyExcessPct": -0.34,
+     "tStat": -16.98,
+     "tradesPerMonth": 342.1,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 26.34,
+      "stop": 67.42,
+      "time": 6.23
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 37133,
+       "days": 2225,
+       "winRatePct": 29.31,
+       "avgReturnPct": -0.88,
+       "avgExcessPct": -0.38,
+       "dailyExcessPct": -0.37,
+       "tStat": -14.17
+      },
+      "2020-2022": {
+       "trades": 12949,
+       "days": 748,
+       "winRatePct": 29.54,
+       "avgReturnPct": -0.82,
+       "avgExcessPct": -0.46,
+       "dailyExcessPct": -0.45,
+       "tStat": -9.14
+      },
+      "2023-now": {
+       "trades": 14466,
+       "days": 957,
+       "winRatePct": 32.87,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.2,
+       "tStat": -4.8
+      }
+     },
+     "marketUp": {
+      "trades": 40311,
+      "days": 2469,
+      "winRatePct": 30.5,
+      "avgReturnPct": -0.77,
+      "avgExcessPct": -0.37,
+      "dailyExcessPct": -0.35,
+      "tStat": -13.56
+     },
+     "marketDown": {
+      "trades": 24237,
+      "days": 1461,
+      "winRatePct": 29.58,
+      "avgReturnPct": -0.89,
+      "avgExcessPct": -0.34,
+      "dailyExcessPct": -0.33,
+      "tStat": -10.22
+     }
+    },
+    "hold-5d": {
+     "trades": 37721,
+     "days": 3930,
+     "winRatePct": 41.05,
+     "avgReturnPct": -0.75,
+     "avgExcessPct": -0.34,
+     "dailyExcessPct": -0.32,
+     "tStat": -7.64,
+     "tradesPerMonth": 199.9,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 21582,
+       "days": 2225,
+       "winRatePct": 39.76,
+       "avgReturnPct": -0.94,
+       "avgExcessPct": -0.39,
+       "dailyExcessPct": -0.37,
+       "tStat": -6.58
+      },
+      "2020-2022": {
+       "trades": 7084,
+       "days": 748,
+       "winRatePct": 41.32,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": -0.44,
+       "dailyExcessPct": -0.41,
+       "tStat": -3.91
+      },
+      "2023-now": {
+       "trades": 9055,
+       "days": 957,
+       "winRatePct": 43.91,
+       "avgReturnPct": -0.37,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.78
+      }
+     },
+     "marketUp": {
+      "trades": 23074,
+      "days": 2469,
+      "winRatePct": 41.42,
+      "avgReturnPct": -0.58,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.26,
+      "tStat": -4.79
+     },
+     "marketDown": {
+      "trades": 14647,
+      "days": 1461,
+      "winRatePct": 40.45,
+      "avgReturnPct": -1.02,
+      "avgExcessPct": -0.46,
+      "dailyExcessPct": -0.43,
+      "tStat": -6.36
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 39523,
+     "days": 3930,
+     "winRatePct": 39.28,
+     "avgReturnPct": -0.87,
+     "avgExcessPct": -0.37,
+     "dailyExcessPct": -0.35,
+     "tStat": -9.16,
+     "tradesPerMonth": 209.5,
+     "avgSessions": 4.5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 24.61,
+      "time": 75.39
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 22712,
+       "days": 2225,
+       "winRatePct": 37.91,
+       "avgReturnPct": -1.05,
+       "avgExcessPct": -0.42,
+       "dailyExcessPct": -0.4,
+       "tStat": -7.81
+      },
+      "2020-2022": {
+       "trades": 7506,
+       "days": 748,
+       "winRatePct": 38.74,
+       "avgReturnPct": -0.87,
+       "avgExcessPct": -0.55,
+       "dailyExcessPct": -0.53,
+       "tStat": -5.53
+      },
+      "2023-now": {
+       "trades": 9305,
+       "days": 957,
+       "winRatePct": 43.05,
+       "avgReturnPct": -0.44,
+       "avgExcessPct": -0.1,
+       "dailyExcessPct": -0.11,
+       "tStat": -1.49
+      }
+     },
+     "marketUp": {
+      "trades": 24014,
+      "days": 2469,
+      "winRatePct": 39.62,
+      "avgReturnPct": -0.75,
+      "avgExcessPct": -0.33,
+      "dailyExcessPct": -0.33,
+      "tStat": -6.63
+     },
+     "marketDown": {
+      "trades": 15509,
+      "days": 1461,
+      "winRatePct": 38.75,
+      "avgReturnPct": -1.06,
+      "avgExcessPct": -0.43,
+      "dailyExcessPct": -0.4,
+      "tStat": -6.45
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 37721,
+     "days": 3930,
+     "winRatePct": 40.1,
+     "avgReturnPct": -0.8,
+     "avgExcessPct": -0.37,
+     "dailyExcessPct": -0.36,
+     "tStat": -9.55,
+     "tradesPerMonth": 199.9,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 21582,
+       "days": 2225,
+       "winRatePct": 38.63,
+       "avgReturnPct": -1,
+       "avgExcessPct": -0.41,
+       "dailyExcessPct": -0.4,
+       "tStat": -7.95
+      },
+      "2020-2022": {
+       "trades": 7084,
+       "days": 748,
+       "winRatePct": 40.25,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.49,
+       "dailyExcessPct": -0.48,
+       "tStat": -5.11
+      },
+      "2023-now": {
+       "trades": 9055,
+       "days": 957,
+       "winRatePct": 43.49,
+       "avgReturnPct": -0.39,
+       "avgExcessPct": -0.17,
+       "dailyExcessPct": -0.17,
+       "tStat": -2.46
+      }
+     },
+     "marketUp": {
+      "trades": 23074,
+      "days": 2469,
+      "winRatePct": 40.1,
+      "avgReturnPct": -0.68,
+      "avgExcessPct": -0.31,
+      "dailyExcessPct": -0.31,
+      "tStat": -6.47
+     },
+     "marketDown": {
+      "trades": 14647,
+      "days": 1461,
+      "winRatePct": 40.11,
+      "avgReturnPct": -1,
+      "avgExcessPct": -0.46,
+      "dailyExcessPct": -0.44,
+      "tStat": -7.33
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 70427,
+     "days": 3930,
+     "winRatePct": 35.24,
+     "avgReturnPct": -1.3,
+     "avgExcessPct": -0.58,
+     "dailyExcessPct": -0.56,
+     "tStat": -38.57,
+     "tradesPerMonth": 373.2,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 34.6,
+      "stop": 63.43,
+      "time": 1.97
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 40542,
+       "days": 2225,
+       "winRatePct": 34.1,
+       "avgReturnPct": -1.38,
+       "avgExcessPct": -0.6,
+       "dailyExcessPct": -0.59,
+       "tStat": -31.12
+      },
+      "2020-2022": {
+       "trades": 13976,
+       "days": 748,
+       "winRatePct": 33.15,
+       "avgReturnPct": -1.42,
+       "avgExcessPct": -0.7,
+       "dailyExcessPct": -0.69,
+       "tStat": -19.69
+      },
+      "2023-now": {
+       "trades": 15909,
+       "days": 957,
+       "winRatePct": 40,
+       "avgReturnPct": -1.01,
+       "avgExcessPct": -0.42,
+       "dailyExcessPct": -0.4,
+       "tStat": -13.69
+      }
+     },
+     "marketUp": {
+      "trades": 44213,
+      "days": 2469,
+      "winRatePct": 34.55,
+      "avgReturnPct": -1.34,
+      "avgExcessPct": -0.63,
+      "dailyExcessPct": -0.61,
+      "tStat": -33.28
+     },
+     "marketDown": {
+      "trades": 26214,
+      "days": 1461,
+      "winRatePct": 36.4,
+      "avgReturnPct": -1.24,
+      "avgExcessPct": -0.49,
+      "dailyExcessPct": -0.48,
+      "tStat": -20.1
+     }
+    }
+   }
+  },
+  {
+   "key": "breakout-20d",
+   "label": "20-day high on heavy volume",
+   "basis": "Close above the highest close of the last 20 sessions on at least twice the usual turnover, in an uptrend.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 56716,
+     "days": 3774,
+     "winRatePct": 43.72,
+     "avgReturnPct": -0.8,
+     "avgExcessPct": -0.3,
+     "dailyExcessPct": -0.28,
+     "tStat": -12.78,
+     "tradesPerMonth": 300.6,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 42.66,
+      "stop": 54.2,
+      "time": 3.13
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 29381,
+       "days": 2117,
+       "winRatePct": 43.44,
+       "avgReturnPct": -0.82,
+       "avgExcessPct": -0.31,
+       "dailyExcessPct": -0.29,
+       "tStat": -9.48
+      },
+      "2020-2022": {
+       "trades": 13440,
+       "days": 716,
+       "winRatePct": 43.34,
+       "avgReturnPct": -0.82,
+       "avgExcessPct": -0.36,
+       "dailyExcessPct": -0.34,
+       "tStat": -7.18
+      },
+      "2023-now": {
+       "trades": 13895,
+       "days": 941,
+       "winRatePct": 44.66,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.2,
+       "dailyExcessPct": -0.2,
+       "tStat": -5.15
+      }
+     },
+     "marketUp": {
+      "trades": 47594,
+      "days": 2457,
+      "winRatePct": 43.99,
+      "avgReturnPct": -0.78,
+      "avgExcessPct": -0.29,
+      "dailyExcessPct": -0.24,
+      "tStat": -11.06
+     },
+     "marketDown": {
+      "trades": 9122,
+      "days": 1317,
+      "winRatePct": 42.3,
+      "avgReturnPct": -0.89,
+      "avgExcessPct": -0.31,
+      "dailyExcessPct": -0.35,
+      "tStat": -7.42
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 57934,
+     "days": 3778,
+     "winRatePct": 32.7,
+     "avgReturnPct": -0.81,
+     "avgExcessPct": -0.28,
+     "dailyExcessPct": -0.26,
+     "tStat": -15.14,
+     "tradesPerMonth": 307,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 32.11,
+      "stop": 66.67,
+      "time": 1.23
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 30025,
+       "days": 2120,
+       "winRatePct": 32.41,
+       "avgReturnPct": -0.83,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.26,
+       "tStat": -10.76
+      },
+      "2020-2022": {
+       "trades": 13721,
+       "days": 716,
+       "winRatePct": 32.24,
+       "avgReturnPct": -0.83,
+       "avgExcessPct": -0.33,
+       "dailyExcessPct": -0.31,
+       "tStat": -8.24
+      },
+      "2023-now": {
+       "trades": 14188,
+       "days": 942,
+       "winRatePct": 33.79,
+       "avgReturnPct": -0.76,
+       "avgExcessPct": -0.22,
+       "dailyExcessPct": -0.22,
+       "tStat": -7.11
+      }
+     },
+     "marketUp": {
+      "trades": 48642,
+      "days": 2457,
+      "winRatePct": 32.96,
+      "avgReturnPct": -0.8,
+      "avgExcessPct": -0.28,
+      "dailyExcessPct": -0.23,
+      "tStat": -13.91
+     },
+     "marketDown": {
+      "trades": 9292,
+      "days": 1321,
+      "winRatePct": 31.38,
+      "avgReturnPct": -0.88,
+      "avgExcessPct": -0.31,
+      "dailyExcessPct": -0.3,
+      "tStat": -8.09
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 59929,
+     "days": 3779,
+     "winRatePct": 38.21,
+     "avgReturnPct": -0.91,
+     "avgExcessPct": -0.3,
+     "dailyExcessPct": -0.27,
+     "tStat": -19.69,
+     "tradesPerMonth": 317.6,
+     "avgSessions": 1.3,
+     "exitsPct": {
+      "target": 37.91,
+      "stop": 60.99,
+      "time": 1.09
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 31095,
+       "days": 2121,
+       "winRatePct": 38.07,
+       "avgReturnPct": -0.92,
+       "avgExcessPct": -0.31,
+       "dailyExcessPct": -0.27,
+       "tStat": -14.18
+      },
+      "2020-2022": {
+       "trades": 14088,
+       "days": 716,
+       "winRatePct": 36.95,
+       "avgReturnPct": -0.95,
+       "avgExcessPct": -0.33,
+       "dailyExcessPct": -0.32,
+       "tStat": -10.65
+      },
+      "2023-now": {
+       "trades": 14746,
+       "days": 942,
+       "winRatePct": 39.71,
+       "avgReturnPct": -0.84,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.24,
+       "tStat": -9
+      }
+     },
+     "marketUp": {
+      "trades": 50316,
+      "days": 2457,
+      "winRatePct": 38.4,
+      "avgReturnPct": -0.9,
+      "avgExcessPct": -0.3,
+      "dailyExcessPct": -0.26,
+      "tStat": -19.84
+     },
+     "marketDown": {
+      "trades": 9613,
+      "days": 1322,
+      "winRatePct": 37.21,
+      "avgReturnPct": -0.95,
+      "avgExcessPct": -0.3,
+      "dailyExcessPct": -0.29,
+      "tStat": -9.37
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 49274,
+     "days": 3751,
+     "winRatePct": 32.09,
+     "avgReturnPct": -0.71,
+     "avgExcessPct": -0.34,
+     "dailyExcessPct": -0.31,
+     "tStat": -10.63,
+     "tradesPerMonth": 261.1,
+     "avgSessions": 2.8,
+     "exitsPct": {
+      "target": 25.73,
+      "stop": 63.69,
+      "time": 10.58
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 25519,
+       "days": 2102,
+       "winRatePct": 31.11,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.4,
+       "dailyExcessPct": -0.35,
+       "tStat": -8.43
+      },
+      "2020-2022": {
+       "trades": 11707,
+       "days": 715,
+       "winRatePct": 32.54,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": -0.35,
+       "dailyExcessPct": -0.33,
+       "tStat": -5.25
+      },
+      "2023-now": {
+       "trades": 12048,
+       "days": 934,
+       "winRatePct": 33.74,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.2,
+       "dailyExcessPct": -0.22,
+       "tStat": -3.99
+      }
+     },
+     "marketUp": {
+      "trades": 41229,
+      "days": 2453,
+      "winRatePct": 32.29,
+      "avgReturnPct": -0.68,
+      "avgExcessPct": -0.33,
+      "dailyExcessPct": -0.26,
+      "tStat": -8.64
+     },
+     "marketDown": {
+      "trades": 8045,
+      "days": 1298,
+      "winRatePct": 31.1,
+      "avgReturnPct": -0.83,
+      "avgExcessPct": -0.35,
+      "dailyExcessPct": -0.41,
+      "tStat": -6.53
+     }
+    },
+    "hold-5d": {
+     "trades": 38167,
+     "days": 3696,
+     "winRatePct": 41.7,
+     "avgReturnPct": -0.49,
+     "avgExcessPct": -0.21,
+     "dailyExcessPct": -0.25,
+     "tStat": -4.55,
+     "tradesPerMonth": 202.3,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 19789,
+       "days": 2068,
+       "winRatePct": 40.31,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": -0.26,
+       "dailyExcessPct": -0.25,
+       "tStat": -3.33
+      },
+      "2020-2022": {
+       "trades": 8620,
+       "days": 705,
+       "winRatePct": 43.31,
+       "avgReturnPct": -0.13,
+       "avgExcessPct": -0.15,
+       "dailyExcessPct": -0.25,
+       "tStat": -1.91
+      },
+      "2023-now": {
+       "trades": 9758,
+       "days": 923,
+       "winRatePct": 43.09,
+       "avgReturnPct": -0.45,
+       "avgExcessPct": -0.15,
+       "dailyExcessPct": -0.25,
+       "tStat": -2.51
+      }
+     },
+     "marketUp": {
+      "trades": 31730,
+      "days": 2441,
+      "winRatePct": 42.13,
+      "avgReturnPct": -0.38,
+      "avgExcessPct": -0.17,
+      "dailyExcessPct": -0.09,
+      "tStat": -1.78
+     },
+     "marketDown": {
+      "trades": 6437,
+      "days": 1255,
+      "winRatePct": 39.58,
+      "avgReturnPct": -1,
+      "avgExcessPct": -0.39,
+      "dailyExcessPct": -0.56,
+      "tStat": -4.44
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 38380,
+     "days": 3698,
+     "winRatePct": 40.7,
+     "avgReturnPct": -0.6,
+     "avgExcessPct": -0.23,
+     "dailyExcessPct": -0.27,
+     "tStat": -5.34,
+     "tradesPerMonth": 203.4,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 17.19,
+      "time": 82.81
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 19906,
+       "days": 2071,
+       "winRatePct": 39.27,
+       "avgReturnPct": -0.75,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.3,
+       "tStat": -4.21
+      },
+      "2020-2022": {
+       "trades": 8681,
+       "days": 704,
+       "winRatePct": 42.03,
+       "avgReturnPct": -0.33,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.27,
+       "tStat": -2.38
+      },
+      "2023-now": {
+       "trades": 9793,
+       "days": 923,
+       "winRatePct": 42.41,
+       "avgReturnPct": -0.53,
+       "avgExcessPct": -0.11,
+       "dailyExcessPct": -0.19,
+       "tStat": -2.27
+      }
+     },
+     "marketUp": {
+      "trades": 31909,
+      "days": 2441,
+      "winRatePct": 41.12,
+      "avgReturnPct": -0.51,
+      "avgExcessPct": -0.2,
+      "dailyExcessPct": -0.14,
+      "tStat": -2.77
+     },
+     "marketDown": {
+      "trades": 6471,
+      "days": 1257,
+      "winRatePct": 38.6,
+      "avgReturnPct": -1.03,
+      "avgExcessPct": -0.39,
+      "dailyExcessPct": -0.52,
+      "tStat": -4.69
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 38167,
+     "days": 3696,
+     "winRatePct": 40.03,
+     "avgReturnPct": -0.66,
+     "avgExcessPct": -0.3,
+     "dailyExcessPct": -0.37,
+     "tStat": -7.71,
+     "tradesPerMonth": 202.3,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 19789,
+       "days": 2068,
+       "winRatePct": 38.47,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.34,
+       "dailyExcessPct": -0.36,
+       "tStat": -5.44
+      },
+      "2020-2022": {
+       "trades": 8620,
+       "days": 705,
+       "winRatePct": 41.17,
+       "avgReturnPct": -0.38,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.4,
+       "tStat": -3.5
+      },
+      "2023-now": {
+       "trades": 9758,
+       "days": 923,
+       "winRatePct": 42.21,
+       "avgReturnPct": -0.52,
+       "avgExcessPct": -0.23,
+       "dailyExcessPct": -0.38,
+       "tStat": -4.28
+      }
+     },
+     "marketUp": {
+      "trades": 31730,
+      "days": 2441,
+      "winRatePct": 40.43,
+      "avgReturnPct": -0.57,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.23,
+      "tStat": -5
+     },
+     "marketDown": {
+      "trades": 6437,
+      "days": 1255,
+      "winRatePct": 38.09,
+      "avgReturnPct": -1.13,
+      "avgExcessPct": -0.48,
+      "dailyExcessPct": -0.65,
+      "tStat": -5.89
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 54113,
+     "days": 3769,
+     "winRatePct": 35.24,
+     "avgReturnPct": -1.3,
+     "avgExcessPct": -0.56,
+     "dailyExcessPct": -0.61,
+     "tStat": -29.06,
+     "tradesPerMonth": 286.8,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 33.84,
+      "stop": 61.86,
+      "time": 4.29
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 28009,
+       "days": 2114,
+       "winRatePct": 33.78,
+       "avgReturnPct": -1.39,
+       "avgExcessPct": -0.58,
+       "dailyExcessPct": -0.62,
+       "tStat": -21.39
+      },
+      "2020-2022": {
+       "trades": 12858,
+       "days": 716,
+       "winRatePct": 33.92,
+       "avgReturnPct": -1.37,
+       "avgExcessPct": -0.7,
+       "dailyExcessPct": -0.78,
+       "tStat": -17.81
+      },
+      "2023-now": {
+       "trades": 13246,
+       "days": 939,
+       "winRatePct": 39.61,
+       "avgReturnPct": -1.02,
+       "avgExcessPct": -0.39,
+       "dailyExcessPct": -0.44,
+       "tStat": -11.1
+      }
+     },
+     "marketUp": {
+      "trades": 45382,
+      "days": 2456,
+      "winRatePct": 35.36,
+      "avgReturnPct": -1.29,
+      "avgExcessPct": -0.55,
+      "dailyExcessPct": -0.56,
+      "tStat": -27.31
+     },
+     "marketDown": {
+      "trades": 8731,
+      "days": 1313,
+      "winRatePct": 34.61,
+      "avgReturnPct": -1.35,
+      "avgExcessPct": -0.6,
+      "dailyExcessPct": -0.7,
+      "tStat": -15.19
+     }
+    }
+   }
+  },
+  {
+   "key": "new-52w-high",
+   "label": "New 52-week high",
+   "basis": "Close above the highest close of the last year on at least 1.5 times the usual turnover (George and Hwang, 2004).",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 20418,
+     "days": 3356,
+     "winRatePct": 45.65,
+     "avgReturnPct": -0.68,
+     "avgExcessPct": -0.15,
+     "dailyExcessPct": -0.12,
+     "tStat": -3.73,
+     "tradesPerMonth": 108.2,
+     "avgSessions": 2.1,
+     "exitsPct": {
+      "target": 44.16,
+      "stop": 51.79,
+      "time": 4.05
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10053,
+       "days": 1821,
+       "winRatePct": 45.37,
+       "avgReturnPct": -0.7,
+       "avgExcessPct": -0.16,
+       "dailyExcessPct": -0.09,
+       "tStat": -2
+      },
+      "2020-2022": {
+       "trades": 4549,
+       "days": 667,
+       "winRatePct": 46.01,
+       "avgReturnPct": -0.65,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.14,
+       "tStat": -2.12
+      },
+      "2023-now": {
+       "trades": 5816,
+       "days": 868,
+       "winRatePct": 45.84,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.16,
+       "tStat": -2.7
+      }
+     },
+     "marketUp": {
+      "trades": 17559,
+      "days": 2344,
+      "winRatePct": 45.66,
+      "avgReturnPct": -0.67,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": -0.11,
+      "tStat": -3.21
+     },
+     "marketDown": {
+      "trades": 2859,
+      "days": 1012,
+      "winRatePct": 45.58,
+      "avgReturnPct": -0.7,
+      "avgExcessPct": -0.1,
+      "dailyExcessPct": -0.14,
+      "tStat": -2.03
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 20659,
+     "days": 3366,
+     "winRatePct": 34.36,
+     "avgReturnPct": -0.73,
+     "avgExcessPct": -0.19,
+     "dailyExcessPct": -0.15,
+     "tStat": -6.14,
+     "tradesPerMonth": 109.5,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 33.46,
+      "stop": 64.78,
+      "time": 1.76
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10181,
+       "days": 1830,
+       "winRatePct": 34.14,
+       "avgReturnPct": -0.74,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.11,
+       "tStat": -3.11
+      },
+      "2020-2022": {
+       "trades": 4594,
+       "days": 667,
+       "winRatePct": 34.44,
+       "avgReturnPct": -0.72,
+       "avgExcessPct": -0.18,
+       "dailyExcessPct": -0.21,
+       "tStat": -4.11
+      },
+      "2023-now": {
+       "trades": 5884,
+       "days": 869,
+       "winRatePct": 34.69,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.2,
+       "tStat": -4.4
+      }
+     },
+     "marketUp": {
+      "trades": 17770,
+      "days": 2347,
+      "winRatePct": 34.32,
+      "avgReturnPct": -0.73,
+      "avgExcessPct": -0.2,
+      "dailyExcessPct": -0.15,
+      "tStat": -5.78
+     },
+     "marketDown": {
+      "trades": 2889,
+      "days": 1019,
+      "winRatePct": 34.61,
+      "avgReturnPct": -0.72,
+      "avgExcessPct": -0.14,
+      "dailyExcessPct": -0.16,
+      "tStat": -2.82
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 20816,
+     "days": 3372,
+     "winRatePct": 40.06,
+     "avgReturnPct": -0.83,
+     "avgExcessPct": -0.21,
+     "dailyExcessPct": -0.18,
+     "tStat": -8.78,
+     "tradesPerMonth": 110.3,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 39.69,
+      "stop": 58.89,
+      "time": 1.42
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10262,
+       "days": 1834,
+       "winRatePct": 39.97,
+       "avgReturnPct": -0.84,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.15,
+       "tStat": -5.17
+      },
+      "2020-2022": {
+       "trades": 4611,
+       "days": 668,
+       "winRatePct": 39.21,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.22,
+       "dailyExcessPct": -0.25,
+       "tStat": -6.04
+      },
+      "2023-now": {
+       "trades": 5943,
+       "days": 870,
+       "winRatePct": 40.87,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.18,
+       "tStat": -4.89
+      }
+     },
+     "marketUp": {
+      "trades": 17897,
+      "days": 2351,
+      "winRatePct": 39.96,
+      "avgReturnPct": -0.83,
+      "avgExcessPct": -0.22,
+      "dailyExcessPct": -0.18,
+      "tStat": -8.49
+     },
+     "marketDown": {
+      "trades": 2919,
+      "days": 1021,
+      "winRatePct": 40.7,
+      "avgReturnPct": -0.81,
+      "avgExcessPct": -0.15,
+      "dailyExcessPct": -0.18,
+      "tStat": -3.85
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 19700,
+     "days": 3344,
+     "winRatePct": 33.76,
+     "avgReturnPct": -0.57,
+     "avgExcessPct": -0.17,
+     "dailyExcessPct": -0.15,
+     "tStat": -3.65,
+     "tradesPerMonth": 104.4,
+     "avgSessions": 2.9,
+     "exitsPct": {
+      "target": 26.44,
+      "stop": 61.42,
+      "time": 12.14
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 9694,
+       "days": 1815,
+       "winRatePct": 33.09,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.14,
+       "tStat": -2.34
+      },
+      "2020-2022": {
+       "trades": 4429,
+       "days": 666,
+       "winRatePct": 33.8,
+       "avgReturnPct": -0.51,
+       "avgExcessPct": -0.17,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.53
+      },
+      "2023-now": {
+       "trades": 5577,
+       "days": 863,
+       "winRatePct": 34.88,
+       "avgReturnPct": -0.53,
+       "avgExcessPct": -0.13,
+       "dailyExcessPct": -0.19,
+       "tStat": -2.53
+      }
+     },
+     "marketUp": {
+      "trades": 16930,
+      "days": 2340,
+      "winRatePct": 33.95,
+      "avgReturnPct": -0.55,
+      "avgExcessPct": -0.17,
+      "dailyExcessPct": -0.09,
+      "tStat": -1.94
+     },
+     "marketDown": {
+      "trades": 2770,
+      "days": 1004,
+      "winRatePct": 32.56,
+      "avgReturnPct": -0.71,
+      "avgExcessPct": -0.2,
+      "dailyExcessPct": -0.3,
+      "tStat": -3.33
+     }
+    },
+    "hold-5d": {
+     "trades": 17810,
+     "days": 3298,
+     "winRatePct": 43.66,
+     "avgReturnPct": -0.23,
+     "avgExcessPct": 0.06,
+     "dailyExcessPct": 0.09,
+     "tStat": 1.33,
+     "tradesPerMonth": 94.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 8748,
+       "days": 1791,
+       "winRatePct": 42.56,
+       "avgReturnPct": -0.32,
+       "avgExcessPct": 0.07,
+       "dailyExcessPct": 0.15,
+       "tStat": 1.51
+      },
+      "2020-2022": {
+       "trades": 3926,
+       "days": 653,
+       "winRatePct": 45.7,
+       "avgReturnPct": 0.08,
+       "avgExcessPct": 0.23,
+       "dailyExcessPct": 0.2,
+       "tStat": 1.23
+      },
+      "2023-now": {
+       "trades": 5136,
+       "days": 854,
+       "winRatePct": 43.96,
+       "avgReturnPct": -0.31,
+       "avgExcessPct": -0.08,
+       "dailyExcessPct": -0.1,
+       "tStat": -0.83
+      }
+     },
+     "marketUp": {
+      "trades": 15319,
+      "days": 2326,
+      "winRatePct": 43.8,
+      "avgReturnPct": -0.18,
+      "avgExcessPct": 0.06,
+      "dailyExcessPct": 0.11,
+      "tStat": 1.58
+     },
+     "marketDown": {
+      "trades": 2491,
+      "days": 972,
+      "winRatePct": 42.75,
+      "avgReturnPct": -0.54,
+      "avgExcessPct": 0.1,
+      "dailyExcessPct": 0.05,
+      "tStat": 0.33
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 17949,
+     "days": 3304,
+     "winRatePct": 42.45,
+     "avgReturnPct": -0.4,
+     "avgExcessPct": 0,
+     "dailyExcessPct": 0.03,
+     "tStat": 0.39,
+     "tradesPerMonth": 95.1,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 17.73,
+      "time": 82.27
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 8809,
+       "days": 1794,
+       "winRatePct": 41.36,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": 0,
+       "dailyExcessPct": 0.05,
+       "tStat": 0.51
+      },
+      "2020-2022": {
+       "trades": 3971,
+       "days": 655,
+       "winRatePct": 44.2,
+       "avgReturnPct": -0.2,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.05,
+       "tStat": 0.34
+      },
+      "2023-now": {
+       "trades": 5169,
+       "days": 855,
+       "winRatePct": 42.99,
+       "avgReturnPct": -0.44,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": -0.04,
+       "tStat": -0.36
+      }
+     },
+     "marketUp": {
+      "trades": 15427,
+      "days": 2328,
+      "winRatePct": 42.58,
+      "avgReturnPct": -0.35,
+      "avgExcessPct": 0,
+      "dailyExcessPct": 0.03,
+      "tStat": 0.38
+     },
+     "marketDown": {
+      "trades": 2522,
+      "days": 976,
+      "winRatePct": 41.67,
+      "avgReturnPct": -0.65,
+      "avgExcessPct": 0.03,
+      "dailyExcessPct": 0.03,
+      "tStat": 0.17
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 17810,
+     "days": 3298,
+     "winRatePct": 41.71,
+     "avgReturnPct": -0.46,
+     "avgExcessPct": -0.09,
+     "dailyExcessPct": -0.1,
+     "tStat": -1.67,
+     "tradesPerMonth": 94.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 8748,
+       "days": 1791,
+       "winRatePct": 40.1,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.11,
+       "dailyExcessPct": -0.08,
+       "tStat": -0.97
+      },
+      "2020-2022": {
+       "trades": 3926,
+       "days": 653,
+       "winRatePct": 42.41,
+       "avgReturnPct": -0.28,
+       "avgExcessPct": -0.05,
+       "dailyExcessPct": -0.12,
+       "tStat": -0.87
+      },
+      "2023-now": {
+       "trades": 5136,
+       "days": 854,
+       "winRatePct": 43.93,
+       "avgReturnPct": -0.31,
+       "avgExcessPct": -0.1,
+       "dailyExcessPct": -0.13,
+       "tStat": -1.15
+      }
+     },
+     "marketUp": {
+      "trades": 15319,
+      "days": 2326,
+      "winRatePct": 41.93,
+      "avgReturnPct": -0.4,
+      "avgExcessPct": -0.08,
+      "dailyExcessPct": -0.07,
+      "tStat": -1.09
+     },
+     "marketDown": {
+      "trades": 2491,
+      "days": 972,
+      "winRatePct": 40.35,
+      "avgReturnPct": -0.85,
+      "avgExcessPct": -0.18,
+      "dailyExcessPct": -0.19,
+      "tStat": -1.27
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 20412,
+     "days": 3352,
+     "winRatePct": 36.18,
+     "avgReturnPct": -1.23,
+     "avgExcessPct": -0.48,
+     "dailyExcessPct": -0.51,
+     "tStat": -16.73,
+     "tradesPerMonth": 108.2,
+     "avgSessions": 2.5,
+     "exitsPct": {
+      "target": 34.45,
+      "stop": 60.56,
+      "time": 4.99
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10045,
+       "days": 1819,
+       "winRatePct": 34.15,
+       "avgReturnPct": -1.36,
+       "avgExcessPct": -0.53,
+       "dailyExcessPct": -0.54,
+       "tStat": -12.72
+      },
+      "2020-2022": {
+       "trades": 4543,
+       "days": 667,
+       "winRatePct": 34.47,
+       "avgReturnPct": -1.34,
+       "avgExcessPct": -0.6,
+       "dailyExcessPct": -0.67,
+       "tStat": -10.36
+      },
+      "2023-now": {
+       "trades": 5824,
+       "days": 866,
+       "winRatePct": 41.02,
+       "avgReturnPct": -0.93,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.32,
+       "tStat": -5.52
+      }
+     },
+     "marketUp": {
+      "trades": 17553,
+      "days": 2341,
+      "winRatePct": 36.5,
+      "avgReturnPct": -1.21,
+      "avgExcessPct": -0.46,
+      "dailyExcessPct": -0.45,
+      "tStat": -13.76
+     },
+     "marketDown": {
+      "trades": 2859,
+      "days": 1011,
+      "winRatePct": 34.21,
+      "avgReturnPct": -1.38,
+      "avgExcessPct": -0.62,
+      "dailyExcessPct": -0.65,
+      "tStat": -9.73
+     }
+    }
+   }
+  },
+  {
+   "key": "results-jump",
+   "label": "Jump on results",
+   "basis": "Up 4% or more on twice the usual turnover as results come out: post-earnings drift (Bernard and Thomas, 1989).",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 4468,
+     "days": 1437,
+     "winRatePct": 45.55,
+     "avgReturnPct": -0.69,
+     "avgExcessPct": -0.14,
+     "dailyExcessPct": -0.09,
+     "tStat": -1.48,
+     "tradesPerMonth": 23.7,
+     "avgSessions": 1.8,
+     "exitsPct": {
+      "target": 44.49,
+      "stop": 52.91,
+      "time": 2.6
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2441,
+       "days": 832,
+       "winRatePct": 43.18,
+       "avgReturnPct": -0.84,
+       "avgExcessPct": -0.22,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.82
+      },
+      "2020-2022": {
+       "trades": 750,
+       "days": 242,
+       "winRatePct": 46.53,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": -0.27,
+       "dailyExcessPct": -0.16,
+       "tStat": -1.11
+      },
+      "2023-now": {
+       "trades": 1277,
+       "days": 363,
+       "winRatePct": 49.49,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": 0.07,
+       "dailyExcessPct": 0.09,
+       "tStat": 0.78
+      }
+     },
+     "marketUp": {
+      "trades": 3055,
+      "days": 968,
+      "winRatePct": 47.04,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": -0.13,
+      "dailyExcessPct": -0.07,
+      "tStat": -1
+     },
+     "marketDown": {
+      "trades": 1413,
+      "days": 469,
+      "winRatePct": 42.32,
+      "avgReturnPct": -0.89,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": -0.12,
+      "tStat": -1.14
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 4474,
+     "days": 1438,
+     "winRatePct": 34.38,
+     "avgReturnPct": -0.72,
+     "avgExcessPct": -0.16,
+     "dailyExcessPct": -0.11,
+     "tStat": -2.26,
+     "tradesPerMonth": 23.7,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 33.84,
+      "stop": 65.27,
+      "time": 0.89
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2445,
+       "days": 833,
+       "winRatePct": 31.66,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.25,
+       "dailyExcessPct": -0.18,
+       "tStat": -2.81
+      },
+      "2020-2022": {
+       "trades": 751,
+       "days": 242,
+       "winRatePct": 35.02,
+       "avgReturnPct": -0.64,
+       "avgExcessPct": -0.21,
+       "dailyExcessPct": -0.1,
+       "tStat": -0.87
+      },
+      "2023-now": {
+       "trades": 1278,
+       "days": 363,
+       "winRatePct": 39.2,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": 0.05,
+       "dailyExcessPct": 0.05,
+       "tStat": 0.54
+      }
+     },
+     "marketUp": {
+      "trades": 3059,
+      "days": 968,
+      "winRatePct": 35.34,
+      "avgReturnPct": -0.67,
+      "avgExcessPct": -0.17,
+      "dailyExcessPct": -0.12,
+      "tStat": -2.17
+     },
+     "marketDown": {
+      "trades": 1415,
+      "days": 470,
+      "winRatePct": 32.3,
+      "avgReturnPct": -0.83,
+      "avgExcessPct": -0.14,
+      "dailyExcessPct": -0.08,
+      "tStat": -0.89
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 4478,
+     "days": 1440,
+     "winRatePct": 38.61,
+     "avgReturnPct": -0.89,
+     "avgExcessPct": -0.24,
+     "dailyExcessPct": -0.2,
+     "tStat": -4.96,
+     "tradesPerMonth": 23.7,
+     "avgSessions": 1.2,
+     "exitsPct": {
+      "target": 38.41,
+      "stop": 60.83,
+      "time": 0.76
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2447,
+       "days": 833,
+       "winRatePct": 35.84,
+       "avgReturnPct": -1.01,
+       "avgExcessPct": -0.33,
+       "dailyExcessPct": -0.27,
+       "tStat": -5.14
+      },
+      "2020-2022": {
+       "trades": 753,
+       "days": 244,
+       "winRatePct": 39.18,
+       "avgReturnPct": -0.83,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.17,
+       "tStat": -1.75
+      },
+      "2023-now": {
+       "trades": 1278,
+       "days": 363,
+       "winRatePct": 43.58,
+       "avgReturnPct": -0.7,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": -0.05,
+       "tStat": -0.62
+      }
+     },
+     "marketUp": {
+      "trades": 3062,
+      "days": 970,
+      "winRatePct": 39.22,
+      "avgReturnPct": -0.86,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.23,
+      "tStat": -4.96
+     },
+     "marketDown": {
+      "trades": 1416,
+      "days": 470,
+      "winRatePct": 37.29,
+      "avgReturnPct": -0.95,
+      "avgExcessPct": -0.2,
+      "dailyExcessPct": -0.12,
+      "tStat": -1.68
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 4414,
+     "days": 1431,
+     "winRatePct": 35.46,
+     "avgReturnPct": -0.44,
+     "avgExcessPct": 0,
+     "dailyExcessPct": 0.1,
+     "tStat": 1.34,
+     "tradesPerMonth": 23.4,
+     "avgSessions": 2.6,
+     "exitsPct": {
+      "target": 28.39,
+      "stop": 61.12,
+      "time": 10.49
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2412,
+       "days": 826,
+       "winRatePct": 32.17,
+       "avgReturnPct": -0.72,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": 0,
+       "tStat": -0.04
+      },
+      "2020-2022": {
+       "trades": 743,
+       "days": 242,
+       "winRatePct": 39.97,
+       "avgReturnPct": 0.13,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.22,
+       "tStat": 1.07
+      },
+      "2023-now": {
+       "trades": 1259,
+       "days": 363,
+       "winRatePct": 39.08,
+       "avgReturnPct": -0.23,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.27,
+       "tStat": 1.86
+      }
+     },
+     "marketUp": {
+      "trades": 3019,
+      "days": 963,
+      "winRatePct": 37.23,
+      "avgReturnPct": -0.27,
+      "avgExcessPct": 0.03,
+      "dailyExcessPct": 0.13,
+      "tStat": 1.39
+     },
+     "marketDown": {
+      "trades": 1395,
+      "days": 468,
+      "winRatePct": 31.61,
+      "avgReturnPct": -0.8,
+      "avgExcessPct": -0.08,
+      "dailyExcessPct": 0.05,
+      "tStat": 0.35
+     }
+    },
+    "hold-5d": {
+     "trades": 4221,
+     "days": 1409,
+     "winRatePct": 44.87,
+     "avgReturnPct": -0.24,
+     "avgExcessPct": 0.14,
+     "dailyExcessPct": 0.31,
+     "tStat": 2.26,
+     "tradesPerMonth": 22.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2300,
+       "days": 811,
+       "winRatePct": 41.83,
+       "avgReturnPct": -0.72,
+       "avgExcessPct": 0.02,
+       "dailyExcessPct": 0.26,
+       "tStat": 1.44
+      },
+      "2020-2022": {
+       "trades": 707,
+       "days": 239,
+       "winRatePct": 49.79,
+       "avgReturnPct": 1.01,
+       "avgExcessPct": 0.52,
+       "dailyExcessPct": 0.16,
+       "tStat": 0.45
+      },
+      "2023-now": {
+       "trades": 1214,
+       "days": 359,
+       "winRatePct": 47.78,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.5,
+       "tStat": 2.16
+      }
+     },
+     "marketUp": {
+      "trades": 2871,
+      "days": 949,
+      "winRatePct": 46.92,
+      "avgReturnPct": 0.22,
+      "avgExcessPct": 0.28,
+      "dailyExcessPct": 0.37,
+      "tStat": 2.24
+     },
+     "marketDown": {
+      "trades": 1350,
+      "days": 460,
+      "winRatePct": 40.52,
+      "avgReturnPct": -1.23,
+      "avgExcessPct": -0.17,
+      "dailyExcessPct": 0.18,
+      "tStat": 0.75
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 4225,
+     "days": 1410,
+     "winRatePct": 43.67,
+     "avgReturnPct": -0.32,
+     "avgExcessPct": 0.12,
+     "dailyExcessPct": 0.27,
+     "tStat": 2.04,
+     "tradesPerMonth": 22.4,
+     "avgSessions": 4.6,
+     "exitsPct": {
+      "target": 0,
+      "stop": 20.4,
+      "time": 79.6
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2303,
+       "days": 811,
+       "winRatePct": 40.43,
+       "avgReturnPct": -0.76,
+       "avgExcessPct": -0.01,
+       "dailyExcessPct": 0.23,
+       "tStat": 1.3
+      },
+      "2020-2022": {
+       "trades": 707,
+       "days": 239,
+       "winRatePct": 48.66,
+       "avgReturnPct": 0.9,
+       "avgExcessPct": 0.54,
+       "dailyExcessPct": 0.21,
+       "tStat": 0.61
+      },
+      "2023-now": {
+       "trades": 1215,
+       "days": 360,
+       "winRatePct": 46.91,
+       "avgReturnPct": -0.21,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.39,
+       "tStat": 1.7
+      }
+     },
+     "marketUp": {
+      "trades": 2874,
+      "days": 949,
+      "winRatePct": 45.76,
+      "avgReturnPct": 0.1,
+      "avgExcessPct": 0.25,
+      "dailyExcessPct": 0.34,
+      "tStat": 2.06
+     },
+     "marketDown": {
+      "trades": 1351,
+      "days": 461,
+      "winRatePct": 39.23,
+      "avgReturnPct": -1.23,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": 0.13,
+      "tStat": 0.58
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 4221,
+     "days": 1409,
+     "winRatePct": 43.78,
+     "avgReturnPct": -0.43,
+     "avgExcessPct": 0,
+     "dailyExcessPct": 0.15,
+     "tStat": 1.3,
+     "tradesPerMonth": 22.4,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2300,
+       "days": 811,
+       "winRatePct": 40.61,
+       "avgReturnPct": -0.81,
+       "avgExcessPct": 0,
+       "dailyExcessPct": 0.22,
+       "tStat": 1.42
+      },
+      "2020-2022": {
+       "trades": 707,
+       "days": 239,
+       "winRatePct": 48.8,
+       "avgReturnPct": 0.64,
+       "avgExcessPct": 0.28,
+       "dailyExcessPct": 0.01,
+       "tStat": 0.03
+      },
+      "2023-now": {
+       "trades": 1214,
+       "days": 359,
+       "winRatePct": 46.87,
+       "avgReturnPct": -0.34,
+       "avgExcessPct": -0.16,
+       "dailyExcessPct": 0.09,
+       "tStat": 0.45
+      }
+     },
+     "marketUp": {
+      "trades": 2871,
+      "days": 949,
+      "winRatePct": 45.63,
+      "avgReturnPct": -0.03,
+      "avgExcessPct": 0.14,
+      "dailyExcessPct": 0.21,
+      "tStat": 1.47
+     },
+     "marketDown": {
+      "trades": 1350,
+      "days": 460,
+      "winRatePct": 39.85,
+      "avgReturnPct": -1.29,
+      "avgExcessPct": -0.28,
+      "dailyExcessPct": 0.03,
+      "tStat": 0.17
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 4453,
+     "days": 1437,
+     "winRatePct": 37.14,
+     "avgReturnPct": -1.19,
+     "avgExcessPct": -0.44,
+     "dailyExcessPct": -0.4,
+     "tStat": -7.12,
+     "tradesPerMonth": 23.6,
+     "avgSessions": 2.2,
+     "exitsPct": {
+      "target": 35.95,
+      "stop": 60.41,
+      "time": 3.64
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2435,
+       "days": 831,
+       "winRatePct": 37.04,
+       "avgReturnPct": -1.2,
+       "avgExcessPct": -0.32,
+       "dailyExcessPct": -0.31,
+       "tStat": -4.15
+      },
+      "2020-2022": {
+       "trades": 749,
+       "days": 243,
+       "winRatePct": 35.78,
+       "avgReturnPct": -1.25,
+       "avgExcessPct": -0.67,
+       "dailyExcessPct": -0.53,
+       "tStat": -3.75
+      },
+      "2023-now": {
+       "trades": 1269,
+       "days": 363,
+       "winRatePct": 38.14,
+       "avgReturnPct": -1.12,
+       "avgExcessPct": -0.52,
+       "dailyExcessPct": -0.52,
+       "tStat": -4.9
+      }
+     },
+     "marketUp": {
+      "trades": 3046,
+      "days": 969,
+      "winRatePct": 37.62,
+      "avgReturnPct": -1.15,
+      "avgExcessPct": -0.45,
+      "dailyExcessPct": -0.42,
+      "tStat": -6.13
+     },
+     "marketDown": {
+      "trades": 1407,
+      "days": 468,
+      "winRatePct": 36.11,
+      "avgReturnPct": -1.27,
+      "avgExcessPct": -0.4,
+      "dailyExcessPct": -0.36,
+      "tStat": -3.66
+     }
+    }
+   }
+  },
+  {
+   "key": "results-drop",
+   "label": "Drop on results (bounce)",
+   "basis": "Down 4% or more on twice the usual turnover as results come out. Tests whether the fall overshoots.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 3478,
+     "days": 1314,
+     "winRatePct": 33.67,
+     "avgReturnPct": -1.41,
+     "avgExcessPct": -0.65,
+     "dailyExcessPct": -0.7,
+     "tStat": -11.82,
+     "tradesPerMonth": 18.4,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 32.14,
+      "stop": 63.74,
+      "time": 4.11
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2023,
+       "days": 784,
+       "winRatePct": 32.82,
+       "avgReturnPct": -1.46,
+       "avgExcessPct": -0.61,
+       "dailyExcessPct": -0.56,
+       "tStat": -7.17
+      },
+      "2020-2022": {
+       "trades": 445,
+       "days": 190,
+       "winRatePct": 30.79,
+       "avgReturnPct": -1.62,
+       "avgExcessPct": -0.88,
+       "dailyExcessPct": -1.02,
+       "tStat": -6.39
+      },
+      "2023-now": {
+       "trades": 1010,
+       "days": 340,
+       "winRatePct": 36.63,
+       "avgReturnPct": -1.22,
+       "avgExcessPct": -0.64,
+       "dailyExcessPct": -0.86,
+       "tStat": -7.73
+      }
+     },
+     "marketUp": {
+      "trades": 2128,
+      "days": 845,
+      "winRatePct": 33.88,
+      "avgReturnPct": -1.39,
+      "avgExcessPct": -0.73,
+      "dailyExcessPct": -0.72,
+      "tStat": -9.73
+     },
+     "marketDown": {
+      "trades": 1350,
+      "days": 469,
+      "winRatePct": 33.33,
+      "avgReturnPct": -1.44,
+      "avgExcessPct": -0.52,
+      "dailyExcessPct": -0.67,
+      "tStat": -6.71
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 3481,
+     "days": 1315,
+     "winRatePct": 25.42,
+     "avgReturnPct": -1.19,
+     "avgExcessPct": -0.46,
+     "dailyExcessPct": -0.51,
+     "tStat": -10.97,
+     "tradesPerMonth": 18.4,
+     "avgSessions": 1.5,
+     "exitsPct": {
+      "target": 24.65,
+      "stop": 73.8,
+      "time": 1.55
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2024,
+       "days": 785,
+       "winRatePct": 24.8,
+       "avgReturnPct": -1.22,
+       "avgExcessPct": -0.43,
+       "dailyExcessPct": -0.41,
+       "tStat": -6.62
+      },
+      "2020-2022": {
+       "trades": 446,
+       "days": 190,
+       "winRatePct": 22.2,
+       "avgReturnPct": -1.38,
+       "avgExcessPct": -0.65,
+       "dailyExcessPct": -0.76,
+       "tStat": -6.05
+      },
+      "2023-now": {
+       "trades": 1011,
+       "days": 340,
+       "winRatePct": 28.09,
+       "avgReturnPct": -1.05,
+       "avgExcessPct": -0.45,
+       "dailyExcessPct": -0.6,
+       "tStat": -7.26
+      }
+     },
+     "marketUp": {
+      "trades": 2130,
+      "days": 846,
+      "winRatePct": 25.96,
+      "avgReturnPct": -1.17,
+      "avgExcessPct": -0.52,
+      "dailyExcessPct": -0.54,
+      "tStat": -9.27
+     },
+     "marketDown": {
+      "trades": 1351,
+      "days": 469,
+      "winRatePct": 24.57,
+      "avgReturnPct": -1.23,
+      "avgExcessPct": -0.37,
+      "dailyExcessPct": -0.45,
+      "tStat": -5.9
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 3481,
+     "days": 1315,
+     "winRatePct": 30.48,
+     "avgReturnPct": -1.23,
+     "avgExcessPct": -0.45,
+     "dailyExcessPct": -0.49,
+     "tStat": -12.26,
+     "tradesPerMonth": 18.4,
+     "avgSessions": 1.3,
+     "exitsPct": {
+      "target": 30.16,
+      "stop": 68.66,
+      "time": 1.18
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2024,
+       "days": 785,
+       "winRatePct": 30.24,
+       "avgReturnPct": -1.24,
+       "avgExcessPct": -0.41,
+       "dailyExcessPct": -0.4,
+       "tStat": -7.61
+      },
+      "2020-2022": {
+       "trades": 446,
+       "days": 190,
+       "winRatePct": 28.7,
+       "avgReturnPct": -1.33,
+       "avgExcessPct": -0.5,
+       "dailyExcessPct": -0.59,
+       "tStat": -5.33
+      },
+      "2023-now": {
+       "trades": 1011,
+       "days": 340,
+       "winRatePct": 31.75,
+       "avgReturnPct": -1.17,
+       "avgExcessPct": -0.5,
+       "dailyExcessPct": -0.63,
+       "tStat": -8.95
+      }
+     },
+     "marketUp": {
+      "trades": 2130,
+      "days": 846,
+      "winRatePct": 31.97,
+      "avgReturnPct": -1.17,
+      "avgExcessPct": -0.46,
+      "dailyExcessPct": -0.48,
+      "tStat": -9.71
+     },
+     "marketDown": {
+      "trades": 1351,
+      "days": 469,
+      "winRatePct": 28.13,
+      "avgReturnPct": -1.33,
+      "avgExcessPct": -0.42,
+      "dailyExcessPct": -0.49,
+      "tStat": -7.5
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 3476,
+     "days": 1314,
+     "winRatePct": 23.27,
+     "avgReturnPct": -1.49,
+     "avgExcessPct": -0.78,
+     "dailyExcessPct": -0.86,
+     "tStat": -12.05,
+     "tradesPerMonth": 18.4,
+     "avgSessions": 2.7,
+     "exitsPct": {
+      "target": 17,
+      "stop": 71.61,
+      "time": 11.39
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2022,
+       "days": 784,
+       "winRatePct": 21.32,
+       "avgReturnPct": -1.61,
+       "avgExcessPct": -0.75,
+       "dailyExcessPct": -0.75,
+       "tStat": -7.95
+      },
+      "2020-2022": {
+       "trades": 444,
+       "days": 190,
+       "winRatePct": 22.3,
+       "avgReturnPct": -1.61,
+       "avgExcessPct": -1.02,
+       "dailyExcessPct": -1.16,
+       "tStat": -5.61
+      },
+      "2023-now": {
+       "trades": 1010,
+       "days": 340,
+       "winRatePct": 27.62,
+       "avgReturnPct": -1.19,
+       "avgExcessPct": -0.73,
+       "dailyExcessPct": -0.97,
+       "tStat": -7.59
+      }
+     },
+     "marketUp": {
+      "trades": 2126,
+      "days": 845,
+      "winRatePct": 23.71,
+      "avgReturnPct": -1.46,
+      "avgExcessPct": -0.88,
+      "dailyExcessPct": -0.89,
+      "tStat": -9.73
+     },
+     "marketDown": {
+      "trades": 1350,
+      "days": 469,
+      "winRatePct": 22.59,
+      "avgReturnPct": -1.54,
+      "avgExcessPct": -0.63,
+      "dailyExcessPct": -0.82,
+      "tStat": -7.11
+     }
+    },
+    "hold-5d": {
+     "trades": 3331,
+     "days": 1294,
+     "winRatePct": 34.1,
+     "avgReturnPct": -1.95,
+     "avgExcessPct": -1.28,
+     "dailyExcessPct": -1.38,
+     "tStat": -10.79,
+     "tradesPerMonth": 17.7,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1919,
+       "days": 767,
+       "winRatePct": 32.78,
+       "avgReturnPct": -2.34,
+       "avgExcessPct": -1.35,
+       "dailyExcessPct": -1.27,
+       "tStat": -7.02
+      },
+      "2020-2022": {
+       "trades": 433,
+       "days": 188,
+       "winRatePct": 30.02,
+       "avgReturnPct": -1.73,
+       "avgExcessPct": -1.48,
+       "dailyExcessPct": -1.74,
+       "tStat": -5.14
+      },
+      "2023-now": {
+       "trades": 979,
+       "days": 339,
+       "winRatePct": 38.51,
+       "avgReturnPct": -1.28,
+       "avgExcessPct": -1.06,
+       "dailyExcessPct": -1.42,
+       "tStat": -7.66
+      }
+     },
+     "marketUp": {
+      "trades": 2046,
+      "days": 831,
+      "winRatePct": 33.58,
+      "avgReturnPct": -1.78,
+      "avgExcessPct": -1.37,
+      "dailyExcessPct": -1.39,
+      "tStat": -8.97
+     },
+     "marketDown": {
+      "trades": 1285,
+      "days": 463,
+      "winRatePct": 34.94,
+      "avgReturnPct": -2.22,
+      "avgExcessPct": -1.14,
+      "dailyExcessPct": -1.36,
+      "tStat": -6.06
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 3382,
+     "days": 1300,
+     "winRatePct": 32.5,
+     "avgReturnPct": -1.93,
+     "avgExcessPct": -1.14,
+     "dailyExcessPct": -1.25,
+     "tStat": -10.22,
+     "tradesPerMonth": 17.9,
+     "avgSessions": 4.4,
+     "exitsPct": {
+      "target": 0,
+      "stop": 25.64,
+      "time": 74.36
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1958,
+       "days": 772,
+       "winRatePct": 31,
+       "avgReturnPct": -2.18,
+       "avgExcessPct": -1.1,
+       "dailyExcessPct": -1.08,
+       "tStat": -6.21
+      },
+      "2020-2022": {
+       "trades": 436,
+       "days": 188,
+       "winRatePct": 28.67,
+       "avgReturnPct": -2.06,
+       "avgExcessPct": -1.57,
+       "dailyExcessPct": -1.82,
+       "tStat": -5.33
+      },
+      "2023-now": {
+       "trades": 988,
+       "days": 340,
+       "winRatePct": 37.15,
+       "avgReturnPct": -1.37,
+       "avgExcessPct": -1.03,
+       "dailyExcessPct": -1.33,
+       "tStat": -7.99
+      }
+     },
+     "marketUp": {
+      "trades": 2069,
+      "days": 835,
+      "winRatePct": 32.19,
+      "avgReturnPct": -1.83,
+      "avgExcessPct": -1.29,
+      "dailyExcessPct": -1.29,
+      "tStat": -8.08
+     },
+     "marketDown": {
+      "trades": 1313,
+      "days": 465,
+      "winRatePct": 32.98,
+      "avgReturnPct": -2.09,
+      "avgExcessPct": -0.92,
+      "dailyExcessPct": -1.17,
+      "tStat": -6.32
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 3331,
+     "days": 1294,
+     "winRatePct": 37.32,
+     "avgReturnPct": -1.3,
+     "avgExcessPct": -0.76,
+     "dailyExcessPct": -0.8,
+     "tStat": -7.18,
+     "tradesPerMonth": 17.7,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1919,
+       "days": 767,
+       "winRatePct": 35.64,
+       "avgReturnPct": -1.61,
+       "avgExcessPct": -0.77,
+       "dailyExcessPct": -0.67,
+       "tStat": -4.25
+      },
+      "2020-2022": {
+       "trades": 433,
+       "days": 188,
+       "winRatePct": 33.95,
+       "avgReturnPct": -1.13,
+       "avgExcessPct": -0.97,
+       "dailyExcessPct": -1.29,
+       "tStat": -4.4
+      },
+      "2023-now": {
+       "trades": 979,
+       "days": 339,
+       "winRatePct": 42.08,
+       "avgReturnPct": -0.78,
+       "avgExcessPct": -0.64,
+       "dailyExcessPct": -0.83,
+       "tStat": -4.94
+      }
+     },
+     "marketUp": {
+      "trades": 2046,
+      "days": 831,
+      "winRatePct": 36.17,
+      "avgReturnPct": -1.22,
+      "avgExcessPct": -0.84,
+      "dailyExcessPct": -0.86,
+      "tStat": -6.31
+     },
+     "marketDown": {
+      "trades": 1285,
+      "days": 463,
+      "winRatePct": 39.14,
+      "avgReturnPct": -1.44,
+      "avgExcessPct": -0.62,
+      "dailyExcessPct": -0.69,
+      "tStat": -3.58
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 3469,
+     "days": 1312,
+     "winRatePct": 38.77,
+     "avgReturnPct": -1.06,
+     "avgExcessPct": -0.28,
+     "dailyExcessPct": -0.25,
+     "tStat": -4.18,
+     "tradesPerMonth": 18.4,
+     "avgSessions": 2.5,
+     "exitsPct": {
+      "target": 36.9,
+      "stop": 56.93,
+      "time": 6.17
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2017,
+       "days": 782,
+       "winRatePct": 37.88,
+       "avgReturnPct": -1.13,
+       "avgExcessPct": -0.23,
+       "dailyExcessPct": -0.15,
+       "tStat": -1.86
+      },
+      "2020-2022": {
+       "trades": 444,
+       "days": 190,
+       "winRatePct": 36.26,
+       "avgReturnPct": -1.25,
+       "avgExcessPct": -0.48,
+       "dailyExcessPct": -0.59,
+       "tStat": -3.66
+      },
+      "2023-now": {
+       "trades": 1008,
+       "days": 340,
+       "winRatePct": 41.67,
+       "avgReturnPct": -0.84,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.31,
+       "tStat": -2.67
+      }
+     },
+     "marketUp": {
+      "trades": 2121,
+      "days": 843,
+      "winRatePct": 39.32,
+      "avgReturnPct": -1.01,
+      "avgExcessPct": -0.27,
+      "dailyExcessPct": -0.27,
+      "tStat": -3.62
+     },
+     "marketDown": {
+      "trades": 1348,
+      "days": 469,
+      "winRatePct": 37.91,
+      "avgReturnPct": -1.15,
+      "avgExcessPct": -0.29,
+      "dailyExcessPct": -0.22,
+      "tStat": -2.15
+     }
+    }
+   }
+  },
+  {
+   "key": "delivery-buying",
+   "label": "Up day with heavy delivery",
+   "basis": "Up 2% or more with delivery share and turnover both at least 1.5 times their 20-day average. An India-specific idea without a published record.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 3039,
+     "days": 1596,
+     "winRatePct": 48.4,
+     "avgReturnPct": -0.5,
+     "avgExcessPct": -0.12,
+     "dailyExcessPct": -0.1,
+     "tStat": -1.52,
+     "tradesPerMonth": 16.1,
+     "avgSessions": 2.2,
+     "exitsPct": {
+      "target": 47.68,
+      "stop": 49.62,
+      "time": 2.7
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2105,
+       "days": 1083,
+       "winRatePct": 48.41,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": -0.08,
+       "dailyExcessPct": -0.08,
+       "tStat": -1.08
+      },
+      "2020-2022": {
+       "trades": 585,
+       "days": 302,
+       "winRatePct": 49.23,
+       "avgReturnPct": -0.45,
+       "avgExcessPct": -0.2,
+       "dailyExcessPct": -0.17,
+       "tStat": -1.13
+      },
+      "2023-now": {
+       "trades": 349,
+       "days": 211,
+       "winRatePct": 46.99,
+       "avgReturnPct": -0.56,
+       "avgExcessPct": -0.2,
+       "dailyExcessPct": -0.07,
+       "tStat": -0.39
+      }
+     },
+     "marketUp": {
+      "trades": 1955,
+      "days": 1032,
+      "winRatePct": 49.05,
+      "avgReturnPct": -0.45,
+      "avgExcessPct": -0.11,
+      "dailyExcessPct": -0.1,
+      "tStat": -1.3
+     },
+     "marketDown": {
+      "trades": 1084,
+      "days": 564,
+      "winRatePct": 47.23,
+      "avgReturnPct": -0.6,
+      "avgExcessPct": -0.13,
+      "dailyExcessPct": -0.09,
+      "tStat": -0.8
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 3040,
+     "days": 1596,
+     "winRatePct": 36.35,
+     "avgReturnPct": -0.62,
+     "avgExcessPct": -0.18,
+     "dailyExcessPct": -0.17,
+     "tStat": -3.26,
+     "tradesPerMonth": 16.1,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 36.05,
+      "stop": 63.19,
+      "time": 0.76
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2106,
+       "days": 1083,
+       "winRatePct": 36.75,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": -0.13,
+       "dailyExcessPct": -0.13,
+       "tStat": -2.16
+      },
+      "2020-2022": {
+       "trades": 585,
+       "days": 302,
+       "winRatePct": 36.58,
+       "avgReturnPct": -0.62,
+       "avgExcessPct": -0.26,
+       "dailyExcessPct": -0.26,
+       "tStat": -2.16
+      },
+      "2023-now": {
+       "trades": 349,
+       "days": 211,
+       "winRatePct": 33.52,
+       "avgReturnPct": -0.78,
+       "avgExcessPct": -0.38,
+       "dailyExcessPct": -0.21,
+       "tStat": -1.46
+      }
+     },
+     "marketUp": {
+      "trades": 1956,
+      "days": 1032,
+      "winRatePct": 37.58,
+      "avgReturnPct": -0.56,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": -0.16,
+      "tStat": -2.47
+     },
+     "marketDown": {
+      "trades": 1084,
+      "days": 564,
+      "winRatePct": 34.13,
+      "avgReturnPct": -0.73,
+      "avgExcessPct": -0.22,
+      "dailyExcessPct": -0.18,
+      "tStat": -2.14
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 3048,
+     "days": 1597,
+     "winRatePct": 43.04,
+     "avgReturnPct": -0.72,
+     "avgExcessPct": -0.16,
+     "dailyExcessPct": -0.14,
+     "tStat": -3.33,
+     "tradesPerMonth": 16.2,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 42.81,
+      "stop": 56.36,
+      "time": 0.82
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2113,
+       "days": 1083,
+       "winRatePct": 43.21,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": -0.13,
+       "dailyExcessPct": -0.14,
+       "tStat": -2.72
+      },
+      "2020-2022": {
+       "trades": 585,
+       "days": 302,
+       "winRatePct": 43.08,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": -0.18,
+       "dailyExcessPct": -0.16,
+       "tStat": -1.59
+      },
+      "2023-now": {
+       "trades": 350,
+       "days": 212,
+       "winRatePct": 42,
+       "avgReturnPct": -0.77,
+       "avgExcessPct": -0.28,
+       "dailyExcessPct": -0.13,
+       "tStat": -1.09
+      }
+     },
+     "marketUp": {
+      "trades": 1963,
+      "days": 1033,
+      "winRatePct": 44.42,
+      "avgReturnPct": -0.66,
+      "avgExcessPct": -0.14,
+      "dailyExcessPct": -0.13,
+      "tStat": -2.51
+     },
+     "marketDown": {
+      "trades": 1085,
+      "days": 564,
+      "winRatePct": 40.55,
+      "avgReturnPct": -0.82,
+      "avgExcessPct": -0.19,
+      "dailyExcessPct": -0.15,
+      "tStat": -2.2
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 2994,
+     "days": 1577,
+     "winRatePct": 36.97,
+     "avgReturnPct": -0.27,
+     "avgExcessPct": -0.08,
+     "dailyExcessPct": -0.06,
+     "tStat": -0.76,
+     "tradesPerMonth": 15.9,
+     "avgSessions": 3.1,
+     "exitsPct": {
+      "target": 29.89,
+      "stop": 58.22,
+      "time": 11.89
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2064,
+       "days": 1067,
+       "winRatePct": 36.29,
+       "avgReturnPct": -0.34,
+       "avgExcessPct": -0.08,
+       "dailyExcessPct": -0.1,
+       "tStat": -1
+      },
+      "2020-2022": {
+       "trades": 583,
+       "days": 301,
+       "winRatePct": 39.97,
+       "avgReturnPct": 0.05,
+       "avgExcessPct": -0.05,
+       "dailyExcessPct": 0.02,
+       "tStat": 0.09
+      },
+      "2023-now": {
+       "trades": 347,
+       "days": 209,
+       "winRatePct": 36.02,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": -0.16,
+       "dailyExcessPct": 0.01,
+       "tStat": 0.07
+      }
+     },
+     "marketUp": {
+      "trades": 1919,
+      "days": 1017,
+      "winRatePct": 37.52,
+      "avgReturnPct": -0.18,
+      "avgExcessPct": -0.06,
+      "dailyExcessPct": -0.09,
+      "tStat": -0.84
+     },
+     "marketDown": {
+      "trades": 1075,
+      "days": 560,
+      "winRatePct": 36,
+      "avgReturnPct": -0.42,
+      "avgExcessPct": -0.13,
+      "dailyExcessPct": -0.02,
+      "tStat": -0.15
+     }
+    },
+    "hold-5d": {
+     "trades": 2918,
+     "days": 1556,
+     "winRatePct": 45.75,
+     "avgReturnPct": -0.09,
+     "avgExcessPct": -0.09,
+     "dailyExcessPct": -0.07,
+     "tStat": -0.53,
+     "tradesPerMonth": 15.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2003,
+       "days": 1052,
+       "winRatePct": 44.68,
+       "avgReturnPct": -0.25,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.11,
+       "tStat": -0.66
+      },
+      "2020-2022": {
+       "trades": 569,
+       "days": 296,
+       "winRatePct": 47.98,
+       "avgReturnPct": 0.43,
+       "avgExcessPct": -0.19,
+       "dailyExcessPct": -0.12,
+       "tStat": -0.36
+      },
+      "2023-now": {
+       "trades": 346,
+       "days": 208,
+       "winRatePct": 48.27,
+       "avgReturnPct": -0.07,
+       "avgExcessPct": -0.12,
+       "dailyExcessPct": 0.18,
+       "tStat": 0.56
+      }
+     },
+     "marketUp": {
+      "trades": 1871,
+      "days": 1008,
+      "winRatePct": 45.38,
+      "avgReturnPct": 0.01,
+      "avgExcessPct": -0.09,
+      "dailyExcessPct": -0.11,
+      "tStat": -0.69
+     },
+     "marketDown": {
+      "trades": 1047,
+      "days": 548,
+      "winRatePct": 46.42,
+      "avgReturnPct": -0.28,
+      "avgExcessPct": -0.09,
+      "dailyExcessPct": 0.01,
+      "tStat": 0.02
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 2925,
+     "days": 1558,
+     "winRatePct": 44.75,
+     "avgReturnPct": -0.14,
+     "avgExcessPct": -0.05,
+     "dailyExcessPct": -0.02,
+     "tStat": -0.18,
+     "tradesPerMonth": 15.5,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 16,
+      "time": 84
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2009,
+       "days": 1053,
+       "winRatePct": 43.85,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": -0.03,
+       "dailyExcessPct": -0.08,
+       "tStat": -0.49
+      },
+      "2020-2022": {
+       "trades": 570,
+       "days": 297,
+       "winRatePct": 46.67,
+       "avgReturnPct": 0.47,
+       "avgExcessPct": -0.05,
+       "dailyExcessPct": 0.03,
+       "tStat": 0.1
+      },
+      "2023-now": {
+       "trades": 346,
+       "days": 208,
+       "winRatePct": 46.82,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": -0.16,
+       "dailyExcessPct": 0.17,
+       "tStat": 0.51
+      }
+     },
+     "marketUp": {
+      "trades": 1874,
+      "days": 1008,
+      "winRatePct": 44.77,
+      "avgReturnPct": -0.03,
+      "avgExcessPct": -0.03,
+      "dailyExcessPct": -0.04,
+      "tStat": -0.23
+     },
+     "marketDown": {
+      "trades": 1051,
+      "days": 550,
+      "winRatePct": 44.72,
+      "avgReturnPct": -0.35,
+      "avgExcessPct": -0.08,
+      "dailyExcessPct": 0,
+      "tStat": 0.01
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 2918,
+     "days": 1556,
+     "winRatePct": 44.17,
+     "avgReturnPct": -0.29,
+     "avgExcessPct": -0.13,
+     "dailyExcessPct": -0.11,
+     "tStat": -0.98,
+     "tradesPerMonth": 15.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2003,
+       "days": 1052,
+       "winRatePct": 43.19,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": -0.1,
+       "dailyExcessPct": -0.13,
+       "tStat": -0.92
+      },
+      "2020-2022": {
+       "trades": 569,
+       "days": 296,
+       "winRatePct": 46.4,
+       "avgReturnPct": 0.18,
+       "avgExcessPct": -0.27,
+       "dailyExcessPct": -0.23,
+       "tStat": -0.8
+      },
+      "2023-now": {
+       "trades": 346,
+       "days": 208,
+       "winRatePct": 46.24,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": 0.14,
+       "tStat": 0.48
+      }
+     },
+     "marketUp": {
+      "trades": 1871,
+      "days": 1008,
+      "winRatePct": 43.24,
+      "avgReturnPct": -0.26,
+      "avgExcessPct": -0.16,
+      "dailyExcessPct": -0.19,
+      "tStat": -1.33
+     },
+     "marketDown": {
+      "trades": 1047,
+      "days": 548,
+      "winRatePct": 45.85,
+      "avgReturnPct": -0.35,
+      "avgExcessPct": -0.07,
+      "dailyExcessPct": 0.01,
+      "tStat": 0.07
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 3030,
+     "days": 1592,
+     "winRatePct": 40.89,
+     "avgReturnPct": -0.94,
+     "avgExcessPct": -0.25,
+     "dailyExcessPct": -0.25,
+     "tStat": -4.03,
+     "tradesPerMonth": 16.1,
+     "avgSessions": 2.6,
+     "exitsPct": {
+      "target": 39.77,
+      "stop": 55.94,
+      "time": 4.29
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2097,
+       "days": 1079,
+       "winRatePct": 40.01,
+       "avgReturnPct": -1,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.24,
+       "tStat": -3.25
+      },
+      "2020-2022": {
+       "trades": 584,
+       "days": 302,
+       "winRatePct": 40.92,
+       "avgReturnPct": -0.94,
+       "avgExcessPct": -0.41,
+       "dailyExcessPct": -0.39,
+       "tStat": -2.81
+      },
+      "2023-now": {
+       "trades": 349,
+       "days": 211,
+       "winRatePct": 46.13,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.08,
+       "tStat": -0.42
+      }
+     },
+     "marketUp": {
+      "trades": 1951,
+      "days": 1030,
+      "winRatePct": 40.54,
+      "avgReturnPct": -0.94,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.25,
+      "tStat": -3.22
+     },
+     "marketDown": {
+      "trades": 1079,
+      "days": 562,
+      "winRatePct": 41.52,
+      "avgReturnPct": -0.94,
+      "avgExcessPct": -0.23,
+      "dailyExcessPct": -0.26,
+      "tStat": -2.41
+     }
+    }
+   }
+  },
+  {
+   "key": "gap-up-holds",
+   "label": "Gap up that holds",
+   "basis": "Opens 3% or more above the previous close and closes above its open, in an uptrend.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 4581,
+     "days": 1995,
+     "winRatePct": 42.5,
+     "avgReturnPct": -0.82,
+     "avgExcessPct": -0.4,
+     "dailyExcessPct": -0.47,
+     "tStat": -8.01,
+     "tradesPerMonth": 24.3,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 42.15,
+      "stop": 56.32,
+      "time": 1.53
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2023,
+       "days": 999,
+       "winRatePct": 38.16,
+       "avgReturnPct": -1.11,
+       "avgExcessPct": -0.61,
+       "dailyExcessPct": -0.64,
+       "tStat": -7.43
+      },
+      "2020-2022": {
+       "trades": 1250,
+       "days": 482,
+       "winRatePct": 42.96,
+       "avgReturnPct": -0.76,
+       "avgExcessPct": -0.37,
+       "dailyExcessPct": -0.5,
+       "tStat": -4.49
+      },
+      "2023-now": {
+       "trades": 1308,
+       "days": 514,
+       "winRatePct": 48.78,
+       "avgReturnPct": -0.42,
+       "avgExcessPct": -0.1,
+       "dailyExcessPct": -0.12,
+       "tStat": -1.05
+      }
+     },
+     "marketUp": {
+      "trades": 3164,
+      "days": 1401,
+      "winRatePct": 40.52,
+      "avgReturnPct": -0.93,
+      "avgExcessPct": -0.52,
+      "dailyExcessPct": -0.52,
+      "tStat": -7.48
+     },
+     "marketDown": {
+      "trades": 1417,
+      "days": 594,
+      "winRatePct": 46.93,
+      "avgReturnPct": -0.58,
+      "avgExcessPct": -0.13,
+      "dailyExcessPct": -0.37,
+      "tStat": -3.26
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 4598,
+     "days": 2000,
+     "winRatePct": 31.88,
+     "avgReturnPct": -0.8,
+     "avgExcessPct": -0.32,
+     "dailyExcessPct": -0.35,
+     "tStat": -7.44,
+     "tradesPerMonth": 24.4,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 31.58,
+      "stop": 67.81,
+      "time": 0.61
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2029,
+       "days": 1001,
+       "winRatePct": 28.49,
+       "avgReturnPct": -0.99,
+       "avgExcessPct": -0.45,
+       "dailyExcessPct": -0.49,
+       "tStat": -7.3
+      },
+      "2020-2022": {
+       "trades": 1257,
+       "days": 483,
+       "winRatePct": 31.34,
+       "avgReturnPct": -0.79,
+       "avgExcessPct": -0.32,
+       "dailyExcessPct": -0.35,
+       "tStat": -3.85
+      },
+      "2023-now": {
+       "trades": 1312,
+       "days": 516,
+       "winRatePct": 37.65,
+       "avgReturnPct": -0.51,
+       "avgExcessPct": -0.11,
+       "dailyExcessPct": -0.08,
+       "tStat": -0.82
+      }
+     },
+     "marketUp": {
+      "trades": 3180,
+      "days": 1406,
+      "winRatePct": 30.41,
+      "avgReturnPct": -0.86,
+      "avgExcessPct": -0.41,
+      "dailyExcessPct": -0.4,
+      "tStat": -7.3
+     },
+     "marketDown": {
+      "trades": 1418,
+      "days": 594,
+      "winRatePct": 35.19,
+      "avgReturnPct": -0.65,
+      "avgExcessPct": -0.11,
+      "dailyExcessPct": -0.24,
+      "tStat": -2.6
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 4602,
+     "days": 2001,
+     "winRatePct": 36.01,
+     "avgReturnPct": -0.94,
+     "avgExcessPct": -0.34,
+     "dailyExcessPct": -0.35,
+     "tStat": -8.76,
+     "tradesPerMonth": 24.4,
+     "avgSessions": 1.2,
+     "exitsPct": {
+      "target": 35.88,
+      "stop": 63.65,
+      "time": 0.48
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2031,
+       "days": 1002,
+       "winRatePct": 32.74,
+       "avgReturnPct": -1.08,
+       "avgExcessPct": -0.45,
+       "dailyExcessPct": -0.46,
+       "tStat": -8
+      },
+      "2020-2022": {
+       "trades": 1259,
+       "days": 483,
+       "winRatePct": 34.15,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.36,
+       "dailyExcessPct": -0.35,
+       "tStat": -4.41
+      },
+      "2023-now": {
+       "trades": 1312,
+       "days": 516,
+       "winRatePct": 42.84,
+       "avgReturnPct": -0.68,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.81
+      }
+     },
+     "marketUp": {
+      "trades": 3183,
+      "days": 1406,
+      "winRatePct": 33.87,
+      "avgReturnPct": -1.01,
+      "avgExcessPct": -0.44,
+      "dailyExcessPct": -0.4,
+      "tStat": -8.66
+     },
+     "marketDown": {
+      "trades": 1419,
+      "days": 595,
+      "winRatePct": 40.8,
+      "avgReturnPct": -0.76,
+      "avgExcessPct": -0.12,
+      "dailyExcessPct": -0.22,
+      "tStat": -2.91
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 4537,
+     "days": 1981,
+     "winRatePct": 32.62,
+     "avgReturnPct": -0.53,
+     "avgExcessPct": -0.34,
+     "dailyExcessPct": -0.41,
+     "tStat": -5.23,
+     "tradesPerMonth": 24,
+     "avgSessions": 2.3,
+     "exitsPct": {
+      "target": 29.16,
+      "stop": 64.91,
+      "time": 5.93
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2008,
+       "days": 991,
+       "winRatePct": 28.39,
+       "avgReturnPct": -0.93,
+       "avgExcessPct": -0.61,
+       "dailyExcessPct": -0.65,
+       "tStat": -5.71
+      },
+      "2020-2022": {
+       "trades": 1230,
+       "days": 480,
+       "winRatePct": 32.68,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.38,
+       "tStat": -2.53
+      },
+      "2023-now": {
+       "trades": 1299,
+       "days": 510,
+       "winRatePct": 39.11,
+       "avgReturnPct": -0.02,
+       "avgExcessPct": -0.02,
+       "dailyExcessPct": 0.02,
+       "tStat": 0.14
+      }
+     },
+     "marketUp": {
+      "trades": 3124,
+      "days": 1389,
+      "winRatePct": 31.11,
+      "avgReturnPct": -0.63,
+      "avgExcessPct": -0.46,
+      "dailyExcessPct": -0.44,
+      "tStat": -4.73
+     },
+     "marketDown": {
+      "trades": 1413,
+      "days": 592,
+      "winRatePct": 35.95,
+      "avgReturnPct": -0.31,
+      "avgExcessPct": -0.08,
+      "dailyExcessPct": -0.34,
+      "tStat": -2.33
+     }
+    },
+    "hold-5d": {
+     "trades": 4244,
+     "days": 1925,
+     "winRatePct": 43.43,
+     "avgReturnPct": -0.38,
+     "avgExcessPct": -0.54,
+     "dailyExcessPct": -0.74,
+     "tStat": -4.79,
+     "tradesPerMonth": 22.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1898,
+       "days": 963,
+       "winRatePct": 40.62,
+       "avgReturnPct": -0.8,
+       "avgExcessPct": -0.75,
+       "dailyExcessPct": -1.01,
+       "tStat": -4.3
+      },
+      "2020-2022": {
+       "trades": 1126,
+       "days": 467,
+       "winRatePct": 41.92,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": -0.46,
+       "dailyExcessPct": -0.66,
+       "tStat": -2.2
+      },
+      "2023-now": {
+       "trades": 1220,
+       "days": 495,
+       "winRatePct": 49.18,
+       "avgReturnPct": 0.31,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.28,
+       "tStat": -1.07
+      }
+     },
+     "marketUp": {
+      "trades": 2922,
+      "days": 1349,
+      "winRatePct": 42.54,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": -0.58,
+      "dailyExcessPct": -0.62,
+      "tStat": -3.49
+     },
+     "marketDown": {
+      "trades": 1322,
+      "days": 576,
+      "winRatePct": 45.39,
+      "avgReturnPct": -0.5,
+      "avgExcessPct": -0.45,
+      "dailyExcessPct": -1.01,
+      "tStat": -3.37
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 4273,
+     "days": 1930,
+     "winRatePct": 41.49,
+     "avgReturnPct": -0.46,
+     "avgExcessPct": -0.46,
+     "dailyExcessPct": -0.68,
+     "tStat": -4.89,
+     "tradesPerMonth": 22.6,
+     "avgSessions": 4.4,
+     "exitsPct": {
+      "target": 0,
+      "stop": 28.2,
+      "time": 71.8
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1905,
+       "days": 964,
+       "winRatePct": 38.53,
+       "avgReturnPct": -0.81,
+       "avgExcessPct": -0.69,
+       "dailyExcessPct": -0.87,
+       "tStat": -4.22
+      },
+      "2020-2022": {
+       "trades": 1135,
+       "days": 469,
+       "winRatePct": 39.82,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": -0.44,
+       "dailyExcessPct": -0.7,
+       "tStat": -2.53
+      },
+      "2023-now": {
+       "trades": 1233,
+       "days": 497,
+       "winRatePct": 47.61,
+       "avgReturnPct": 0.11,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.29,
+       "tStat": -1.15
+      }
+     },
+     "marketUp": {
+      "trades": 2946,
+      "days": 1353,
+      "winRatePct": 40.33,
+      "avgReturnPct": -0.49,
+      "avgExcessPct": -0.55,
+      "dailyExcessPct": -0.65,
+      "tStat": -3.9
+     },
+     "marketDown": {
+      "trades": 1327,
+      "days": 577,
+      "winRatePct": 44.08,
+      "avgReturnPct": -0.39,
+      "avgExcessPct": -0.26,
+      "dailyExcessPct": -0.75,
+      "tStat": -2.97
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 4244,
+     "days": 1925,
+     "winRatePct": 42.79,
+     "avgReturnPct": -0.4,
+     "avgExcessPct": -0.51,
+     "dailyExcessPct": -0.66,
+     "tStat": -4.71,
+     "tradesPerMonth": 22.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 1898,
+       "days": 963,
+       "winRatePct": 38.83,
+       "avgReturnPct": -0.84,
+       "avgExcessPct": -0.62,
+       "dailyExcessPct": -0.75,
+       "tStat": -3.5
+      },
+      "2020-2022": {
+       "trades": 1126,
+       "days": 467,
+       "winRatePct": 39.7,
+       "avgReturnPct": -0.68,
+       "avgExcessPct": -0.57,
+       "dailyExcessPct": -0.63,
+       "tStat": -2.28
+      },
+      "2023-now": {
+       "trades": 1220,
+       "days": 495,
+       "winRatePct": 51.8,
+       "avgReturnPct": 0.55,
+       "avgExcessPct": -0.29,
+       "dailyExcessPct": -0.5,
+       "tStat": -2.18
+      }
+     },
+     "marketUp": {
+      "trades": 2922,
+      "days": 1349,
+      "winRatePct": 42.92,
+      "avgReturnPct": -0.23,
+      "avgExcessPct": -0.47,
+      "dailyExcessPct": -0.51,
+      "tStat": -3.14
+     },
+     "marketDown": {
+      "trades": 1322,
+      "days": 576,
+      "winRatePct": 42.51,
+      "avgReturnPct": -0.78,
+      "avgExcessPct": -0.6,
+      "dailyExcessPct": -1,
+      "tStat": -3.71
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 4581,
+     "days": 1993,
+     "winRatePct": 32.63,
+     "avgReturnPct": -1.42,
+     "avgExcessPct": -0.72,
+     "dailyExcessPct": -0.79,
+     "tStat": -14.03,
+     "tradesPerMonth": 24.3,
+     "avgSessions": 1.9,
+     "exitsPct": {
+      "target": 32.18,
+      "stop": 65.73,
+      "time": 2.1
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 2022,
+       "days": 998,
+       "winRatePct": 30.61,
+       "avgReturnPct": -1.57,
+       "avgExcessPct": -0.75,
+       "dailyExcessPct": -0.78,
+       "tStat": -9.56
+      },
+      "2020-2022": {
+       "trades": 1250,
+       "days": 481,
+       "winRatePct": 29.36,
+       "avgReturnPct": -1.6,
+       "avgExcessPct": -0.86,
+       "dailyExcessPct": -1,
+       "tStat": -9.15
+      },
+      "2023-now": {
+       "trades": 1309,
+       "days": 514,
+       "winRatePct": 38.88,
+       "avgReturnPct": -1.01,
+       "avgExcessPct": -0.53,
+       "dailyExcessPct": -0.63,
+       "tStat": -5.62
+      }
+     },
+     "marketUp": {
+      "trades": 3163,
+      "days": 1398,
+      "winRatePct": 32.63,
+      "avgReturnPct": -1.41,
+      "avgExcessPct": -0.73,
+      "dailyExcessPct": -0.76,
+      "tStat": -11.36
+     },
+     "marketDown": {
+      "trades": 1418,
+      "days": 595,
+      "winRatePct": 32.65,
+      "avgReturnPct": -1.45,
+      "avgExcessPct": -0.68,
+      "dailyExcessPct": -0.88,
+      "tStat": -8.25
+     }
+    }
+   }
+  },
+  {
+   "key": "old-screener",
+   "label": "Clean uptrend with momentum (the old screener)",
+   "basis": "Close above the 20-day, above the 50-day, above the 200-day average, with a 14-day RSI between 55 and 70. The shape of the removed screener's buy signal.",
+   "round": 1,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 139021,
+     "days": 3910,
+     "winRatePct": 47.33,
+     "avgReturnPct": -0.57,
+     "avgExcessPct": -0.02,
+     "dailyExcessPct": -0.01,
+     "tStat": -1.08,
+     "tradesPerMonth": 736.8,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 45.85,
+      "stop": 49.58,
+      "time": 4.57
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 70235,
+       "days": 2215,
+       "winRatePct": 47.31,
+       "avgReturnPct": -0.57,
+       "avgExcessPct": 0,
+       "dailyExcessPct": 0,
+       "tStat": -0.01
+      },
+      "2020-2022": {
+       "trades": 32678,
+       "days": 738,
+       "winRatePct": 46.58,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": -0.08,
+       "dailyExcessPct": -0.07,
+       "tStat": -2.56
+      },
+      "2023-now": {
+       "trades": 36108,
+       "days": 957,
+       "winRatePct": 48.04,
+       "avgReturnPct": -0.52,
+       "avgExcessPct": -0.01,
+       "dailyExcessPct": 0,
+       "tStat": 0.04
+      }
+     },
+     "marketUp": {
+      "trades": 113056,
+      "days": 2469,
+      "winRatePct": 47.55,
+      "avgReturnPct": -0.55,
+      "avgExcessPct": -0.03,
+      "dailyExcessPct": -0.01,
+      "tStat": -1.11
+     },
+     "marketDown": {
+      "trades": 25965,
+      "days": 1441,
+      "winRatePct": 46.39,
+      "avgReturnPct": -0.65,
+      "avgExcessPct": 0,
+      "dailyExcessPct": -0.02,
+      "tStat": -0.54
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 168055,
+     "days": 3914,
+     "winRatePct": 37.16,
+     "avgReturnPct": -0.6,
+     "avgExcessPct": -0.03,
+     "dailyExcessPct": -0.01,
+     "tStat": -1.28,
+     "tradesPerMonth": 890.7,
+     "avgSessions": 1.9,
+     "exitsPct": {
+      "target": 36.29,
+      "stop": 61.82,
+      "time": 1.89
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 84795,
+       "days": 2217,
+       "winRatePct": 37.12,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": -0.02,
+       "dailyExcessPct": 0,
+       "tStat": 0.23
+      },
+      "2020-2022": {
+       "trades": 39459,
+       "days": 740,
+       "winRatePct": 36.18,
+       "avgReturnPct": -0.64,
+       "avgExcessPct": -0.06,
+       "dailyExcessPct": -0.06,
+       "tStat": -2.88
+      },
+      "2023-now": {
+       "trades": 43801,
+       "days": 957,
+       "winRatePct": 38.11,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": -0.01,
+       "dailyExcessPct": -0.01,
+       "tStat": -0.47
+      }
+     },
+     "marketUp": {
+      "trades": 137226,
+      "days": 2469,
+      "winRatePct": 37.32,
+      "avgReturnPct": -0.58,
+      "avgExcessPct": -0.03,
+      "dailyExcessPct": -0.02,
+      "tStat": -2.12
+     },
+     "marketDown": {
+      "trades": 30829,
+      "days": 1445,
+      "winRatePct": 36.41,
+      "avgReturnPct": -0.64,
+      "avgExcessPct": 0,
+      "dailyExcessPct": 0,
+      "tStat": -0.03
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 198762,
+     "days": 3916,
+     "winRatePct": 44.14,
+     "avgReturnPct": -0.67,
+     "avgExcessPct": -0.02,
+     "dailyExcessPct": 0,
+     "tStat": -0.62,
+     "tradesPerMonth": 1053.4,
+     "avgSessions": 1.5,
+     "exitsPct": {
+      "target": 43.65,
+      "stop": 54.47,
+      "time": 1.88
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 100738,
+       "days": 2219,
+       "winRatePct": 44.45,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": -0.01,
+       "dailyExcessPct": 0.02,
+       "tStat": 2.03
+      },
+      "2020-2022": {
+       "trades": 45905,
+       "days": 740,
+       "winRatePct": 42.88,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.05,
+       "dailyExcessPct": -0.05,
+       "tStat": -2.82
+      },
+      "2023-now": {
+       "trades": 52119,
+       "days": 957,
+       "winRatePct": 44.65,
+       "avgReturnPct": -0.65,
+       "avgExcessPct": -0.03,
+       "dailyExcessPct": -0.03,
+       "tStat": -1.97
+      }
+     },
+     "marketUp": {
+      "trades": 162843,
+      "days": 2469,
+      "winRatePct": 44.34,
+      "avgReturnPct": -0.66,
+      "avgExcessPct": -0.03,
+      "dailyExcessPct": -0.02,
+      "tStat": -2.54
+     },
+     "marketDown": {
+      "trades": 35919,
+      "days": 1447,
+      "winRatePct": 43.24,
+      "avgReturnPct": -0.71,
+      "avgExcessPct": 0,
+      "dailyExcessPct": 0.02,
+      "tStat": 1.01
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 103677,
+     "days": 3905,
+     "winRatePct": 35.71,
+     "avgReturnPct": -0.44,
+     "avgExcessPct": 0,
+     "dailyExcessPct": 0,
+     "tStat": -0.07,
+     "tradesPerMonth": 549.5,
+     "avgSessions": 3.3,
+     "exitsPct": {
+      "target": 26.83,
+      "stop": 58.2,
+      "time": 14.97
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 52313,
+       "days": 2211,
+       "winRatePct": 35.38,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.01,
+       "dailyExcessPct": 0.01,
+       "tStat": 0.35
+      },
+      "2020-2022": {
+       "trades": 24332,
+       "days": 737,
+       "winRatePct": 34.92,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": -0.1,
+       "tStat": -2.09
+      },
+      "2023-now": {
+       "trades": 27032,
+       "days": 957,
+       "winRatePct": 37.06,
+       "avgReturnPct": -0.37,
+       "avgExcessPct": 0.05,
+       "dailyExcessPct": 0.05,
+       "tStat": 1.37
+      }
+     },
+     "marketUp": {
+      "trades": 83964,
+      "days": 2468,
+      "winRatePct": 36,
+      "avgReturnPct": -0.41,
+      "avgExcessPct": 0,
+      "dailyExcessPct": 0.01,
+      "tStat": 0.73
+     },
+     "marketDown": {
+      "trades": 19713,
+      "days": 1437,
+      "winRatePct": 34.48,
+      "avgReturnPct": -0.57,
+      "avgExcessPct": 0.03,
+      "dailyExcessPct": -0.03,
+      "tStat": -0.62
+     }
+    },
+    "hold-5d": {
+     "trades": 82042,
+     "days": 3884,
+     "winRatePct": 44.49,
+     "avgReturnPct": -0.14,
+     "avgExcessPct": 0.24,
+     "dailyExcessPct": 0.2,
+     "tStat": 6.2,
+     "tradesPerMonth": 434.8,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 41587,
+       "days": 2197,
+       "winRatePct": 43.77,
+       "avgReturnPct": -0.22,
+       "avgExcessPct": 0.29,
+       "dailyExcessPct": 0.25,
+       "tStat": 5.73
+      },
+      "2020-2022": {
+       "trades": 17980,
+       "days": 732,
+       "winRatePct": 44.54,
+       "avgReturnPct": -0.02,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.14,
+       "tStat": 1.78
+      },
+      "2023-now": {
+       "trades": 22475,
+       "days": 955,
+       "winRatePct": 45.8,
+       "avgReturnPct": -0.07,
+       "avgExcessPct": 0.18,
+       "dailyExcessPct": 0.12,
+       "tStat": 2.16
+      }
+     },
+     "marketUp": {
+      "trades": 67452,
+      "days": 2469,
+      "winRatePct": 44.71,
+      "avgReturnPct": -0.06,
+      "avgExcessPct": 0.24,
+      "dailyExcessPct": 0.23,
+      "tStat": 8.14
+     },
+     "marketDown": {
+      "trades": 14590,
+      "days": 1415,
+      "winRatePct": 43.49,
+      "avgReturnPct": -0.48,
+      "avgExcessPct": 0.25,
+      "dailyExcessPct": 0.15,
+      "tStat": 2.04
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 83066,
+     "days": 3885,
+     "winRatePct": 43.75,
+     "avgReturnPct": -0.27,
+     "avgExcessPct": 0.2,
+     "dailyExcessPct": 0.14,
+     "tStat": 4.76,
+     "tradesPerMonth": 440.2,
+     "avgSessions": 4.8,
+     "exitsPct": {
+      "target": 0,
+      "stop": 12.58,
+      "time": 87.42
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 42127,
+       "days": 2200,
+       "winRatePct": 43.01,
+       "avgReturnPct": -0.34,
+       "avgExcessPct": 0.25,
+       "dailyExcessPct": 0.18,
+       "tStat": 4.32
+      },
+      "2020-2022": {
+       "trades": 18255,
+       "days": 730,
+       "winRatePct": 43.6,
+       "avgReturnPct": -0.2,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.09,
+       "tStat": 1.33
+      },
+      "2023-now": {
+       "trades": 22684,
+       "days": 955,
+       "winRatePct": 45.23,
+       "avgReturnPct": -0.2,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.09,
+       "tStat": 1.8
+      }
+     },
+     "marketUp": {
+      "trades": 68158,
+      "days": 2469,
+      "winRatePct": 44.04,
+      "avgReturnPct": -0.2,
+      "avgExcessPct": 0.21,
+      "dailyExcessPct": 0.19,
+      "tStat": 7.03
+     },
+     "marketDown": {
+      "trades": 14908,
+      "days": 1416,
+      "winRatePct": 42.43,
+      "avgReturnPct": -0.6,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.06,
+      "tStat": 0.92
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 82042,
+     "days": 3884,
+     "winRatePct": 43.37,
+     "avgReturnPct": -0.24,
+     "avgExcessPct": 0.18,
+     "dailyExcessPct": 0.12,
+     "tStat": 4.03,
+     "tradesPerMonth": 434.8,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 41587,
+       "days": 2197,
+       "winRatePct": 42.11,
+       "avgReturnPct": -0.38,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.14,
+       "tStat": 3.59
+      },
+      "2020-2022": {
+       "trades": 17980,
+       "days": 732,
+       "winRatePct": 43.98,
+       "avgReturnPct": -0.1,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.09,
+       "tStat": 1.22
+      },
+      "2023-now": {
+       "trades": 22475,
+       "days": 955,
+       "winRatePct": 45.21,
+       "avgReturnPct": -0.11,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.08,
+       "tStat": 1.59
+      }
+     },
+     "marketUp": {
+      "trades": 67452,
+      "days": 2469,
+      "winRatePct": 43.58,
+      "avgReturnPct": -0.17,
+      "avgExcessPct": 0.19,
+      "dailyExcessPct": 0.17,
+      "tStat": 6.79
+     },
+     "marketDown": {
+      "trades": 14590,
+      "days": 1415,
+      "winRatePct": 42.39,
+      "avgReturnPct": -0.58,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.02,
+      "tStat": 0.26
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 120934,
+     "days": 3909,
+     "winRatePct": 41.53,
+     "avgReturnPct": -0.91,
+     "avgExcessPct": -0.17,
+     "dailyExcessPct": -0.17,
+     "tStat": -12.44,
+     "tradesPerMonth": 640.9,
+     "avgSessions": 2.8,
+     "exitsPct": {
+      "target": 39.63,
+      "stop": 54.45,
+      "time": 5.92
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 61070,
+       "days": 2215,
+       "winRatePct": 40.52,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.16,
+       "dailyExcessPct": -0.16,
+       "tStat": -8.45
+      },
+      "2020-2022": {
+       "trades": 28275,
+       "days": 737,
+       "winRatePct": 40.62,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.26,
+       "dailyExcessPct": -0.29,
+       "tStat": -9.28
+      },
+      "2023-now": {
+       "trades": 31589,
+       "days": 957,
+       "winRatePct": 44.3,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.12,
+       "dailyExcessPct": -0.1,
+       "tStat": -4.08
+      }
+     },
+     "marketUp": {
+      "trades": 98128,
+      "days": 2469,
+      "winRatePct": 41.76,
+      "avgReturnPct": -0.89,
+      "avgExcessPct": -0.15,
+      "dailyExcessPct": -0.13,
+      "tStat": -10.92
+     },
+     "marketDown": {
+      "trades": 22806,
+      "days": 1440,
+      "winRatePct": 40.55,
+      "avgReturnPct": -1,
+      "avgExcessPct": -0.25,
+      "dailyExcessPct": -0.22,
+      "tStat": -7.53
+     }
+    }
+   }
+  },
+  {
+   "key": "deep-dip",
+   "label": "Deep dip in an uptrend",
+   "basis": "Above the 200-day average, 2-day RSI under 5, and down 7% or more in five sessions.",
+   "round": 2,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 18509,
+     "days": 2764,
+     "winRatePct": 50.4,
+     "avgReturnPct": -0.44,
+     "avgExcessPct": 0.17,
+     "dailyExcessPct": 0.13,
+     "tStat": 3.31,
+     "tradesPerMonth": 98.1,
+     "avgSessions": 1.7,
+     "exitsPct": {
+      "target": 50,
+      "stop": 48.71,
+      "time": 1.29
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 9607,
+       "days": 1506,
+       "winRatePct": 48.79,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.06,
+       "tStat": 1.12
+      },
+      "2020-2022": {
+       "trades": 4391,
+       "days": 542,
+       "winRatePct": 51.36,
+       "avgReturnPct": -0.38,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.24,
+       "tStat": 2.8
+      },
+      "2023-now": {
+       "trades": 4511,
+       "days": 716,
+       "winRatePct": 52.89,
+       "avgReturnPct": -0.26,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.19,
+       "tStat": 2.49
+      }
+     },
+     "marketUp": {
+      "trades": 9306,
+      "days": 1734,
+      "winRatePct": 51.34,
+      "avgReturnPct": -0.37,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.13,
+      "tStat": 2.51
+     },
+     "marketDown": {
+      "trades": 9203,
+      "days": 1030,
+      "winRatePct": 49.44,
+      "avgReturnPct": -0.51,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.13,
+      "tStat": 2.2
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 19686,
+     "days": 2855,
+     "winRatePct": 39.44,
+     "avgReturnPct": -0.5,
+     "avgExcessPct": 0.13,
+     "dailyExcessPct": 0.12,
+     "tStat": 3.78,
+     "tradesPerMonth": 104.3,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 39.25,
+      "stop": 60.29,
+      "time": 0.46
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10176,
+       "days": 1556,
+       "winRatePct": 38.05,
+       "avgReturnPct": -0.58,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.06,
+       "tStat": 1.48
+      },
+      "2020-2022": {
+       "trades": 4652,
+       "days": 559,
+       "winRatePct": 41.4,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": 0.22,
+       "tStat": 3.1
+      },
+      "2023-now": {
+       "trades": 4858,
+       "days": 740,
+       "winRatePct": 40.49,
+       "avgReturnPct": -0.43,
+       "avgExcessPct": 0.09,
+       "dailyExcessPct": 0.16,
+       "tStat": 2.55
+      }
+     },
+     "marketUp": {
+      "trades": 9948,
+      "days": 1804,
+      "winRatePct": 40.66,
+      "avgReturnPct": -0.43,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.12,
+      "tStat": 2.84
+     },
+     "marketDown": {
+      "trades": 9738,
+      "days": 1051,
+      "winRatePct": 38.2,
+      "avgReturnPct": -0.58,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.12,
+      "tStat": 2.54
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 20044,
+     "days": 2875,
+     "winRatePct": 44.56,
+     "avgReturnPct": -0.69,
+     "avgExcessPct": 0.05,
+     "dailyExcessPct": 0.04,
+     "tStat": 1.41,
+     "tradesPerMonth": 106.2,
+     "avgSessions": 1.2,
+     "exitsPct": {
+      "target": 44.51,
+      "stop": 55.2,
+      "time": 0.29
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 10372,
+       "days": 1571,
+       "winRatePct": 43.28,
+       "avgReturnPct": -0.74,
+       "avgExcessPct": 0.04,
+       "dailyExcessPct": 0,
+       "tStat": -0.07
+      },
+      "2020-2022": {
+       "trades": 4730,
+       "days": 561,
+       "winRatePct": 45.52,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.13,
+       "tStat": 2.15
+      },
+      "2023-now": {
+       "trades": 4942,
+       "days": 743,
+       "winRatePct": 46.34,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": 0.02,
+       "dailyExcessPct": 0.05,
+       "tStat": 1
+      }
+     },
+     "marketUp": {
+      "trades": 10134,
+      "days": 1818,
+      "winRatePct": 46.3,
+      "avgReturnPct": -0.61,
+      "avgExcessPct": 0.07,
+      "dailyExcessPct": 0.04,
+      "tStat": 1.21
+     },
+     "marketDown": {
+      "trades": 9910,
+      "days": 1057,
+      "winRatePct": 42.79,
+      "avgReturnPct": -0.76,
+      "avgExcessPct": 0.03,
+      "dailyExcessPct": 0.03,
+      "tStat": 0.73
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 18011,
+     "days": 2735,
+     "winRatePct": 38.86,
+     "avgReturnPct": -0.13,
+     "avgExcessPct": 0.32,
+     "dailyExcessPct": 0.25,
+     "tStat": 4.78,
+     "tradesPerMonth": 95.5,
+     "avgSessions": 2.6,
+     "exitsPct": {
+      "target": 33.31,
+      "stop": 58.51,
+      "time": 8.18
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 9331,
+       "days": 1486,
+       "winRatePct": 37.41,
+       "avgReturnPct": -0.25,
+       "avgExcessPct": 0.35,
+       "dailyExcessPct": 0.26,
+       "tStat": 3.59
+      },
+      "2020-2022": {
+       "trades": 4279,
+       "days": 539,
+       "winRatePct": 40.13,
+       "avgReturnPct": -0.01,
+       "avgExcessPct": 0.37,
+       "dailyExcessPct": 0.33,
+       "tStat": 2.77
+      },
+      "2023-now": {
+       "trades": 4401,
+       "days": 710,
+       "winRatePct": 40.7,
+       "avgReturnPct": 0,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.18,
+       "tStat": 1.76
+      }
+     },
+     "marketUp": {
+      "trades": 9075,
+      "days": 1719,
+      "winRatePct": 39.13,
+      "avgReturnPct": -0.09,
+      "avgExcessPct": 0.33,
+      "dailyExcessPct": 0.23,
+      "tStat": 3.3
+     },
+     "marketDown": {
+      "trades": 8936,
+      "days": 1016,
+      "winRatePct": 38.59,
+      "avgReturnPct": -0.18,
+      "avgExcessPct": 0.32,
+      "dailyExcessPct": 0.3,
+      "tStat": 3.61
+     }
+    },
+    "hold-5d": {
+     "trades": 12870,
+     "days": 2493,
+     "winRatePct": 52.53,
+     "avgReturnPct": 0.45,
+     "avgExcessPct": 0.6,
+     "dailyExcessPct": 0.35,
+     "tStat": 3.95,
+     "tradesPerMonth": 68.2,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 6553,
+       "days": 1348,
+       "winRatePct": 51.53,
+       "avgReturnPct": 0.27,
+       "avgExcessPct": 0.69,
+       "dailyExcessPct": 0.46,
+       "tStat": 3.52
+      },
+      "2020-2022": {
+       "trades": 3092,
+       "days": 498,
+       "winRatePct": 53.01,
+       "avgReturnPct": 0.62,
+       "avgExcessPct": 0.66,
+       "dailyExcessPct": 0.15,
+       "tStat": 0.79
+      },
+      "2023-now": {
+       "trades": 3225,
+       "days": 647,
+       "winRatePct": 54.08,
+       "avgReturnPct": 0.65,
+       "avgExcessPct": 0.38,
+       "dailyExcessPct": 0.27,
+       "tStat": 1.9
+      }
+     },
+     "marketUp": {
+      "trades": 6762,
+      "days": 1572,
+      "winRatePct": 51.42,
+      "avgReturnPct": 0.49,
+      "avgExcessPct": 0.5,
+      "dailyExcessPct": 0.18,
+      "tStat": 1.58
+     },
+     "marketDown": {
+      "trades": 6108,
+      "days": 921,
+      "winRatePct": 53.75,
+      "avgReturnPct": 0.41,
+      "avgExcessPct": 0.71,
+      "dailyExcessPct": 0.64,
+      "tStat": 4.57
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 13966,
+     "days": 2541,
+     "winRatePct": 50.21,
+     "avgReturnPct": 0.13,
+     "avgExcessPct": 0.49,
+     "dailyExcessPct": 0.24,
+     "tStat": 2.82,
+     "tradesPerMonth": 74,
+     "avgSessions": 4.5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 21.13,
+      "time": 78.87
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 7202,
+       "days": 1381,
+       "winRatePct": 48.56,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": 0.56,
+       "dailyExcessPct": 0.31,
+       "tStat": 2.63
+      },
+      "2020-2022": {
+       "trades": 3337,
+       "days": 508,
+       "winRatePct": 50.88,
+       "avgReturnPct": 0.31,
+       "avgExcessPct": 0.54,
+       "dailyExcessPct": 0.18,
+       "tStat": 0.95
+      },
+      "2023-now": {
+       "trades": 3427,
+       "days": 652,
+       "winRatePct": 53.05,
+       "avgReturnPct": 0.42,
+       "avgExcessPct": 0.29,
+       "dailyExcessPct": 0.12,
+       "tStat": 0.82
+      }
+     },
+     "marketUp": {
+      "trades": 7162,
+      "days": 1594,
+      "winRatePct": 49.53,
+      "avgReturnPct": 0.16,
+      "avgExcessPct": 0.39,
+      "dailyExcessPct": 0.07,
+      "tStat": 0.71
+     },
+     "marketDown": {
+      "trades": 6804,
+      "days": 947,
+      "winRatePct": 50.94,
+      "avgReturnPct": 0.1,
+      "avgExcessPct": 0.59,
+      "dailyExcessPct": 0.51,
+      "tStat": 3.65
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 12870,
+     "days": 2493,
+     "winRatePct": 51.23,
+     "avgReturnPct": 0.25,
+     "avgExcessPct": 0.37,
+     "dailyExcessPct": 0.18,
+     "tStat": 2.19,
+     "tradesPerMonth": 68.2,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 6553,
+       "days": 1348,
+       "winRatePct": 50.4,
+       "avgReturnPct": 0.17,
+       "avgExcessPct": 0.48,
+       "dailyExcessPct": 0.32,
+       "tStat": 2.64
+      },
+      "2020-2022": {
+       "trades": 3092,
+       "days": 498,
+       "winRatePct": 51.71,
+       "avgReturnPct": 0.28,
+       "avgExcessPct": 0.36,
+       "dailyExcessPct": -0.17,
+       "tStat": -0.93
+      },
+      "2023-now": {
+       "trades": 3225,
+       "days": 647,
+       "winRatePct": 52.43,
+       "avgReturnPct": 0.4,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.16,
+       "tStat": 1.17
+      }
+     },
+     "marketUp": {
+      "trades": 6762,
+      "days": 1572,
+      "winRatePct": 50.07,
+      "avgReturnPct": 0.27,
+      "avgExcessPct": 0.26,
+      "dailyExcessPct": -0.03,
+      "tStat": -0.27
+     },
+     "marketDown": {
+      "trades": 6108,
+      "days": 921,
+      "winRatePct": 52.5,
+      "avgReturnPct": 0.23,
+      "avgExcessPct": 0.5,
+      "dailyExcessPct": 0.53,
+      "tStat": 4.06
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 17490,
+     "days": 2725,
+     "winRatePct": 40.25,
+     "avgReturnPct": -1.05,
+     "avgExcessPct": -0.3,
+     "dailyExcessPct": -0.15,
+     "tStat": -3.59,
+     "tradesPerMonth": 92.7,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 39.66,
+      "stop": 58.46,
+      "time": 1.88
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 9064,
+       "days": 1488,
+       "winRatePct": 39.39,
+       "avgReturnPct": -1.11,
+       "avgExcessPct": -0.3,
+       "dailyExcessPct": -0.18,
+       "tStat": -3.26
+      },
+      "2020-2022": {
+       "trades": 4183,
+       "days": 534,
+       "winRatePct": 39.4,
+       "avgReturnPct": -1.11,
+       "avgExcessPct": -0.35,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.55
+      },
+      "2023-now": {
+       "trades": 4243,
+       "days": 703,
+       "winRatePct": 42.92,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.25,
+       "dailyExcessPct": -0.08,
+       "tStat": -1
+      }
+     },
+     "marketUp": {
+      "trades": 8812,
+      "days": 1712,
+      "winRatePct": 41.57,
+      "avgReturnPct": -0.95,
+      "avgExcessPct": -0.27,
+      "dailyExcessPct": -0.16,
+      "tStat": -2.97
+     },
+     "marketDown": {
+      "trades": 8678,
+      "days": 1013,
+      "winRatePct": 38.9,
+      "avgReturnPct": -1.16,
+      "avgExcessPct": -0.33,
+      "dailyExcessPct": -0.13,
+      "tStat": -2.03
+     }
+    }
+   }
+  },
+  {
+   "key": "dip-in-leader",
+   "label": "Dip in a strong stock",
+   "basis": "Up 40% or more over the last year (skipping the latest month), above the 200-day average, 2-day RSI under 10.",
+   "round": 2,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 44330,
+     "days": 3554,
+     "winRatePct": 48.77,
+     "avgReturnPct": -0.51,
+     "avgExcessPct": 0.15,
+     "dailyExcessPct": 0.1,
+     "tStat": 3.73,
+     "tradesPerMonth": 234.9,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 47.84,
+      "stop": 49.28,
+      "time": 2.88
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 22326,
+       "days": 1988,
+       "winRatePct": 47.86,
+       "avgReturnPct": -0.56,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.1,
+       "tStat": 2.73
+      },
+      "2020-2022": {
+       "trades": 10759,
+       "days": 680,
+       "winRatePct": 49.73,
+       "avgReturnPct": -0.46,
+       "avgExcessPct": 0.18,
+       "dailyExcessPct": 0.12,
+       "tStat": 1.98
+      },
+      "2023-now": {
+       "trades": 11245,
+       "days": 886,
+       "winRatePct": 49.65,
+       "avgReturnPct": -0.44,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.09,
+       "tStat": 1.65
+      }
+     },
+     "marketUp": {
+      "trades": 26736,
+      "days": 2274,
+      "winRatePct": 48.88,
+      "avgReturnPct": -0.48,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.09,
+      "tStat": 2.65
+     },
+     "marketDown": {
+      "trades": 17594,
+      "days": 1280,
+      "winRatePct": 48.6,
+      "avgReturnPct": -0.55,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.12,
+      "tStat": 2.68
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 49616,
+     "days": 3606,
+     "winRatePct": 38.38,
+     "avgReturnPct": -0.54,
+     "avgExcessPct": 0.12,
+     "dailyExcessPct": 0.09,
+     "tStat": 4.29,
+     "tradesPerMonth": 263,
+     "avgSessions": 1.7,
+     "exitsPct": {
+      "target": 37.86,
+      "stop": 60.95,
+      "time": 1.19
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 24966,
+       "days": 2015,
+       "winRatePct": 37.53,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.08,
+       "tStat": 2.64
+      },
+      "2020-2022": {
+       "trades": 11976,
+       "days": 693,
+       "winRatePct": 39.6,
+       "avgReturnPct": -0.49,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.13,
+       "tStat": 2.65
+      },
+      "2023-now": {
+       "trades": 12674,
+       "days": 898,
+       "winRatePct": 38.9,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": 0.11,
+       "dailyExcessPct": 0.09,
+       "tStat": 2.33
+      }
+     },
+     "marketUp": {
+      "trades": 30225,
+      "days": 2310,
+      "winRatePct": 38.83,
+      "avgReturnPct": -0.51,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.06,
+      "tStat": 2.42
+     },
+     "marketDown": {
+      "trades": 19391,
+      "days": 1296,
+      "winRatePct": 37.68,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.14,
+      "tStat": 3.89
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 51224,
+     "days": 3614,
+     "winRatePct": 44.84,
+     "avgReturnPct": -0.66,
+     "avgExcessPct": 0.09,
+     "dailyExcessPct": 0.07,
+     "tStat": 4.24,
+     "tradesPerMonth": 271.5,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 44.58,
+      "stop": 54.4,
+      "time": 1.02
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 25893,
+       "days": 2021,
+       "winRatePct": 44.19,
+       "avgReturnPct": -0.68,
+       "avgExcessPct": 0.08,
+       "dailyExcessPct": 0.07,
+       "tStat": 3.13
+      },
+      "2020-2022": {
+       "trades": 12310,
+       "days": 693,
+       "winRatePct": 45.18,
+       "avgReturnPct": -0.65,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": 0.09,
+       "tStat": 2.33
+      },
+      "2023-now": {
+       "trades": 13021,
+       "days": 900,
+       "winRatePct": 45.79,
+       "avgReturnPct": -0.61,
+       "avgExcessPct": 0.08,
+       "dailyExcessPct": 0.06,
+       "tStat": 1.77
+      }
+     },
+     "marketUp": {
+      "trades": 31237,
+      "days": 2315,
+      "winRatePct": 45.68,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": 0.09,
+      "dailyExcessPct": 0.06,
+      "tStat": 2.75
+     },
+     "marketDown": {
+      "trades": 19987,
+      "days": 1299,
+      "winRatePct": 43.52,
+      "avgReturnPct": -0.72,
+      "avgExcessPct": 0.08,
+      "dailyExcessPct": 0.1,
+      "tStat": 3.37
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 42532,
+     "days": 3529,
+     "winRatePct": 36.6,
+     "avgReturnPct": -0.34,
+     "avgExcessPct": 0.2,
+     "dailyExcessPct": 0.15,
+     "tStat": 3.97,
+     "tradesPerMonth": 225.4,
+     "avgSessions": 3,
+     "exitsPct": {
+      "target": 29.16,
+      "stop": 58.74,
+      "time": 12.1
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 21370,
+       "days": 1970,
+       "winRatePct": 35.86,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": 0.17,
+       "tStat": 3.27
+      },
+      "2020-2022": {
+       "trades": 10323,
+       "days": 676,
+       "winRatePct": 37.14,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": 0.2,
+       "dailyExcessPct": 0.08,
+       "tStat": 0.95
+      },
+      "2023-now": {
+       "trades": 10839,
+       "days": 883,
+       "winRatePct": 37.55,
+       "avgReturnPct": -0.27,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.15,
+       "tStat": 2.2
+      }
+     },
+     "marketUp": {
+      "trades": 25705,
+      "days": 2268,
+      "winRatePct": 36.35,
+      "avgReturnPct": -0.36,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.09,
+      "tStat": 2.07
+     },
+     "marketDown": {
+      "trades": 16827,
+      "days": 1261,
+      "winRatePct": 36.99,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": 0.24,
+      "dailyExcessPct": 0.24,
+      "tStat": 3.78
+     }
+    },
+    "hold-5d": {
+     "trades": 28971,
+     "days": 3390,
+     "winRatePct": 47.35,
+     "avgReturnPct": -0.09,
+     "avgExcessPct": 0.32,
+     "dailyExcessPct": 0.25,
+     "tStat": 4.14,
+     "tradesPerMonth": 153.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 14453,
+       "days": 1884,
+       "winRatePct": 47.4,
+       "avgReturnPct": -0.11,
+       "avgExcessPct": 0.43,
+       "dailyExcessPct": 0.34,
+       "tStat": 4.07
+      },
+      "2020-2022": {
+       "trades": 7001,
+       "days": 652,
+       "winRatePct": 46.22,
+       "avgReturnPct": -0.13,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": -0.03,
+       "tStat": -0.21
+      },
+      "2023-now": {
+       "trades": 7517,
+       "days": 854,
+       "winRatePct": 48.29,
+       "avgReturnPct": 0,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": 0.24,
+       "tStat": 2.37
+      }
+     },
+     "marketUp": {
+      "trades": 18428,
+      "days": 2203,
+      "winRatePct": 46.35,
+      "avgReturnPct": -0.11,
+      "avgExcessPct": 0.24,
+      "dailyExcessPct": 0.11,
+      "tStat": 1.53
+     },
+     "marketDown": {
+      "trades": 10543,
+      "days": 1187,
+      "winRatePct": 49.09,
+      "avgReturnPct": -0.05,
+      "avgExcessPct": 0.44,
+      "dailyExcessPct": 0.5,
+      "tStat": 4.73
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 31449,
+     "days": 3419,
+     "winRatePct": 46.18,
+     "avgReturnPct": -0.32,
+     "avgExcessPct": 0.25,
+     "dailyExcessPct": 0.18,
+     "tStat": 3.25,
+     "tradesPerMonth": 166.7,
+     "avgSessions": 4.6,
+     "exitsPct": {
+      "target": 0,
+      "stop": 18.63,
+      "time": 81.37
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 15789,
+       "days": 1902,
+       "winRatePct": 46.1,
+       "avgReturnPct": -0.35,
+       "avgExcessPct": 0.35,
+       "dailyExcessPct": 0.25,
+       "tStat": 3.26
+      },
+      "2020-2022": {
+       "trades": 7587,
+       "days": 659,
+       "winRatePct": 44.59,
+       "avgReturnPct": -0.43,
+       "avgExcessPct": 0.1,
+       "dailyExcessPct": -0.11,
+       "tStat": -0.82
+      },
+      "2023-now": {
+       "trades": 8073,
+       "days": 858,
+       "winRatePct": 47.84,
+       "avgReturnPct": -0.14,
+       "avgExcessPct": 0.2,
+       "dailyExcessPct": 0.24,
+       "tStat": 2.47
+      }
+     },
+     "marketUp": {
+      "trades": 19451,
+      "days": 2218,
+      "winRatePct": 45.29,
+      "avgReturnPct": -0.37,
+      "avgExcessPct": 0.16,
+      "dailyExcessPct": 0.05,
+      "tStat": 0.75
+     },
+     "marketDown": {
+      "trades": 11998,
+      "days": 1201,
+      "winRatePct": 47.63,
+      "avgReturnPct": -0.23,
+      "avgExcessPct": 0.4,
+      "dailyExcessPct": 0.42,
+      "tStat": 4.29
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 28971,
+     "days": 3390,
+     "winRatePct": 47.45,
+     "avgReturnPct": -0.06,
+     "avgExcessPct": 0.26,
+     "dailyExcessPct": 0.24,
+     "tStat": 4.44,
+     "tradesPerMonth": 153.5,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 14453,
+       "days": 1884,
+       "winRatePct": 47.66,
+       "avgReturnPct": -0.05,
+       "avgExcessPct": 0.38,
+       "dailyExcessPct": 0.33,
+       "tStat": 4.26
+      },
+      "2020-2022": {
+       "trades": 7001,
+       "days": 652,
+       "winRatePct": 45.99,
+       "avgReturnPct": -0.15,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": -0.02,
+       "tStat": -0.18
+      },
+      "2023-now": {
+       "trades": 7517,
+       "days": 854,
+       "winRatePct": 48.42,
+       "avgReturnPct": 0.01,
+       "avgExcessPct": 0.16,
+       "dailyExcessPct": 0.25,
+       "tStat": 2.66
+      }
+     },
+     "marketUp": {
+      "trades": 18428,
+      "days": 2203,
+      "winRatePct": 46.33,
+      "avgReturnPct": -0.1,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.12,
+      "tStat": 1.9
+     },
+     "marketDown": {
+      "trades": 10543,
+      "days": 1187,
+      "winRatePct": 49.42,
+      "avgReturnPct": 0.01,
+      "avgExcessPct": 0.38,
+      "dailyExcessPct": 0.46,
+      "tStat": 4.72
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 40885,
+     "days": 3524,
+     "winRatePct": 43.55,
+     "avgReturnPct": -0.81,
+     "avgExcessPct": -0.07,
+     "dailyExcessPct": 0.02,
+     "tStat": 0.55,
+     "tradesPerMonth": 216.7,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 42.4,
+      "stop": 53.74,
+      "time": 3.86
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 20559,
+       "days": 1970,
+       "winRatePct": 42.84,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.07,
+       "dailyExcessPct": 0.05,
+       "tStat": 1.4
+      },
+      "2020-2022": {
+       "trades": 9946,
+       "days": 672,
+       "winRatePct": 43.6,
+       "avgReturnPct": -0.83,
+       "avgExcessPct": -0.09,
+       "dailyExcessPct": -0.01,
+       "tStat": -0.13
+      },
+      "2023-now": {
+       "trades": 10380,
+       "days": 882,
+       "winRatePct": 44.92,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": -0.05,
+       "dailyExcessPct": -0.05,
+       "tStat": -0.98
+      }
+     },
+     "marketUp": {
+      "trades": 24668,
+      "days": 2262,
+      "winRatePct": 44.49,
+      "avgReturnPct": -0.73,
+      "avgExcessPct": -0.02,
+      "dailyExcessPct": 0.03,
+      "tStat": 0.96
+     },
+     "marketDown": {
+      "trades": 16217,
+      "days": 1262,
+      "winRatePct": 42.13,
+      "avgReturnPct": -0.94,
+      "avgExcessPct": -0.14,
+      "dailyExcessPct": -0.02,
+      "tStat": -0.36
+     }
+    }
+   }
+  },
+  {
+   "key": "quiet-dip",
+   "label": "Three falling days on low volume",
+   "basis": "Above the 200-day average, three lower closes in a row, each on less than the usual turnover: a fall without news.",
+   "round": 2,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 50322,
+     "days": 3733,
+     "winRatePct": 48.7,
+     "avgReturnPct": -0.49,
+     "avgExcessPct": 0.19,
+     "dailyExcessPct": 0.16,
+     "tStat": 7.47,
+     "tradesPerMonth": 266.7,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 47.13,
+      "stop": 47.63,
+      "time": 5.24
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 26573,
+       "days": 2118,
+       "winRatePct": 47.96,
+       "avgReturnPct": -0.54,
+       "avgExcessPct": 0.18,
+       "dailyExcessPct": 0.14,
+       "tStat": 4.78
+      },
+      "2020-2022": {
+       "trades": 11265,
+       "days": 711,
+       "winRatePct": 49.25,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.23,
+       "tStat": 4.94
+      },
+      "2023-now": {
+       "trades": 12484,
+       "days": 904,
+       "winRatePct": 49.78,
+       "avgReturnPct": -0.4,
+       "avgExcessPct": 0.2,
+       "dailyExcessPct": 0.16,
+       "tStat": 3.71
+      }
+     },
+     "marketUp": {
+      "trades": 33890,
+      "days": 2397,
+      "winRatePct": 49.5,
+      "avgReturnPct": -0.42,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.17,
+      "tStat": 6.86
+     },
+     "marketDown": {
+      "trades": 16432,
+      "days": 1336,
+      "winRatePct": 47.05,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": 0.18,
+      "dailyExcessPct": 0.15,
+      "tStat": 3.57
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 56032,
+     "days": 3768,
+     "winRatePct": 38.94,
+     "avgReturnPct": -0.51,
+     "avgExcessPct": 0.16,
+     "dailyExcessPct": 0.14,
+     "tStat": 7.77,
+     "tradesPerMonth": 297,
+     "avgSessions": 1.9,
+     "exitsPct": {
+      "target": 38.03,
+      "stop": 59.78,
+      "time": 2.19
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 29557,
+       "days": 2138,
+       "winRatePct": 38.23,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.13,
+       "tStat": 5.42
+      },
+      "2020-2022": {
+       "trades": 12538,
+       "days": 713,
+       "winRatePct": 39.25,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": 0.17,
+       "dailyExcessPct": 0.17,
+       "tStat": 4.31
+      },
+      "2023-now": {
+       "trades": 13937,
+       "days": 917,
+       "winRatePct": 40.14,
+       "avgReturnPct": -0.45,
+       "avgExcessPct": 0.17,
+       "dailyExcessPct": 0.13,
+       "tStat": 3.74
+      }
+     },
+     "marketUp": {
+      "trades": 37852,
+      "days": 2416,
+      "winRatePct": 39.82,
+      "avgReturnPct": -0.46,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.14,
+      "tStat": 6.96
+     },
+     "marketDown": {
+      "trades": 18180,
+      "days": 1352,
+      "winRatePct": 37.1,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": 0.15,
+      "dailyExcessPct": 0.13,
+      "tStat": 3.9
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 57535,
+     "days": 3776,
+     "winRatePct": 45.86,
+     "avgReturnPct": -0.61,
+     "avgExcessPct": 0.13,
+     "dailyExcessPct": 0.12,
+     "tStat": 8.7,
+     "tradesPerMonth": 304.9,
+     "avgSessions": 1.5,
+     "exitsPct": {
+      "target": 45.38,
+      "stop": 52.63,
+      "time": 1.99
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 30455,
+       "days": 2144,
+       "winRatePct": 45.3,
+       "avgReturnPct": -0.63,
+       "avgExcessPct": 0.12,
+       "dailyExcessPct": 0.11,
+       "tStat": 5.94
+      },
+      "2020-2022": {
+       "trades": 12832,
+       "days": 713,
+       "winRatePct": 45.39,
+       "avgReturnPct": -0.64,
+       "avgExcessPct": 0.13,
+       "dailyExcessPct": 0.15,
+       "tStat": 4.81
+      },
+      "2023-now": {
+       "trades": 14248,
+       "days": 919,
+       "winRatePct": 47.49,
+       "avgReturnPct": -0.53,
+       "avgExcessPct": 0.15,
+       "dailyExcessPct": 0.12,
+       "tStat": 4.4
+      }
+     },
+     "marketUp": {
+      "trades": 38848,
+      "days": 2420,
+      "winRatePct": 46.93,
+      "avgReturnPct": -0.56,
+      "avgExcessPct": 0.14,
+      "dailyExcessPct": 0.13,
+      "tStat": 8.19
+     },
+     "marketDown": {
+      "trades": 18687,
+      "days": 1356,
+      "winRatePct": 43.64,
+      "avgReturnPct": -0.71,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.11,
+      "tStat": 3.97
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 48720,
+     "days": 3723,
+     "winRatePct": 36.64,
+     "avgReturnPct": -0.37,
+     "avgExcessPct": 0.22,
+     "dailyExcessPct": 0.18,
+     "tStat": 6.07,
+     "tradesPerMonth": 258.2,
+     "avgSessions": 3.4,
+     "exitsPct": {
+      "target": 27.27,
+      "stop": 56.41,
+      "time": 16.32
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 25675,
+       "days": 2109,
+       "winRatePct": 35.49,
+       "avgReturnPct": -0.47,
+       "avgExcessPct": 0.19,
+       "dailyExcessPct": 0.11,
+       "tStat": 2.69
+      },
+      "2020-2022": {
+       "trades": 10904,
+       "days": 711,
+       "winRatePct": 37.38,
+       "avgReturnPct": -0.28,
+       "avgExcessPct": 0.25,
+       "dailyExcessPct": 0.3,
+       "tStat": 4.67
+      },
+      "2023-now": {
+       "trades": 12141,
+       "days": 903,
+       "winRatePct": 38.39,
+       "avgReturnPct": -0.26,
+       "avgExcessPct": 0.26,
+       "dailyExcessPct": 0.25,
+       "tStat": 4.36
+      }
+     },
+     "marketUp": {
+      "trades": 32817,
+      "days": 2391,
+      "winRatePct": 37.37,
+      "avgReturnPct": -0.3,
+      "avgExcessPct": 0.23,
+      "dailyExcessPct": 0.2,
+      "tStat": 5.86
+     },
+     "marketDown": {
+      "trades": 15903,
+      "days": 1332,
+      "winRatePct": 35.11,
+      "avgReturnPct": -0.53,
+      "avgExcessPct": 0.2,
+      "dailyExcessPct": 0.14,
+      "tStat": 2.57
+     }
+    },
+    "hold-5d": {
+     "trades": 39226,
+     "days": 3667,
+     "winRatePct": 45.21,
+     "avgReturnPct": -0.23,
+     "avgExcessPct": 0.27,
+     "dailyExcessPct": 0.28,
+     "tStat": 6.11,
+     "tradesPerMonth": 207.9,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 20513,
+       "days": 2071,
+       "winRatePct": 44.53,
+       "avgReturnPct": -0.32,
+       "avgExcessPct": 0.32,
+       "dailyExcessPct": 0.26,
+       "tStat": 4.09
+      },
+      "2020-2022": {
+       "trades": 8576,
+       "days": 699,
+       "winRatePct": 46.05,
+       "avgReturnPct": -0.12,
+       "avgExcessPct": 0.21,
+       "dailyExcessPct": 0.34,
+       "tStat": 3.04
+      },
+      "2023-now": {
+       "trades": 10137,
+       "days": 897,
+       "winRatePct": 45.88,
+       "avgReturnPct": -0.16,
+       "avgExcessPct": 0.2,
+       "dailyExcessPct": 0.28,
+       "tStat": 3.6
+      }
+     },
+     "marketUp": {
+      "trades": 27219,
+      "days": 2367,
+      "winRatePct": 44.95,
+      "avgReturnPct": -0.17,
+      "avgExcessPct": 0.22,
+      "dailyExcessPct": 0.24,
+      "tStat": 4.88
+     },
+     "marketDown": {
+      "trades": 12007,
+      "days": 1300,
+      "winRatePct": 45.8,
+      "avgReturnPct": -0.37,
+      "avgExcessPct": 0.37,
+      "dailyExcessPct": 0.35,
+      "tStat": 3.78
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 40445,
+     "days": 3673,
+     "winRatePct": 44.27,
+     "avgReturnPct": -0.44,
+     "avgExcessPct": 0.21,
+     "dailyExcessPct": 0.22,
+     "tStat": 4.81,
+     "tradesPerMonth": 214.3,
+     "avgSessions": 4.7,
+     "exitsPct": {
+      "target": 0,
+      "stop": 14.56,
+      "time": 85.44
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 21197,
+       "days": 2073,
+       "winRatePct": 43.44,
+       "avgReturnPct": -0.55,
+       "avgExcessPct": 0.25,
+       "dailyExcessPct": 0.19,
+       "tStat": 3.04
+      },
+      "2020-2022": {
+       "trades": 8912,
+       "days": 701,
+       "winRatePct": 45,
+       "avgReturnPct": -0.34,
+       "avgExcessPct": 0.17,
+       "dailyExcessPct": 0.28,
+       "tStat": 2.46
+      },
+      "2023-now": {
+       "trades": 10336,
+       "days": 899,
+       "winRatePct": 45.36,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": 0.18,
+       "dailyExcessPct": 0.24,
+       "tStat": 3.1
+      }
+     },
+     "marketUp": {
+      "trades": 27804,
+      "days": 2367,
+      "winRatePct": 44.21,
+      "avgReturnPct": -0.36,
+      "avgExcessPct": 0.17,
+      "dailyExcessPct": 0.2,
+      "tStat": 4.02
+     },
+     "marketDown": {
+      "trades": 12641,
+      "days": 1306,
+      "winRatePct": 44.43,
+      "avgReturnPct": -0.59,
+      "avgExcessPct": 0.31,
+      "dailyExcessPct": 0.26,
+      "tStat": 2.81
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 39226,
+     "days": 3667,
+     "winRatePct": 44.47,
+     "avgReturnPct": -0.28,
+     "avgExcessPct": 0.15,
+     "dailyExcessPct": 0.19,
+     "tStat": 4.41,
+     "tradesPerMonth": 207.9,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 20513,
+       "days": 2071,
+       "winRatePct": 43.86,
+       "avgReturnPct": -0.36,
+       "avgExcessPct": 0.22,
+       "dailyExcessPct": 0.2,
+       "tStat": 3.33
+      },
+      "2020-2022": {
+       "trades": 8576,
+       "days": 699,
+       "winRatePct": 45.21,
+       "avgReturnPct": -0.17,
+       "avgExcessPct": 0.06,
+       "dailyExcessPct": 0.17,
+       "tStat": 1.78
+      },
+      "2023-now": {
+       "trades": 10137,
+       "days": 897,
+       "winRatePct": 45.06,
+       "avgReturnPct": -0.22,
+       "avgExcessPct": 0.07,
+       "dailyExcessPct": 0.17,
+       "tStat": 2.34
+      }
+     },
+     "marketUp": {
+      "trades": 27219,
+      "days": 2367,
+      "winRatePct": 43.86,
+      "avgReturnPct": -0.26,
+      "avgExcessPct": 0.11,
+      "dailyExcessPct": 0.14,
+      "tStat": 3.15
+     },
+     "marketDown": {
+      "trades": 12007,
+      "days": 1300,
+      "winRatePct": 45.86,
+      "avgReturnPct": -0.32,
+      "avgExcessPct": 0.24,
+      "dailyExcessPct": 0.26,
+      "tStat": 3.09
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 46758,
+     "days": 3712,
+     "winRatePct": 44.84,
+     "avgReturnPct": -0.71,
+     "avgExcessPct": 0.02,
+     "dailyExcessPct": 0.06,
+     "tStat": 2.59,
+     "tradesPerMonth": 247.8,
+     "avgSessions": 2.9,
+     "exitsPct": {
+      "target": 42.84,
+      "stop": 50.61,
+      "time": 6.55
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 24608,
+       "days": 2099,
+       "winRatePct": 43.86,
+       "avgReturnPct": -0.77,
+       "avgExcessPct": 0.02,
+       "dailyExcessPct": 0.05,
+       "tStat": 1.57
+      },
+      "2020-2022": {
+       "trades": 10455,
+       "days": 709,
+       "winRatePct": 45.26,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": 0,
+       "dailyExcessPct": 0.09,
+       "tStat": 1.8
+      },
+      "2023-now": {
+       "trades": 11695,
+       "days": 904,
+       "winRatePct": 46.53,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": 0.03,
+       "dailyExcessPct": 0.06,
+       "tStat": 1.32
+      }
+     },
+     "marketUp": {
+      "trades": 31568,
+      "days": 2391,
+      "winRatePct": 45.3,
+      "avgReturnPct": -0.66,
+      "avgExcessPct": 0.05,
+      "dailyExcessPct": 0.07,
+      "tStat": 2.76
+     },
+     "marketDown": {
+      "trades": 15190,
+      "days": 1321,
+      "winRatePct": 43.89,
+      "avgReturnPct": -0.82,
+      "avgExcessPct": -0.04,
+      "dailyExcessPct": 0.04,
+      "tStat": 0.82
+     }
+    }
+   }
+  },
+  {
+   "key": "big-results-jump",
+   "label": "Big jump on results",
+   "basis": "Up 7% or more on three times the usual turnover as results come out, closing in the top quarter of the day's range.",
+   "round": 2,
+   "exits": {
+    "target3-stop3-7d": {
+     "trades": 1071,
+     "days": 705,
+     "winRatePct": 45.66,
+     "avgReturnPct": -0.67,
+     "avgExcessPct": -0.16,
+     "dailyExcessPct": -0.12,
+     "tStat": -1.21,
+     "tradesPerMonth": 5.7,
+     "avgSessions": 1.6,
+     "exitsPct": {
+      "target": 44.72,
+      "stop": 52.66,
+      "time": 2.61
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 542,
+       "days": 374,
+       "winRatePct": 43.17,
+       "avgReturnPct": -0.83,
+       "avgExcessPct": -0.28,
+       "dailyExcessPct": -0.16,
+       "tStat": -1.17
+      },
+      "2020-2022": {
+       "trades": 198,
+       "days": 132,
+       "winRatePct": 50,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": -0.02,
+       "dailyExcessPct": -0.13,
+       "tStat": -0.55
+      },
+      "2023-now": {
+       "trades": 331,
+       "days": 199,
+       "winRatePct": 47.13,
+       "avgReturnPct": -0.58,
+       "avgExcessPct": -0.04,
+       "dailyExcessPct": -0.05,
+       "tStat": -0.24
+      }
+     },
+     "marketUp": {
+      "trades": 731,
+      "days": 476,
+      "winRatePct": 46.51,
+      "avgReturnPct": -0.62,
+      "avgExcessPct": -0.15,
+      "dailyExcessPct": -0.17,
+      "tStat": -1.4
+     },
+     "marketDown": {
+      "trades": 340,
+      "days": 229,
+      "winRatePct": 43.82,
+      "avgReturnPct": -0.79,
+      "avgExcessPct": -0.17,
+      "dailyExcessPct": -0.02,
+      "tStat": -0.13
+     }
+    },
+    "target3-stop2-7d": {
+     "trades": 1072,
+     "days": 706,
+     "winRatePct": 33.96,
+     "avgReturnPct": -0.74,
+     "avgExcessPct": -0.2,
+     "dailyExcessPct": -0.17,
+     "tStat": -2.09,
+     "tradesPerMonth": 5.7,
+     "avgSessions": 1.4,
+     "exitsPct": {
+      "target": 33.58,
+      "stop": 65.39,
+      "time": 1.03
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 543,
+       "days": 375,
+       "winRatePct": 31.86,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.31,
+       "dailyExcessPct": -0.23,
+       "tStat": -2.07
+      },
+      "2020-2022": {
+       "trades": 198,
+       "days": 132,
+       "winRatePct": 32.83,
+       "avgReturnPct": -0.73,
+       "avgExcessPct": -0.25,
+       "dailyExcessPct": -0.27,
+       "tStat": -1.3
+      },
+      "2023-now": {
+       "trades": 331,
+       "days": 199,
+       "winRatePct": 38.07,
+       "avgReturnPct": -0.54,
+       "avgExcessPct": 0.01,
+       "dailyExcessPct": -0.01,
+       "tStat": -0.04
+      }
+     },
+     "marketUp": {
+      "trades": 732,
+      "days": 477,
+      "winRatePct": 34.43,
+      "avgReturnPct": -0.71,
+      "avgExcessPct": -0.21,
+      "dailyExcessPct": -0.22,
+      "tStat": -2.22
+     },
+     "marketDown": {
+      "trades": 340,
+      "days": 229,
+      "winRatePct": 32.94,
+      "avgReturnPct": -0.8,
+      "avgExcessPct": -0.18,
+      "dailyExcessPct": -0.08,
+      "tStat": -0.51
+     }
+    },
+    "target2-stop2-5d": {
+     "trades": 1072,
+     "days": 706,
+     "winRatePct": 38.43,
+     "avgReturnPct": -0.91,
+     "avgExcessPct": -0.28,
+     "dailyExcessPct": -0.24,
+     "tStat": -3.46,
+     "tradesPerMonth": 5.7,
+     "avgSessions": 1.2,
+     "exitsPct": {
+      "target": 38.25,
+      "stop": 61.1,
+      "time": 0.65
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 543,
+       "days": 375,
+       "winRatePct": 37.02,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.34,
+       "dailyExcessPct": -0.26,
+       "tStat": -2.85
+      },
+      "2020-2022": {
+       "trades": 198,
+       "days": 132,
+       "winRatePct": 35.86,
+       "avgReturnPct": -0.97,
+       "avgExcessPct": -0.35,
+       "dailyExcessPct": -0.33,
+       "tStat": -1.87
+      },
+      "2023-now": {
+       "trades": 331,
+       "days": 199,
+       "winRatePct": 42.3,
+       "avgReturnPct": -0.77,
+       "avgExcessPct": -0.14,
+       "dailyExcessPct": -0.14,
+       "tStat": -1.06
+      }
+     },
+     "marketUp": {
+      "trades": 732,
+      "days": 477,
+      "winRatePct": 38.25,
+      "avgReturnPct": -0.91,
+      "avgExcessPct": -0.31,
+      "dailyExcessPct": -0.29,
+      "tStat": -3.54
+     },
+     "marketDown": {
+      "trades": 340,
+      "days": 229,
+      "winRatePct": 38.82,
+      "avgReturnPct": -0.91,
+      "avgExcessPct": -0.22,
+      "dailyExcessPct": -0.13,
+      "tStat": -1.04
+     }
+    },
+    "target6-stop3-7d": {
+     "trades": 1071,
+     "days": 705,
+     "winRatePct": 35.76,
+     "avgReturnPct": -0.34,
+     "avgExcessPct": 0.04,
+     "dailyExcessPct": 0.1,
+     "tStat": 0.73,
+     "tradesPerMonth": 5.7,
+     "avgSessions": 2.4,
+     "exitsPct": {
+      "target": 30.25,
+      "stop": 60.41,
+      "time": 9.34
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 542,
+       "days": 374,
+       "winRatePct": 32.84,
+       "avgReturnPct": -0.59,
+       "avgExcessPct": -0.11,
+       "dailyExcessPct": -0.02,
+       "tStat": -0.1
+      },
+      "2020-2022": {
+       "trades": 198,
+       "days": 132,
+       "winRatePct": 41.41,
+       "avgReturnPct": 0.26,
+       "avgExcessPct": 0.28,
+       "dailyExcessPct": 0.2,
+       "tStat": 0.6
+      },
+      "2023-now": {
+       "trades": 331,
+       "days": 199,
+       "winRatePct": 37.16,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": 0.14,
+       "dailyExcessPct": 0.27,
+       "tStat": 1
+      }
+     },
+     "marketUp": {
+      "trades": 731,
+      "days": 476,
+      "winRatePct": 35.98,
+      "avgReturnPct": -0.29,
+      "avgExcessPct": 0,
+      "dailyExcessPct": -0.05,
+      "tStat": -0.27
+     },
+     "marketDown": {
+      "trades": 340,
+      "days": 229,
+      "winRatePct": 35.29,
+      "avgReturnPct": -0.43,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.42,
+      "tStat": 1.66
+     }
+    },
+    "hold-5d": {
+     "trades": 1051,
+     "days": 694,
+     "winRatePct": 47.29,
+     "avgReturnPct": 0.23,
+     "avgExcessPct": 0.51,
+     "dailyExcessPct": 0.52,
+     "tStat": 2.13,
+     "tradesPerMonth": 5.6,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 528,
+       "days": 366,
+       "winRatePct": 45.45,
+       "avgReturnPct": 0,
+       "avgExcessPct": 0.54,
+       "dailyExcessPct": 0.64,
+       "tStat": 1.86
+      },
+      "2020-2022": {
+       "trades": 196,
+       "days": 131,
+       "winRatePct": 50,
+       "avgReturnPct": 0.74,
+       "avgExcessPct": 0.23,
+       "dailyExcessPct": -0.37,
+       "tStat": -0.61
+      },
+      "2023-now": {
+       "trades": 327,
+       "days": 197,
+       "winRatePct": 48.62,
+       "avgReturnPct": 0.29,
+       "avgExcessPct": 0.61,
+       "dailyExcessPct": 0.89,
+       "tStat": 2.18
+      }
+     },
+     "marketUp": {
+      "trades": 716,
+      "days": 467,
+      "winRatePct": 47.63,
+      "avgReturnPct": 0.41,
+      "avgExcessPct": 0.47,
+      "dailyExcessPct": 0.34,
+      "tStat": 1.2
+     },
+     "marketDown": {
+      "trades": 335,
+      "days": 227,
+      "winRatePct": 46.57,
+      "avgReturnPct": -0.15,
+      "avgExcessPct": 0.58,
+      "dailyExcessPct": 0.89,
+      "tStat": 1.93
+     }
+    },
+    "hold-5d-stop8": {
+     "trades": 1051,
+     "days": 694,
+     "winRatePct": 46.05,
+     "avgReturnPct": 0.06,
+     "avgExcessPct": 0.41,
+     "dailyExcessPct": 0.39,
+     "tStat": 1.6,
+     "tradesPerMonth": 5.6,
+     "avgSessions": 4.5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 20.17,
+      "time": 79.83
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 528,
+       "days": 366,
+       "winRatePct": 43.75,
+       "avgReturnPct": -0.19,
+       "avgExcessPct": 0.37,
+       "dailyExcessPct": 0.39,
+       "tStat": 1.12
+      },
+      "2020-2022": {
+       "trades": 196,
+       "days": 131,
+       "winRatePct": 48.98,
+       "avgReturnPct": 0.58,
+       "avgExcessPct": 0.26,
+       "dailyExcessPct": -0.26,
+       "tStat": -0.44
+      },
+      "2023-now": {
+       "trades": 327,
+       "days": 197,
+       "winRatePct": 48.01,
+       "avgReturnPct": 0.15,
+       "avgExcessPct": 0.57,
+       "dailyExcessPct": 0.8,
+       "tStat": 2.01
+      }
+     },
+     "marketUp": {
+      "trades": 716,
+      "days": 467,
+      "winRatePct": 46.23,
+      "avgReturnPct": 0.2,
+      "avgExcessPct": 0.35,
+      "dailyExcessPct": 0.19,
+      "tStat": 0.64
+     },
+     "marketDown": {
+      "trades": 335,
+      "days": 227,
+      "winRatePct": 45.67,
+      "avgReturnPct": -0.24,
+      "avgExcessPct": 0.53,
+      "dailyExcessPct": 0.8,
+      "tStat": 1.81
+     }
+    },
+    "hold-5d-vwap": {
+     "trades": 1051,
+     "days": 694,
+     "winRatePct": 44.62,
+     "avgReturnPct": -0.26,
+     "avgExcessPct": 0.1,
+     "dailyExcessPct": 0.08,
+     "tStat": 0.37,
+     "tradesPerMonth": 5.6,
+     "avgSessions": 5,
+     "exitsPct": {
+      "target": 0,
+      "stop": 0,
+      "time": 100
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 528,
+       "days": 366,
+       "winRatePct": 42.8,
+       "avgReturnPct": -0.44,
+       "avgExcessPct": 0.23,
+       "dailyExcessPct": 0.2,
+       "tStat": 0.71
+      },
+      "2020-2022": {
+       "trades": 196,
+       "days": 131,
+       "winRatePct": 46.94,
+       "avgReturnPct": 0.17,
+       "avgExcessPct": -0.24,
+       "dailyExcessPct": -0.64,
+       "tStat": -1.27
+      },
+      "2023-now": {
+       "trades": 327,
+       "days": 197,
+       "winRatePct": 46.18,
+       "avgReturnPct": -0.23,
+       "avgExcessPct": 0.09,
+       "dailyExcessPct": 0.33,
+       "tStat": 0.83
+      }
+     },
+     "marketUp": {
+      "trades": 716,
+      "days": 467,
+      "winRatePct": 44.97,
+      "avgReturnPct": -0.09,
+      "avgExcessPct": 0.09,
+      "dailyExcessPct": 0.01,
+      "tStat": 0.05
+     },
+     "marketDown": {
+      "trades": 335,
+      "days": 227,
+      "winRatePct": 43.88,
+      "avgReturnPct": -0.61,
+      "avgExcessPct": 0.12,
+      "dailyExcessPct": 0.21,
+      "tStat": 0.54
+     }
+    },
+    "target3-stop3-7d-vwap": {
+     "trades": 1072,
+     "days": 706,
+     "winRatePct": 32.46,
+     "avgReturnPct": -1.48,
+     "avgExcessPct": -0.73,
+     "dailyExcessPct": -0.69,
+     "tStat": -7.17,
+     "tradesPerMonth": 5.7,
+     "avgSessions": 2,
+     "exitsPct": {
+      "target": 30.88,
+      "stop": 65.3,
+      "time": 3.82
+     },
+     "periods": {
+      "2011-2019": {
+       "trades": 543,
+       "days": 375,
+       "winRatePct": 32.6,
+       "avgReturnPct": -1.45,
+       "avgExcessPct": -0.59,
+       "dailyExcessPct": -0.56,
+       "tStat": -4.28
+      },
+      "2020-2022": {
+       "trades": 198,
+       "days": 132,
+       "winRatePct": 31.82,
+       "avgReturnPct": -1.5,
+       "avgExcessPct": -0.89,
+       "dailyExcessPct": -0.77,
+       "tStat": -3.39
+      },
+      "2023-now": {
+       "trades": 331,
+       "days": 199,
+       "winRatePct": 32.63,
+       "avgReturnPct": -1.5,
+       "avgExcessPct": -0.85,
+       "dailyExcessPct": -0.87,
+       "tStat": -4.88
+      }
+     },
+     "marketUp": {
+      "trades": 732,
+      "days": 477,
+      "winRatePct": 32.1,
+      "avgReturnPct": -1.48,
+      "avgExcessPct": -0.74,
+      "dailyExcessPct": -0.68,
+      "tStat": -5.75
+     },
+     "marketDown": {
+      "trades": 340,
+      "days": 229,
+      "winRatePct": 33.24,
+      "avgReturnPct": -1.47,
+      "avgExcessPct": -0.7,
+      "dailyExcessPct": -0.71,
+      "tStat": -4.29
+     }
+    }
+   }
+  }
+ ]
+}

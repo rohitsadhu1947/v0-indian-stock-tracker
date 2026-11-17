@@ -56,6 +56,10 @@ export function marketFromBars(stockRows: BarRow[], indexRows: Array<{ symbol: s
       symbol,
       dates: Int32Array.from(rows.map(r => r.date)),
       close: Float64Array.from(rows.map(r => r.close)),
+      // The stored bars have closes only; the monthly replay never looks inside a session
+      open: Float64Array.from(rows.map(r => r.close)),
+      high: Float64Array.from(rows.map(r => r.close)),
+      low: Float64Array.from(rows.map(r => r.close)),
       // The day's average price (rupees traded / shares traded), kept inside its range
       fill: Float64Array.from(rows.map(r => {
         const vwap = r.turnover && r.volume > 0 ? r.turnover / r.volume : r.close
