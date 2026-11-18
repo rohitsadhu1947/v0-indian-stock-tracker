@@ -1,0 +1,680 @@
+{
+ "generatedFrom": {
+  "start": 20110101,
+  "end": 20261111,
+  "capital": 500000
+ },
+ "note": "A swing rule run as a book with limited positions, charges, slippage and tax. Idle cash earns nothing. The NIFTY 500 row is the price index, without dividends, costs or tax.",
+ "nifty500": {
+  "full": {
+   "cagrPct": 10.4,
+   "maxDrawdownPct": -38.3,
+   "worstYearPct": -27.6
+  },
+  "2011-2019": {
+   "cagrPct": 7.9,
+   "maxDrawdownPct": -28.7,
+   "worstYearPct": -27.6
+  },
+  "2020-2022": {
+   "cagrPct": 16.1,
+   "maxDrawdownPct": -38.3,
+   "worstYearPct": 3
+  },
+  "2023-now": {
+   "cagrPct": 11.8,
+   "maxDrawdownPct": -18.8,
+   "worstYearPct": -0.4
+  }
+ },
+ "variants": [
+  {
+   "key": "deep-dip",
+   "signal": "deep-dip",
+   "note": "10 positions, buy at open, sell after 5 sessions, deepest fall first",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -7,
+     "maxDrawdownPct": -76.5,
+     "worstYearPct": -32.1
+    },
+    "2011-2019": {
+     "cagrPct": -9,
+     "maxDrawdownPct": -61.6,
+     "worstYearPct": -30.9
+    },
+    "2020-2022": {
+     "cagrPct": -14.6,
+     "maxDrawdownPct": -46.2,
+     "worstYearPct": -32.1
+    },
+    "2023-now": {
+     "cagrPct": 4.6,
+     "maxDrawdownPct": -33.1,
+     "worstYearPct": -7.2
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -7,
+     "maxDrawdownPct": -76.5,
+     "worstYearPct": -32.1
+    },
+    "2011-2019": {
+     "cagrPct": -9,
+     "maxDrawdownPct": -61.6,
+     "worstYearPct": -30.9
+    },
+    "2020-2022": {
+     "cagrPct": -14.6,
+     "maxDrawdownPct": -46.2,
+     "worstYearPct": -32.1
+    },
+    "2023-now": {
+     "cagrPct": 4.6,
+     "maxDrawdownPct": -33.1,
+     "worstYearPct": -7.2
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -21.4,
+    "2012": -7.9,
+    "2013": 4.5,
+    "2014": 18.1,
+    "2015": -15.6,
+    "2016": -16.8,
+    "2017": 13.5,
+    "2018": -30.9,
+    "2019": -12.9,
+    "2020": -12.9,
+    "2021": 5.2,
+    "2022": -32.1,
+    "2023": 37.3,
+    "2024": -7.2,
+    "2025": -6.4,
+    "2026": -0.3
+   },
+   "tradesPerYear": 307,
+   "winRatePct": 49,
+   "signalsSkippedPct": 72.6,
+   "avgInvestedPct": 48.3,
+   "chargesPctPerYear": 4.6
+  },
+  {
+   "key": "deep-dip-vwap",
+   "signal": "deep-dip",
+   "note": "same, bought at the day's average price",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -12.9,
+     "maxDrawdownPct": -90,
+     "worstYearPct": -36.3
+    },
+    "2011-2019": {
+     "cagrPct": -12.8,
+     "maxDrawdownPct": -75.1,
+     "worstYearPct": -29.7
+    },
+    "2020-2022": {
+     "cagrPct": -21.9,
+     "maxDrawdownPct": -58,
+     "worstYearPct": -36.3
+    },
+    "2023-now": {
+     "cagrPct": -5.4,
+     "maxDrawdownPct": -36.9,
+     "worstYearPct": -17.5
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -12.9,
+     "maxDrawdownPct": -89.8,
+     "worstYearPct": -36.3
+    },
+    "2011-2019": {
+     "cagrPct": -12.9,
+     "maxDrawdownPct": -75.2,
+     "worstYearPct": -29.7
+    },
+    "2020-2022": {
+     "cagrPct": -21.9,
+     "maxDrawdownPct": -58,
+     "worstYearPct": -36.3
+    },
+    "2023-now": {
+     "cagrPct": -5.3,
+     "maxDrawdownPct": -36.7,
+     "worstYearPct": -17.3
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -18.4,
+    "2012": -10.6,
+    "2013": -1.5,
+    "2014": 0.1,
+    "2015": -20.7,
+    "2016": -19.1,
+    "2017": 4.2,
+    "2018": -29.7,
+    "2019": -14.4,
+    "2020": -25.1,
+    "2021": -0.1,
+    "2022": -36.3,
+    "2023": 16.2,
+    "2024": -8.6,
+    "2025": -17.3,
+    "2026": -7.7
+   },
+   "tradesPerYear": 306,
+   "winRatePct": 46.5,
+   "signalsSkippedPct": 72.7,
+   "avgInvestedPct": 47.6,
+   "chargesPctPerYear": 3.6
+  },
+  {
+   "key": "deep-dip-liquid-first",
+   "signal": "deep-dip",
+   "note": "same, most traded stock first",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -7.1,
+     "maxDrawdownPct": -75.2,
+     "worstYearPct": -27.2
+    },
+    "2011-2019": {
+     "cagrPct": -9.1,
+     "maxDrawdownPct": -61.4,
+     "worstYearPct": -27.2
+    },
+    "2020-2022": {
+     "cagrPct": -11.6,
+     "maxDrawdownPct": -43.3,
+     "worstYearPct": -27
+    },
+    "2023-now": {
+     "cagrPct": 1.8,
+     "maxDrawdownPct": -35.7,
+     "worstYearPct": -12.8
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -7.1,
+     "maxDrawdownPct": -75.2,
+     "worstYearPct": -27.2
+    },
+    "2011-2019": {
+     "cagrPct": -9.1,
+     "maxDrawdownPct": -61.4,
+     "worstYearPct": -27.2
+    },
+    "2020-2022": {
+     "cagrPct": -11.6,
+     "maxDrawdownPct": -43.3,
+     "worstYearPct": -27
+    },
+    "2023-now": {
+     "cagrPct": 1.8,
+     "maxDrawdownPct": -35.7,
+     "worstYearPct": -12.8
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -19.9,
+    "2012": -2,
+    "2013": -10.5,
+    "2014": 22.7,
+    "2015": -12.8,
+    "2016": -19,
+    "2017": 6.5,
+    "2018": -27.2,
+    "2019": -10.5,
+    "2020": -8.8,
+    "2021": 4,
+    "2022": -27,
+    "2023": 28.2,
+    "2024": -12.8,
+    "2025": -9.3,
+    "2026": 5.6
+   },
+   "tradesPerYear": 308,
+   "winRatePct": 49,
+   "signalsSkippedPct": 72.8,
+   "avgInvestedPct": 48.4,
+   "chargesPctPerYear": 4.5
+  },
+  {
+   "key": "deep-dip-5-slots",
+   "signal": "deep-dip",
+   "note": "5 positions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -13.2,
+     "maxDrawdownPct": -90.3,
+     "worstYearPct": -43.8
+    },
+    "2011-2019": {
+     "cagrPct": -14.3,
+     "maxDrawdownPct": -79.2,
+     "worstYearPct": -43.8
+    },
+    "2020-2022": {
+     "cagrPct": -18.7,
+     "maxDrawdownPct": -57.2,
+     "worstYearPct": -34.5
+    },
+    "2023-now": {
+     "cagrPct": -5.9,
+     "maxDrawdownPct": -40.6,
+     "worstYearPct": -25.8
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -13.2,
+     "maxDrawdownPct": -90.3,
+     "worstYearPct": -43.8
+    },
+    "2011-2019": {
+     "cagrPct": -14.3,
+     "maxDrawdownPct": -79.2,
+     "worstYearPct": -43.8
+    },
+    "2020-2022": {
+     "cagrPct": -18.7,
+     "maxDrawdownPct": -57.2,
+     "worstYearPct": -34.5
+    },
+    "2023-now": {
+     "cagrPct": -5.9,
+     "maxDrawdownPct": -40.6,
+     "worstYearPct": -25.8
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -26.6,
+    "2012": -12.8,
+    "2013": 13.8,
+    "2014": -2.1,
+    "2015": -33.8,
+    "2016": 2.9,
+    "2017": 4.8,
+    "2018": -43.8,
+    "2019": -12.2,
+    "2020": -20.5,
+    "2021": 3.4,
+    "2022": -34.5,
+    "2023": 17.5,
+    "2024": -25.8,
+    "2025": 7,
+    "2026": -15.2
+   },
+   "tradesPerYear": 186,
+   "winRatePct": 47.6,
+   "signalsSkippedPct": 84.5,
+   "avgInvestedPct": 58.5,
+   "chargesPctPerYear": 3.7
+  },
+  {
+   "key": "deep-dip-20-slots",
+   "signal": "deep-dip",
+   "note": "20 positions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -3.2,
+     "maxDrawdownPct": -60.7,
+     "worstYearPct": -22.7
+    },
+    "2011-2019": {
+     "cagrPct": -2.3,
+     "maxDrawdownPct": -38.1,
+     "worstYearPct": -17
+    },
+    "2020-2022": {
+     "cagrPct": -11.3,
+     "maxDrawdownPct": -41.2,
+     "worstYearPct": -22.7
+    },
+    "2023-now": {
+     "cagrPct": 1.5,
+     "maxDrawdownPct": -24.8,
+     "worstYearPct": -9.1
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -3.4,
+     "maxDrawdownPct": -62,
+     "worstYearPct": -22.6
+    },
+    "2011-2019": {
+     "cagrPct": -2.6,
+     "maxDrawdownPct": -40,
+     "worstYearPct": -17.1
+    },
+    "2020-2022": {
+     "cagrPct": -11.3,
+     "maxDrawdownPct": -41.2,
+     "worstYearPct": -22.6
+    },
+    "2023-now": {
+     "cagrPct": 1.3,
+     "maxDrawdownPct": -24.8,
+     "worstYearPct": -9.3
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -12.9,
+    "2012": -2.4,
+    "2013": 2.8,
+    "2014": 33.2,
+    "2015": -8.3,
+    "2016": -14.6,
+    "2017": 17,
+    "2018": -17.1,
+    "2019": -11.1,
+    "2020": -20.2,
+    "2021": 13.1,
+    "2022": -22.6,
+    "2023": 22,
+    "2024": -9.3,
+    "2025": -3,
+    "2026": -1.9
+   },
+   "tradesPerYear": 463,
+   "winRatePct": 49,
+   "signalsSkippedPct": 54.6,
+   "avgInvestedPct": 36.4,
+   "chargesPctPerYear": 5.5
+  },
+  {
+   "key": "deep-dip-stop8",
+   "signal": "deep-dip",
+   "note": "with an 8% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -11.3,
+     "maxDrawdownPct": -85.9,
+     "worstYearPct": -27.8
+    },
+    "2011-2019": {
+     "cagrPct": -12,
+     "maxDrawdownPct": -71.4,
+     "worstYearPct": -27.8
+    },
+    "2020-2022": {
+     "cagrPct": -15.7,
+     "maxDrawdownPct": -49.1,
+     "worstYearPct": -25.8
+    },
+    "2023-now": {
+     "cagrPct": -6.1,
+     "maxDrawdownPct": -39.4,
+     "worstYearPct": -13.6
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -11.3,
+     "maxDrawdownPct": -85.9,
+     "worstYearPct": -27.8
+    },
+    "2011-2019": {
+     "cagrPct": -12,
+     "maxDrawdownPct": -71.4,
+     "worstYearPct": -27.8
+    },
+    "2020-2022": {
+     "cagrPct": -15.7,
+     "maxDrawdownPct": -49.1,
+     "worstYearPct": -25.8
+    },
+    "2023-now": {
+     "cagrPct": -6.1,
+     "maxDrawdownPct": -39.4,
+     "worstYearPct": -13.6
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -23.9,
+    "2012": -17.9,
+    "2013": 4.9,
+    "2014": 13.9,
+    "2015": -19.9,
+    "2016": -27.8,
+    "2017": 1.6,
+    "2018": -16.4,
+    "2019": -13.7,
+    "2020": -15.3,
+    "2021": -4.6,
+    "2022": -25.8,
+    "2023": 19.6,
+    "2024": -13.6,
+    "2025": -12.5,
+    "2026": -13.4
+   },
+   "tradesPerYear": 343,
+   "winRatePct": 46.3,
+   "signalsSkippedPct": 70.1,
+   "avgInvestedPct": 47.2,
+   "chargesPctPerYear": 4.1
+  },
+  {
+   "key": "deep-dip-10d",
+   "signal": "deep-dip",
+   "note": "sell after 10 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -1.2,
+     "maxDrawdownPct": -67.8,
+     "worstYearPct": -36.4
+    },
+    "2011-2019": {
+     "cagrPct": -3.8,
+     "maxDrawdownPct": -53.9,
+     "worstYearPct": -36.4
+    },
+    "2020-2022": {
+     "cagrPct": 2.2,
+     "maxDrawdownPct": -42.5,
+     "worstYearPct": -9.7
+    },
+    "2023-now": {
+     "cagrPct": 2.5,
+     "maxDrawdownPct": -31.6,
+     "worstYearPct": -8.2
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -1.5,
+     "maxDrawdownPct": -68.3,
+     "worstYearPct": -36.5
+    },
+    "2011-2019": {
+     "cagrPct": -4.2,
+     "maxDrawdownPct": -54.6,
+     "worstYearPct": -36.5
+    },
+    "2020-2022": {
+     "cagrPct": 2.1,
+     "maxDrawdownPct": -42.5,
+     "worstYearPct": -9.8
+    },
+    "2023-now": {
+     "cagrPct": 2.5,
+     "maxDrawdownPct": -31.7,
+     "worstYearPct": -8.4
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -13.4,
+    "2012": -21.6,
+    "2013": 11.9,
+    "2014": 35.5,
+    "2015": 14.2,
+    "2016": -3.4,
+    "2017": 7.4,
+    "2018": -36.5,
+    "2019": -12.6,
+    "2020": -6.6,
+    "2021": 26.3,
+    "2022": -9.8,
+    "2023": 27.5,
+    "2024": -8.4,
+    "2025": -7.8,
+    "2026": 2.3
+   },
+   "tradesPerYear": 198,
+   "winRatePct": 50.5,
+   "signalsSkippedPct": 83.1,
+   "avgInvestedPct": 70.6,
+   "chargesPctPerYear": 4.3
+  },
+  {
+   "key": "quiet-dip",
+   "signal": "quiet-dip",
+   "note": "three falling days on low volume, 10 positions, 5 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -4.7,
+     "maxDrawdownPct": -74.6,
+     "worstYearPct": -32.5
+    },
+    "2011-2019": {
+     "cagrPct": -5.1,
+     "maxDrawdownPct": -63.3,
+     "worstYearPct": -32.5
+    },
+    "2020-2022": {
+     "cagrPct": -2.7,
+     "maxDrawdownPct": -42,
+     "worstYearPct": -20.8
+    },
+    "2023-now": {
+     "cagrPct": -5.5,
+     "maxDrawdownPct": -43.1,
+     "worstYearPct": -16.8
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -5.1,
+     "maxDrawdownPct": -76.5,
+     "worstYearPct": -32.4
+    },
+    "2011-2019": {
+     "cagrPct": -6,
+     "maxDrawdownPct": -65,
+     "worstYearPct": -32.4
+    },
+    "2020-2022": {
+     "cagrPct": -3,
+     "maxDrawdownPct": -42,
+     "worstYearPct": -20.9
+    },
+    "2023-now": {
+     "cagrPct": -4.8,
+     "maxDrawdownPct": -41.6,
+     "worstYearPct": -16.6
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -19.2,
+    "2012": 15.2,
+    "2013": 3.3,
+    "2014": 49.6,
+    "2015": -14.6,
+    "2016": -28.6,
+    "2017": 22.7,
+    "2018": -32.4,
+    "2019": -20.9,
+    "2020": 15.5,
+    "2021": 0,
+    "2022": -20.9,
+    "2023": 21.7,
+    "2024": -16.6,
+    "2025": -13.3,
+    "2026": -6.2
+   },
+   "tradesPerYear": 477,
+   "winRatePct": 46.9,
+   "signalsSkippedPct": 87.8,
+   "avgInvestedPct": 75.3,
+   "chargesPctPerYear": 9.8
+  },
+  {
+   "key": "pullback-rsi2",
+   "signal": "pullback-rsi2",
+   "note": "sharp dip in an uptrend, 10 positions, 5 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": -11.9,
+     "maxDrawdownPct": -88,
+     "worstYearPct": -41.3
+    },
+    "2011-2019": {
+     "cagrPct": -11.5,
+     "maxDrawdownPct": -71,
+     "worstYearPct": -35.4
+    },
+    "2020-2022": {
+     "cagrPct": -16.5,
+     "maxDrawdownPct": -52.3,
+     "worstYearPct": -41.3
+    },
+    "2023-now": {
+     "cagrPct": -8.9,
+     "maxDrawdownPct": -56.4,
+     "worstYearPct": -31.7
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": -11.9,
+     "maxDrawdownPct": -88,
+     "worstYearPct": -41.3
+    },
+    "2011-2019": {
+     "cagrPct": -11.5,
+     "maxDrawdownPct": -71,
+     "worstYearPct": -35.4
+    },
+    "2020-2022": {
+     "cagrPct": -16.5,
+     "maxDrawdownPct": -52.3,
+     "worstYearPct": -41.3
+    },
+    "2023-now": {
+     "cagrPct": -8.9,
+     "maxDrawdownPct": -56.4,
+     "worstYearPct": -31.7
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -35.4,
+    "2012": 4.2,
+    "2013": 1.3,
+    "2014": 34.2,
+    "2015": -17.4,
+    "2016": -13.9,
+    "2017": 0.9,
+    "2018": -33.1,
+    "2019": -24.1,
+    "2020": -16.8,
+    "2021": 18.8,
+    "2022": -41.3,
+    "2023": 32.7,
+    "2024": -9.5,
+    "2025": -31.7,
+    "2026": -15.1
+   },
+   "tradesPerYear": 485,
+   "winRatePct": 46.8,
+   "signalsSkippedPct": 92.6,
+   "avgInvestedPct": 75.6,
+   "chargesPctPerYear": 6.6
+  }
+ ]
+}
