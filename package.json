@@ -19,6 +19,7 @@
     "research": "tsx scripts/research/run.ts",
     "research:swing": "tsx scripts/research/swing.ts",
     "research:swing-book": "tsx scripts/research/swing-book.ts",
+    "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
   },
   "dependencies": {
