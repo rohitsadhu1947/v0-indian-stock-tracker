@@ -21,6 +21,7 @@ const MarketTab = lazy(() => import('./components/MarketTab'))
 const PaperTradesTab = lazy(() => import('./components/PaperTradesTab'))
 const PortfolioAnalyst = lazy(() => import('./components/PortfolioAnalyst'))
 const MonthlyPlanTab = lazy(() => import('./components/MonthlyPlanTab'))
+const ScreenerTab = lazy(() => import('./components/ScreenerTab'))
 const StockCheckTab = lazy(() => import('./components/StockCheckTab'))
 
 export default function StockTracker() {
@@ -623,6 +624,12 @@ export default function StockTracker() {
           🧭 Monthly Plan
         </button>
         <button
+          className={`tab ${activeTab === 'screen' ? 'active' : ''}`}
+          onClick={() => setActiveTab('screen')}
+        >
+          🔎 Screener
+        </button>
+        <button
           className={`tab ${activeTab === 'stockcheck' ? 'active' : ''}`}
           onClick={() => setActiveTab('stockcheck')}
           style={{
@@ -684,6 +691,8 @@ export default function StockTracker() {
 
       {activeTab === 'plan' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Monthly Plan"><MonthlyPlanTab /></TabErrorBoundary></Suspense>}
 
+
+      {activeTab === 'screen' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Screener"><ScreenerTab /></TabErrorBoundary></Suspense>}
 
       {activeTab === 'portfolio' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Portfolio"><PortfolioAnalyst /></TabErrorBoundary></Suspense>}
 
