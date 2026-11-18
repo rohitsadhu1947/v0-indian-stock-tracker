@@ -9,7 +9,7 @@
  * take the book there. Real Zerodha holdings are shown read only.
  */
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { MonthlyPlan, BrokerHoldingRow } from '@/lib/portfolio/service'
 import { holdingValue } from '@/lib/portfolio/plan-core'
 import type { TrackRecord } from '@/lib/portfolio/signals'
@@ -21,6 +21,14 @@ const MODE_IDS = Object.keys(MODES) as Mode[]
 
 const MODE_KEY = 'monthlyPlan.mode'
 const TREND_KEY = 'monthlyPlan.trendFilter'
+const VIEW_KEY = 'monthlyPlan.view'
+const VIEWS = [
+  { id: 'book', label: 'My book' },
+  { id: 'plan', label: "This month's plan" },
+  { id: 'record', label: 'Track record' },
+  { id: 'zerodha', label: 'Zerodha holdings' },
+] as const
+type View = (typeof VIEWS)[number]['id']
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 const pct = (n: number, d = 1) => `${n >= 0 ? '+' : ''}${n.toFixed(d)}%`
 
@@ -84,6 +92,7 @@ const smallButton: React.CSSProperties = {
 export default function MonthlyPlanTab() {
   const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
   const [trendFilter, setTrendFilter] = useState(false)
+  const [view, setView] = useState<View>('book')
   const [plan, setPlan] = useState<MonthlyPlan | null>(null)
   const [live, setLive] = useState<LiveView | null>(null)
   const [perf, setPerf] = useState<Performance | null>(null)
@@ -98,10 +107,15 @@ export default function MonthlyPlanTab() {
       const saved = localStorage.getItem(MODE_KEY)
       if (saved && (MODE_IDS as string[]).includes(saved)) setMode(saved as Mode)
       setTrendFilter(localStorage.getItem(TREND_KEY) === '1')
+      const savedView = localStorage.getItem(VIEW_KEY)
+      if (VIEWS.some(v => v.id === savedView)) setView(savedView as View)
     } catch { /* storage unavailable */ }
   }, [])
 
+  // Only the latest request may update the page: an earlier mode's answer can arrive later
+  const latestLoad = useRef(0)
   const load = useCallback(async (m: Mode, trend: boolean, quiet = false) => {
+    const request = ++latestLoad.current
     if (!quiet) setLoading(true)
     setError(null)
     try {
@@ -112,6 +126,7 @@ export default function MonthlyPlanTab() {
       ])
       if (planRes.status === 401) { window.location.href = '/login'; return }
       const planJson = await planRes.json()
+      if (request !== latestLoad.current) return
       if (!planJson.success) throw new Error(planJson.details || planJson.error || 'Failed to build plan')
       setPlan(planJson.plan)
       const perfJson = await perfRes.json()
@@ -120,10 +135,11 @@ export default function MonthlyPlanTab() {
       if (recordJson?.success) setRecord(recordJson)
     } catch (e: any) {
       // Never leave another mode's plan on screen under this mode's heading
+      if (request !== latestLoad.current) return
       setPlan(null)
       setError(e.message.split('\n')[0].slice(0, 200))
     } finally {
-      setLoading(false)
+      if (request === latestLoad.current) setLoading(false)
     }
   }, [])
 
@@ -151,6 +167,12 @@ export default function MonthlyPlanTab() {
     setMode(m)
     setMessage(null)
     try { localStorage.setItem(MODE_KEY, m) } catch { /* ignore */ }
+  }
+
+  const chooseView = (v: View) => {
+    setView(v)
+    try { localStorage.setItem(VIEW_KEY, v) } catch { /* ignore */ }
+    window.scrollTo({ top: 0 })
   }
 
   const toggleTrend = (on: boolean) => {
@@ -207,70 +229,95 @@ export default function MonthlyPlanTab() {
   const plain = backtestFor(mode, false)
   const filtered = backtestFor(mode, true)
 
+  const modePicker = (
+    <div style={card}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {MODE_IDS.map(m => (
+          <button
+            key={m}
+            onClick={() => chooseMode(m)}
+            aria-pressed={mode === m}
+            style={{
+              flex: '1 1 200px', padding: 12, borderRadius: 10, cursor: 'pointer', textAlign: 'left', color: '#fff',
+              border: mode === m ? '2px solid #60a5fa' : '1px solid rgba(255,255,255,0.15)',
+              background: mode === m ? 'rgba(96,165,250,0.15)' : 'rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ fontWeight: 700 }}>
+              {MODES[m].label}{m === DEFAULT_MODE ? ' (default)' : ''}
+              {plan?.book.mode === m && <span style={{ marginLeft: 8, fontSize: '0.75em', padding: '2px 8px', borderRadius: 10, background: '#2563eb' }}>your book</span>}
+            </div>
+            <div style={{ fontSize: '0.8em', marginTop: 4, opacity: 0.85 }}>{MODES[m].description}</div>
+          </button>
+        ))}
+      </div>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, cursor: 'pointer' }}>
+        <input type="checkbox" checked={trendFilter} onChange={e => toggleTrend(e.target.checked)} />
+        <span>
+          Trend filter: hold cash while NIFTY 200 is below its 200-day average.
+          {plain && filtered && (
+            <span style={muted}>
+              {' '}In the backtest it took this mode from {plain.afterTax.full.cagrPct.toFixed(1)}% to {filtered.afterTax.full.cagrPct.toFixed(1)}% a
+              year, and its worst fall from {plain.afterTax.full.maxDrawdownPct.toFixed(0)}% to {filtered.afterTax.full.maxDrawdownPct.toFixed(0)}%.
+            </span>
+          )}
+        </span>
+      </label>
+    </div>
+  )
+
+  const ready = plan && !loading
   return (
     <div>
       <div style={card}>
         <h2 style={{ margin: '0 0 6px' }}>🧭 Monthly Plan</h2>
         <p style={{ ...muted, margin: 0 }}>
-          Once a month, hold the {PORTFOLIO_RULES.topN} best-ranked of the {PORTFOLIO_RULES.universeSize} most traded NSE stocks
-          at equal weight, with at most {PORTFOLIO_RULES.maxPerSector} from any one sector. A stock you hold stays until it
-          falls below rank {PORTFOLIO_RULES.exitRank}, which roughly halves the trading. Each mode ranks stocks differently, so
-          each has its own list. Choosing a mode here only shows you that mode. Your paper book changes only when you confirm
-          an action below. No real orders are placed.
+          Once a month, hold the {PORTFOLIO_RULES.topN} best-ranked of the {PORTFOLIO_RULES.universeSize} most traded NSE stocks in equal amounts.
+          The book is paper: no real orders are placed.
         </p>
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', ...muted }}>How it works</summary>
+          <p style={{ ...muted, marginBottom: 0 }}>
+            At most {PORTFOLIO_RULES.maxPerSector} stocks come from any one sector. A stock you hold stays until it falls below
+            rank {PORTFOLIO_RULES.exitRank}, which roughly halves the trading. The three modes rank stocks differently, so each has its
+            own list. Choosing a mode only shows you that mode. Your book changes only when you confirm an action.
+          </p>
+        </details>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-          {MODE_IDS.map(m => (
+        <div role="tablist" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+          {VIEWS.map(v => (
             <button
-              key={m}
-              onClick={() => chooseMode(m)}
-              aria-pressed={mode === m}
+              key={v.id}
+              role="tab"
+              aria-selected={view === v.id}
+              onClick={() => chooseView(v.id)}
               style={{
-                flex: '1 1 200px',
-                padding: 12,
-                borderRadius: 10,
-                cursor: 'pointer',
-                textAlign: 'left',
-                color: '#fff',
-                border: mode === m ? '2px solid #60a5fa' : '1px solid rgba(255,255,255,0.15)',
-                background: mode === m ? 'rgba(96,165,250,0.15)' : 'rgba(0,0,0,0.2)',
+                padding: '8px 16px', borderRadius: 20, cursor: 'pointer', color: '#fff', fontWeight: 600,
+                border: view === v.id ? '1px solid #60a5fa' : '1px solid rgba(255,255,255,0.15)',
+                background: view === v.id ? '#2563eb' : 'transparent',
               }}
             >
-              <div style={{ fontWeight: 700 }}>
-                {MODES[m].label}{m === DEFAULT_MODE ? ' (default)' : ''}
-                {plan?.book.mode === m && <span style={{ marginLeft: 8, fontSize: '0.75em', padding: '2px 8px', borderRadius: 10, background: '#2563eb' }}>your book</span>}
-              </div>
-              <div style={{ fontSize: '0.8em', marginTop: 4, opacity: 0.85 }}>{MODES[m].description}</div>
+              {v.label}
             </button>
           ))}
         </div>
-
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, cursor: 'pointer' }}>
-          <input type="checkbox" checked={trendFilter} onChange={e => toggleTrend(e.target.checked)} />
-          <span>
-            Trend filter: hold cash while NIFTY 200 is below its 200-day average.
-            {plain && filtered && (
-              <span style={muted}>
-                {' '}In the backtest it took this mode from {plain.afterTax.full.cagrPct.toFixed(1)}% to {filtered.afterTax.full.cagrPct.toFixed(1)}% a
-                year, and its worst fall from {plain.afterTax.full.maxDrawdownPct.toFixed(0)}% to {filtered.afterTax.full.maxDrawdownPct.toFixed(0)}%.
-              </span>
-            )}
-          </span>
-        </label>
-
-        <BacktestTable mode={mode} trendFilter={trendFilter} />
       </div>
 
       {loading && <div style={card}>Building this month&apos;s plan…</div>}
       {error && <div style={{ ...card, borderColor: '#ef4444', color: '#fca5a5' }}>⚠️ {error}</div>}
       {message && <div style={{ ...card, borderColor: '#60a5fa' }}>{message}</div>}
 
-      {plan && !loading && (
+      {ready && view === 'book' && (
         <>
           <PriceStatus plan={plan} live={live} />
-
           <HoldingsCard plan={plan} live={live} busy={busy} onTrade={trade} />
+          <NextStep plan={plan} onOpenPlan={() => chooseView('plan')} />
+        </>
+      )}
 
+      {view === 'plan' && modePicker}
+      {ready && view === 'plan' && (
+        <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
             <div style={card}>
               <div style={muted}>Market trend (NIFTY 200 vs 200-day average)</div>
@@ -303,17 +350,47 @@ export default function MonthlyPlanTab() {
             </div>
           </div>
 
-          <PicksCard plan={plan} />
-
           <ActionCard plan={plan} busy={busy} onRun={runAction} />
-
-          <BrokerHoldingsCard plan={plan} live={live} />
-
-          <LiveRecordCard record={record} mode={mode} />
-
-          <PerformanceCard perf={perf} />
+          <PicksCard plan={plan} />
         </>
       )}
+
+      {view === 'record' && (
+        <>
+          {modePicker}
+          <div style={card}>
+            <h3 style={{ margin: 0 }}>How {MODES[mode].label} did in the backtest</h3>
+            <BacktestTable mode={mode} trendFilter={trendFilter} />
+          </div>
+          {ready && <LiveRecordCard record={record} mode={mode} />}
+          {ready && <PerformanceCard perf={perf} />}
+        </>
+      )}
+
+      {ready && view === 'zerodha' && (
+        <>
+          <PriceStatus plan={plan} live={live} />
+          <BrokerHoldingsCard plan={plan} live={live} />
+        </>
+      )}
+    </div>
+  )
+}
+
+/** One line on the book page about the monthly rebalance, with a way to the plan. */
+function NextStep({ plan, onOpenPlan }: { plan: MonthlyPlan; onOpenPlan: () => void }) {
+  const { book, action } = plan
+  if (!book.exists) return null
+  const sells = book.holdings.filter(h => !h.keep).length
+  const text = action.kind !== 'rebalance'
+    ? `You are looking at ${MODES[plan.mode].label} in the plan, and your book follows ${MODES[book.mode!].label}.`
+    : action.canExecute
+      ? `This month's rebalance is ready: ${action.orders.length} orders.`
+      : `${action.blocked} ${sells > 0 ? `As things stand, the next rebalance would sell ${sells} of your holdings.` : 'As things stand, the next rebalance would keep every holding.'}`
+  return (
+    <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div><strong>Monthly rebalance</strong><div style={muted}>{text}</div></div>
+      <button onClick={onOpenPlan} style={{ ...smallButton, padding: '8px 16px', marginRight: 0 }}>Open this month&apos;s plan</button>
     </div>
   )
 }
@@ -825,7 +902,7 @@ function PerformanceCard({ perf }: { perf: Performance | null }) {
   if (!perf || !book || !first || !last) {
     return (
       <div style={card}>
-        <h3 style={{ marginTop: 0 }}>Your paper book</h3>
+        <h3 style={{ marginTop: 0 }}>Your paper book against NIFTY 500</h3>
         <p style={muted}>Starts with the first paper rebalance. Values are recorded every trading day at 15:25 IST.</p>
       </div>
     )
@@ -838,7 +915,7 @@ function PerformanceCard({ perf }: { perf: Performance | null }) {
     ? ((benchEnd.value - benchStart.value) / benchStart.value) * 100 : null
   return (
     <div style={card}>
-      <h3 style={{ marginTop: 0 }}>Your paper book</h3>
+      <h3 style={{ marginTop: 0 }}>Your paper book against NIFTY 500</h3>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead><tr><th style={th}>Mode</th><th style={th}>Started</th><th style={th}>Value</th><th style={th}>Return</th><th style={th}>NIFTY 500 same period</th></tr></thead>
         <tbody>
