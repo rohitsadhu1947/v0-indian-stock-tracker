@@ -3,6 +3,7 @@ import type { FundamentalData, FundamentalScore } from '@/lib/fundamentals-utils
 
 export type ActiveTab =
   | 'plan'
+  | 'screen'
   | 'stockcheck'
   | 'fundamentals'
   | 'market'
