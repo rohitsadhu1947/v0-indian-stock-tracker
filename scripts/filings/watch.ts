@@ -7,7 +7,8 @@
  *   npm run filings:watch -- --dry-run    print the messages instead of sending them
  *
  * Every filing is stored in data/filings.db with the time NSE published it
- * and the time this machine first saw it. That history is what lets us
+ * and the time this machine first saw it, and copied to the app's database
+ * when the filings table exists there. That history is what lets us
  * measure, later, what prices did in the minutes after each kind of filing.
  *
  * Telegram details come from TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID, or
@@ -71,6 +72,26 @@ async function telegramTargets(): Promise<Array<{ token: string; chat: string }>
   return rows.map(r => ({ token: r.token!, chat: r.chat! }))
 }
 
+/**
+ * Copies filings to the app's database, so the deployed app can show them.
+ * Returns a no-op when there is no database or the filings table is missing.
+ */
+async function appDatabaseWriter(): Promise<(rows: Array<Record<string, unknown>>) => Promise<void>> {
+  if (!process.env.DATABASE_URL) return async () => {}
+  const { db } = await import('@/db')
+  const { filings } = await import('@/db/schema')
+  let working = true
+  return async rows => {
+    if (!working || !rows.length) return
+    try {
+      await db.insert(filings).values(rows as any).onConflictDoNothing()
+    } catch (error: any) {
+      working = false
+      console.error(`Not copying filings to the app database: ${String(error.message).split('\n')[0]}`)
+    }
+  }
+}
+
 const istHour = () => (new Date().getUTCHours() + 5.5 + new Date().getUTCMinutes() / 60) % 24
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -79,6 +100,7 @@ async function main() {
   const { match, ranks } = loadReference()
   const targets = DRY_RUN ? [] : await telegramTargets()
   if (!DRY_RUN && !targets.length) console.log('No Telegram details found: filings will be stored but no messages sent.')
+  const copyToApp = await appDatabaseWriter()
   const known = db.prepare('select 1 from filings where id = ?')
   const insert = db.prepare('insert into filings (id, published_at, first_seen_at, company, symbol, rank, subject, category, text, url, alerted) values (?,?,?,?,?,?,?,?,?,?,?)')
 
@@ -86,6 +108,7 @@ async function main() {
     const seenAt = new Date()
     const fresh: Filing[] = (await fetchFeed()).filter(f => !known.get(f.id))
     let alerted = 0
+    const stored: Array<Record<string, unknown>> = []
     // Oldest first, so messages arrive in the order the filings were made
     for (const f of fresh.sort((a, b) => a.publishedAt.localeCompare(b.publishedAt))) {
       const symbol = match(f.company)
@@ -100,7 +123,9 @@ async function main() {
         alerted++
       }
       insert.run(f.id, f.publishedAt, seenAt.toISOString(), f.company, symbol, rank, f.subject, category, f.text, f.url, send && !DRY_RUN && targets.length ? 1 : 0)
+      stored.push({ id: f.id, publishedAt: new Date(f.publishedAt), firstSeenAt: seenAt, company: f.company, symbol, rank, subject: f.subject, category, text: f.text, url: f.url })
     }
+    await copyToApp(stored)
     if (fresh.length) console.log(`${seenAt.toISOString()}  ${fresh.length} new filings, ${alerted} worth a message`)
   }
 

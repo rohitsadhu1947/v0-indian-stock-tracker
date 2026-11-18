@@ -827,6 +827,26 @@ export const monthlySignals = pgTable('monthly_signals', {
   modeDateIdx: uniqueIndex('monthly_signals_mode_date_idx').on(table.mode, table.signalDate),
 }))
 
+/**
+ * Company filings from NSE's public feed, stored as they are published
+ * (scripts/filings/watch.ts). `rank` is the stock's trading rank that month.
+ */
+export const filings = pgTable('filings', {
+  id: text('id').primaryKey(),
+  publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
+  firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+  company: text('company').notNull(),
+  symbol: text('symbol'),
+  rank: integer('rank'),
+  subject: text('subject').notNull(),
+  category: text('category').notNull(),
+  text: text('text').notNull(),
+  url: text('url').notNull(),
+}, (table) => ({
+  publishedIdx: index('filings_published_idx').on(table.publishedAt),
+  symbolIdx: index('filings_symbol_idx').on(table.symbol, table.publishedAt),
+}))
+
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
 export const marketDataRuns = pgTable('market_data_runs', {
   id: serial('id').primaryKey(),
