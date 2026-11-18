@@ -7,6 +7,7 @@
  * reason to trade: that has to be measured first.
  */
 import { createHash } from 'crypto'
+import { CATEGORY_LABEL, type FilingCategory } from './categories'
 
 export const FEED_URL = 'https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml'
 const USER_AGENT = 'indian-stock-tracker/1.0 (personal research; public RSS feed)'
@@ -22,23 +23,7 @@ export interface Filing {
   publishedAt: string
 }
 
-export type FilingCategory =
-  | 'orders' | 'results' | 'deal' | 'capital' | 'rating' | 'regulatory' | 'management' | 'update' | 'routine'
-
-export const CATEGORY_LABEL: Record<FilingCategory, string> = {
-  orders: 'Order or contract',
-  results: 'Results or board meeting outcome',
-  deal: 'Acquisition, merger or sale',
-  capital: 'Dividend, bonus, buyback or fund raising',
-  rating: 'Credit rating',
-  regulatory: 'Penalty, litigation or default',
-  management: 'Senior resignation or auditor change',
-  update: 'Press release or business update',
-  routine: 'Routine',
-}
-
-/** Kinds worth a message: the ones that can change what a company is worth. */
-export const MATERIAL: ReadonlySet<FilingCategory> = new Set(['orders', 'results', 'deal', 'capital', 'rating', 'regulatory', 'management'])
+export { CATEGORY_LABEL, MATERIAL, type FilingCategory } from './categories'
 
 const decode = (s: string) => s
   .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
