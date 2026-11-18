@@ -101,6 +101,14 @@ async function main() {
   const targets = DRY_RUN ? [] : await telegramTargets()
   if (!DRY_RUN && !targets.length) console.log('No Telegram details found: filings will be stored but no messages sent.')
   const copyToApp = await appDatabaseWriter()
+  // Filings stored here before the app had its table: copy them across once (already-copied rows are skipped)
+  const earlier = db.prepare('select id, published_at, first_seen_at, company, symbol, rank, subject, category, text, url from filings').all() as Array<Record<string, any>>
+  for (let i = 0; i < earlier.length; i += 500) {
+    await copyToApp(earlier.slice(i, i + 500).map(r => ({
+      id: r.id, publishedAt: new Date(r.published_at), firstSeenAt: new Date(r.first_seen_at), company: r.company,
+      symbol: r.symbol, rank: r.rank, subject: r.subject, category: r.category, text: r.text, url: r.url,
+    })))
+  }
   const known = db.prepare('select 1 from filings where id = ?')
   const insert = db.prepare('insert into filings (id, published_at, first_seen_at, company, symbol, rank, subject, category, text, url, alerted) values (?,?,?,?,?,?,?,?,?,?,?)')
 
