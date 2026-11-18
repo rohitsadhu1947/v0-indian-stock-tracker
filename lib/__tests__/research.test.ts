@@ -28,6 +28,7 @@ function stock(symbol: string, sessions: number[], price: (i: number) => number,
   const fill = close.map((c, i) => (opts.fill ? opts.fill(i) : i === 0 ? c : close[i - 1]))
   return {
     symbol, dates: Int32Array.from(sessions.slice(0, n)), fill: Float64Array.from(fill), close: Float64Array.from(close),
+    open: Float64Array.from(close), high: Float64Array.from(close), low: Float64Array.from(close),
     turnover: Float64Array.from(close.map(() => 1e9)), dividendFactor: Float64Array.from(close.map(() => 1)),
     deliveryShare: Float64Array.from(close.map(() => 0.5)), resultsDates: new Int32Array(),
   }

@@ -18,6 +18,10 @@ export interface StockSeries {
    * 19% below its previous close on 14 Mar 2011 and closed unchanged).
    */
   fill: Float64Array
+  /** The session's adjusted open, high and low. Used by the swing tests, where targets and stops are hit inside the day. */
+  open: Float64Array
+  high: Float64Array
+  low: Float64Array
   turnover: Float64Array       // rupees traded
   /** Share of the day's volume taken into delivery, 0 to 1; NaN when NSE published none. */
   deliveryShare: Float64Array

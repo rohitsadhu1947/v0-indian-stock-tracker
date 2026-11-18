@@ -17,6 +17,9 @@
     "check": "tsc --noEmit && vitest run",
     "data:sync": "tsx scripts/data/download-nse.ts && tsx scripts/data/ingest-nse.ts && tsx scripts/data/build-adjustments.ts && tsx scripts/data/build-universe.ts",
     "research": "tsx scripts/research/run.ts",
+    "research:swing": "tsx scripts/research/swing.ts",
+    "research:swing-book": "tsx scripts/research/swing-book.ts",
+    "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
   },
   "dependencies": {
