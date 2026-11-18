@@ -1,0 +1,358 @@
+{
+ "note": "Pilot on order-win announcements for the 500 most traded stocks. Buy two minutes after the announcement, or at the next open when the market is shut. Returns in percent. \"After costs\" subtracts 0.31% for an intraday round trip and 0.45% for delivery. \"Win\" means beating the cost.",
+ "source": "Announcement times from the Drishti API; minute prices from Zerodha.",
+ "period": {
+  "from": "2025-04-03",
+  "to": "2026-11-18"
+ },
+ "announcements": 806,
+ "tradesMeasured": 740,
+ "withoutPrices": 16,
+ "withoutAnEntry": 0,
+ "groups": {
+  "during market hours": {
+   "trades": 298,
+   "days": 184,
+   "measures": {
+    "runUp": {
+     "label": "Move before you could buy",
+     "trades": 297,
+     "avgPct": 0.13,
+     "medianPct": 0.03,
+     "winPct": 56,
+     "afterCostsPct": null,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "m5": {
+     "label": "Sell 5 minutes later",
+     "trades": 298,
+     "avgPct": 0.02,
+     "medianPct": -0.01,
+     "winPct": 14,
+     "afterCostsPct": -0.29,
+     "vsNiftyPct": 0.02,
+     "tStat": 0.61
+    },
+    "m15": {
+     "label": "Sell 15 minutes later",
+     "trades": 297,
+     "avgPct": 0.07,
+     "medianPct": 0,
+     "winPct": 22,
+     "afterCostsPct": -0.24,
+     "vsNiftyPct": 0.08,
+     "tStat": 1.22
+    },
+    "m30": {
+     "label": "Sell 30 minutes later",
+     "trades": 283,
+     "avgPct": 0.05,
+     "medianPct": -0.01,
+     "winPct": 25,
+     "afterCostsPct": -0.26,
+     "vsNiftyPct": 0.07,
+     "tStat": 1.29
+    },
+    "m60": {
+     "label": "Sell 60 minutes later",
+     "trades": 258,
+     "avgPct": 0.05,
+     "medianPct": -0.04,
+     "winPct": 28,
+     "afterCostsPct": -0.26,
+     "vsNiftyPct": 0.07,
+     "tStat": 0.8
+    },
+    "toClose": {
+     "label": "Sell at that day's close",
+     "trades": 298,
+     "avgPct": -0.02,
+     "medianPct": -0.09,
+     "winPct": 33,
+     "afterCostsPct": -0.33,
+     "vsNiftyPct": 0.01,
+     "tStat": 0.06
+    },
+    "targetStop": {
+     "label": "Sell at +2% or -2%, else the close",
+     "trades": 298,
+     "avgPct": -0.03,
+     "medianPct": -0.08,
+     "winPct": 35,
+     "afterCostsPct": -0.34,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "toNextClose": {
+     "label": "Sell at the next day's close",
+     "trades": 298,
+     "avgPct": 0.11,
+     "medianPct": -0.16,
+     "winPct": 38,
+     "afterCostsPct": -0.34,
+     "vsNiftyPct": 0.1,
+     "tStat": 0.46
+    }
+   }
+  },
+  "outside market hours": {
+   "trades": 442,
+   "days": 223,
+   "measures": {
+    "runUp": {
+     "label": "Move before you could buy",
+     "trades": 298,
+     "avgPct": 0.88,
+     "medianPct": 0.67,
+     "winPct": 78,
+     "afterCostsPct": null,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "m5": {
+     "label": "Sell 5 minutes later",
+     "trades": 442,
+     "avgPct": 0.06,
+     "medianPct": -0.04,
+     "winPct": 37,
+     "afterCostsPct": -0.25,
+     "vsNiftyPct": 0.08,
+     "tStat": 1.12
+    },
+    "m15": {
+     "label": "Sell 15 minutes later",
+     "trades": 442,
+     "avgPct": -0.02,
+     "medianPct": -0.13,
+     "winPct": 38,
+     "afterCostsPct": -0.33,
+     "vsNiftyPct": 0.01,
+     "tStat": 0.08
+    },
+    "m30": {
+     "label": "Sell 30 minutes later",
+     "trades": 442,
+     "avgPct": -0.05,
+     "medianPct": -0.21,
+     "winPct": 37,
+     "afterCostsPct": -0.36,
+     "vsNiftyPct": -0.05,
+     "tStat": -0.61
+    },
+    "m60": {
+     "label": "Sell 60 minutes later",
+     "trades": 440,
+     "avgPct": -0.04,
+     "medianPct": -0.22,
+     "winPct": 38,
+     "afterCostsPct": -0.35,
+     "vsNiftyPct": -0.06,
+     "tStat": -0.62
+    },
+    "toClose": {
+     "label": "Sell at that day's close",
+     "trades": 442,
+     "avgPct": -0.23,
+     "medianPct": -0.42,
+     "winPct": 35,
+     "afterCostsPct": -0.54,
+     "vsNiftyPct": -0.23,
+     "tStat": -1.71
+    },
+    "targetStop": {
+     "label": "Sell at +2% or -2%, else the close",
+     "trades": 442,
+     "avgPct": -0.12,
+     "medianPct": -0.32,
+     "winPct": 40,
+     "afterCostsPct": -0.43,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "toNextClose": {
+     "label": "Sell at the next day's close",
+     "trades": 441,
+     "avgPct": -0.2,
+     "medianPct": -0.47,
+     "winPct": 34,
+     "afterCostsPct": -0.65,
+     "vsNiftyPct": -0.09,
+     "tStat": -0.4
+    }
+   }
+  },
+  "during market hours, 200 most traded": {
+   "trades": 108,
+   "days": 81,
+   "measures": {
+    "runUp": {
+     "label": "Move before you could buy",
+     "trades": 107,
+     "avgPct": 0.06,
+     "medianPct": 0.01,
+     "winPct": 51,
+     "afterCostsPct": null,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "m5": {
+     "label": "Sell 5 minutes later",
+     "trades": 108,
+     "avgPct": 0.05,
+     "medianPct": -0.01,
+     "winPct": 9,
+     "afterCostsPct": -0.26,
+     "vsNiftyPct": 0.06,
+     "tStat": 1.71
+    },
+    "m15": {
+     "label": "Sell 15 minutes later",
+     "trades": 108,
+     "avgPct": 0.05,
+     "medianPct": 0.01,
+     "winPct": 19,
+     "afterCostsPct": -0.26,
+     "vsNiftyPct": 0.07,
+     "tStat": 1.52
+    },
+    "m30": {
+     "label": "Sell 30 minutes later",
+     "trades": 106,
+     "avgPct": 0.01,
+     "medianPct": 0,
+     "winPct": 21,
+     "afterCostsPct": -0.3,
+     "vsNiftyPct": 0.03,
+     "tStat": 0.49
+    },
+    "m60": {
+     "label": "Sell 60 minutes later",
+     "trades": 96,
+     "avgPct": -0.06,
+     "medianPct": -0.09,
+     "winPct": 25,
+     "afterCostsPct": -0.37,
+     "vsNiftyPct": -0.04,
+     "tStat": -0.52
+    },
+    "toClose": {
+     "label": "Sell at that day's close",
+     "trades": 108,
+     "avgPct": -0.04,
+     "medianPct": -0.16,
+     "winPct": 30,
+     "afterCostsPct": -0.35,
+     "vsNiftyPct": 0.01,
+     "tStat": 0.05
+    },
+    "targetStop": {
+     "label": "Sell at +2% or -2%, else the close",
+     "trades": 108,
+     "avgPct": -0.07,
+     "medianPct": -0.14,
+     "winPct": 31,
+     "afterCostsPct": -0.38,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "toNextClose": {
+     "label": "Sell at the next day's close",
+     "trades": 108,
+     "avgPct": 0.24,
+     "medianPct": 0.09,
+     "winPct": 40,
+     "afterCostsPct": -0.21,
+     "vsNiftyPct": 0.12,
+     "tStat": 0.58
+    }
+   }
+  },
+  "during market hours, ranks 201 to 500": {
+   "trades": 190,
+   "days": 142,
+   "measures": {
+    "runUp": {
+     "label": "Move before you could buy",
+     "trades": 190,
+     "avgPct": 0.17,
+     "medianPct": 0.05,
+     "winPct": 58,
+     "afterCostsPct": null,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "m5": {
+     "label": "Sell 5 minutes later",
+     "trades": 190,
+     "avgPct": 0,
+     "medianPct": -0.02,
+     "winPct": 17,
+     "afterCostsPct": -0.31,
+     "vsNiftyPct": 0.01,
+     "tStat": 0.27
+    },
+    "m15": {
+     "label": "Sell 15 minutes later",
+     "trades": 189,
+     "avgPct": 0.07,
+     "medianPct": -0.02,
+     "winPct": 23,
+     "afterCostsPct": -0.24,
+     "vsNiftyPct": 0.1,
+     "tStat": 1.2
+    },
+    "m30": {
+     "label": "Sell 30 minutes later",
+     "trades": 177,
+     "avgPct": 0.08,
+     "medianPct": -0.01,
+     "winPct": 28,
+     "afterCostsPct": -0.23,
+     "vsNiftyPct": 0.1,
+     "tStat": 1.27
+    },
+    "m60": {
+     "label": "Sell 60 minutes later",
+     "trades": 162,
+     "avgPct": 0.12,
+     "medianPct": -0.02,
+     "winPct": 30,
+     "afterCostsPct": -0.19,
+     "vsNiftyPct": 0.12,
+     "tStat": 1.02
+    },
+    "toClose": {
+     "label": "Sell at that day's close",
+     "trades": 190,
+     "avgPct": 0,
+     "medianPct": -0.01,
+     "winPct": 35,
+     "afterCostsPct": -0.31,
+     "vsNiftyPct": -0.03,
+     "tStat": -0.19
+    },
+    "targetStop": {
+     "label": "Sell at +2% or -2%, else the close",
+     "trades": 190,
+     "avgPct": -0.01,
+     "medianPct": 0,
+     "winPct": 37,
+     "afterCostsPct": -0.32,
+     "vsNiftyPct": null,
+     "tStat": null
+    },
+    "toNextClose": {
+     "label": "Sell at the next day's close",
+     "trades": 190,
+     "avgPct": 0.03,
+     "medianPct": -0.21,
+     "winPct": 36,
+     "afterCostsPct": -0.42,
+     "vsNiftyPct": -0.06,
+     "tStat": -0.24
+    }
+   }
+  }
+ }
+}
