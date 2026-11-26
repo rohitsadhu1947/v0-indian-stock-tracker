@@ -8,6 +8,8 @@ import { dataFreshness, liveUniverse, loadBars } from '@/lib/portfolio/data'
 import { rankByFactors } from '@/lib/portfolio/factors'
 import { INDEX_MEMBERS } from '@/lib/portfolio/index-members'
 import { SECTOR_BY_SYMBOL } from '@/lib/portfolio/sectors'
+import { fundamentalFacts, type FundamentalFacts } from '@/lib/fundamentals/core'
+import { latestResults } from '@/lib/fundamentals/service'
 import { screenFacts, type ScreenFacts } from './core'
 
 export interface ScreenRow extends ScreenFacts {
@@ -16,21 +18,38 @@ export interface ScreenRow extends ScreenFacts {
   nifty100: boolean
   /** Rank today among the most traded stocks, by each mode's ranking. Missing when the stock cannot be ranked. */
   ranks: Partial<Record<RiskMode, number>>
+  /** Latest quarterly result, when we have one for the stock. */
+  results?: FundamentalFacts
 }
 
 export interface Screen {
   asOf: string
   /** How many stocks the ranks are out of. */
   ranked: number
+  /** How many NIFTY 100 and NIFTY 500 stocks have quarterly results. */
+  withResults: { nifty100: number; nifty500: number }
   rows: ScreenRow[]
 }
 
 const MODE_IDS = Object.keys(MODES) as RiskMode[]
-let cached: Screen | null = null
+let cached: Omit<Screen, 'withResults'> | null = null
 
 const daysBefore = (iso: string, days: number) => new Date(new Date(iso + 'T00:00:00Z').getTime() - days * 86400000).toISOString().slice(0, 10)
 
+/** The price screen is built once a day. Quarterly results are read on every call, so newly loaded ones show at once. */
 export async function buildScreen(): Promise<Screen | null> {
+  const prices = await buildPriceScreen()
+  if (!prices) return null
+  const results = await latestResults(prices.rows.map(r => r.symbol))
+  const rows = prices.rows.map(r => {
+    const result = results.get(r.symbol)
+    return result ? { ...r, results: fundamentalFacts(result, r.close) } : r
+  })
+  const have = rows.filter(r => r.results)
+  return { ...prices, rows, withResults: { nifty100: have.filter(r => r.nifty100).length, nifty500: have.length } }
+}
+
+async function buildPriceScreen(): Promise<Omit<Screen, 'withResults'> | null> {
   const { latestDate } = await dataFreshness()
   if (!latestDate) return null
   if (cached?.asOf === latestDate) return cached

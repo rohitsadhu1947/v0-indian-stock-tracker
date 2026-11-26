@@ -3,7 +3,7 @@
  * Using Drizzle ORM with Neon PostgreSQL
  */
 
-import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex, varchar, doublePrecision, date } from 'drizzle-orm/pg-core'
+import { pgTable, text, serial, integer, real, timestamp, boolean, jsonb, index, uniqueIndex, varchar, doublePrecision, date, primaryKey } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 // ============================================
@@ -845,6 +845,30 @@ export const filings = pgTable('filings', {
 }, (table) => ({
   publishedIdx: index('filings_published_idx').on(table.publishedAt),
   symbolIdx: index('filings_symbol_idx').on(table.symbol, table.publishedAt),
+}))
+
+/**
+ * Quarterly results for the screener, from the Drishti API
+ * (scripts/fundamentals/fetch.ts). Amounts are rupees crore.
+ */
+export const quarterlyResults = pgTable('quarterly_results', {
+  symbol: text('symbol').notNull(),
+  quarter: text('quarter').notNull(),
+  periodLabel: text('period_label'),
+  filedAt: timestamp('filed_at', { withTimezone: true }).notNull(),
+  basis: text('basis').notNull(),
+  revenueCr: doublePrecision('revenue_cr'),
+  revenueYoyPct: doublePrecision('revenue_yoy_pct'),
+  operatingProfitCr: doublePrecision('operating_profit_cr'),
+  patCr: doublePrecision('pat_cr'),
+  patYoyPct: doublePrecision('pat_yoy_pct'),
+  eps: doublePrecision('eps'),
+  epsTtm: doublePrecision('eps_ttm'),
+  summary: text('summary'),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.symbol, table.quarter] }),
+  filedIdx: index('quarterly_results_filed_idx').on(table.symbol, table.filedAt),
 }))
 
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
