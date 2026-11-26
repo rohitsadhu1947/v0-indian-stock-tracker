@@ -34,6 +34,15 @@ const pct = (x: number) => Math.round(x * 10000) / 100
 const round2 = (x: number) => Math.round(x * 100) / 100
 const clip = (x: number) => Math.max(-0.25, Math.min(0.25, x))
 
+// Rules whose trades go on to the minute-price test (scripts/research/fo-daytrade.ts), with a random sample of
+// ordinary stock-days to compare against. Zerodha has minute prices from 2015.
+const DAY_TRADE_KEYS = new Set(['ban-entry', 'ban-exit', 'long-buildup-strong', 'call-volume-spike', 'short-buildup-strong'])
+const MINUTE_START = 20150201
+const CONTROL_SHARE = 0.009
+let seed = 20261126
+const random = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32
+const dayTrades: Array<{ signal: string; symbol: string; date: number }> = []
+
 const market = loadMarketCached()
 const sessionIndex = new Map<number, number>()
 market.sessions.forEach((d, i) => sessionIndex.set(d, i))
@@ -151,7 +160,13 @@ for (const p of prepared) {
     if (!day) baseline.set(date, (day = { sum: { gap: 0, day: 0, hold3: 0, hold5: 0 }, count: 0 }))
     for (const h of HORIZONS) day.sum[h] += out[h]
     day.count++
-    FO_SIGNALS.forEach((signal, g) => { if (signal.fires(p.facts[k])) trades[g].push({ date, out }) })
+    const tradeDate = s.dates[i + 1]
+    if (tradeDate >= MINUTE_START && random() < CONTROL_SHARE) dayTrades.push({ signal: 'control', symbol: p.symbol, date: tradeDate })
+    FO_SIGNALS.forEach((signal, g) => {
+      if (!signal.fires(p.facts[k])) return
+      trades[g].push({ date, out })
+      if (tradeDate >= MINUTE_START && DAY_TRADE_KEYS.has(signal.key)) dayTrades.push({ signal: signal.key, symbol: p.symbol, date: tradeDate })
+    })
   })
 }
 
@@ -234,6 +249,8 @@ for (const f of INDEX_FEATURES) {
 }
 
 mkdirSync('research/results', { recursive: true })
+mkdirSync('data/fo', { recursive: true })
+writeFileSync('data/fo/day-trades.json', JSON.stringify(dayTrades))
 writeFileSync('research/results/fo-signals.json', JSON.stringify({
   generatedAt: new Date().toISOString(), from: START, to: market.sessions[market.sessions.length - 1],
   note: 'Gross returns, before costs. Excess is against the average of all F&O stocks over the same sessions, tested on daily averages.',
@@ -244,6 +261,7 @@ writeFileSync('research/results/fo-signals.json', JSON.stringify({
 const cell = (x: { excessPct: number; t: number } | null | undefined) => (x ? `${x.excessPct >= 0 ? '+' : ''}${x.excessPct.toFixed(2)} (${x.t.toFixed(1)})`.padStart(14) : ''.padStart(14))
 console.log(`${baselineDays.length} days, ${baselineDays.reduce((a, d) => a + d.count, 0)} stock-days, ${missing} F&O stocks not in the store`)
 console.log(`All F&O stocks, average: gap ${baselineSummary.gap}%, day ${baselineSummary.day}%, 3 days ${baselineSummary.hold3}%, 5 days ${baselineSummary.hold5}%`)
+console.log(`${dayTrades.length} trades written for the minute-price test (${new Set(dayTrades.map(t => `${t.symbol}:${t.date}`)).size} stock-days)`)
 console.log(`\n${'Rule'.padEnd(34)}${'trades'.padStart(8)}${'/month'.padStart(8)}  excess % (t):${'gap'.padStart(8)}${'day'.padStart(14)}${'3 days'.padStart(14)}${'5 days'.padStart(14)}   day by period`)
 for (const r of stockResults) {
   const h = r.horizons as Record<Horizon, any>

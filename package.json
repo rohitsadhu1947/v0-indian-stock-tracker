@@ -20,6 +20,7 @@
     "research:swing": "tsx scripts/research/swing.ts",
     "research:swing-book": "tsx scripts/research/swing-book.ts",
     "research:fo": "tsx scripts/research/fo-signals.ts",
+    "research:fo-daytrade": "tsx scripts/research/fo-daytrade.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
