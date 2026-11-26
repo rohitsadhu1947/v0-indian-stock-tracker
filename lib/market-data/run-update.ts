@@ -1,11 +1,12 @@
 /**
- * Run the NSE update, tell the admins when it fails, and freeze the month's
- * picks for the live track record. Shared by the market-data cron and the
+ * Run the NSE update, tell the admins when it fails, freeze the month's
+ * picks for the live track record, and run the paper day-trade tracker. Shared by the market-data cron and the
  * morning cron.
  */
 import { db } from '@/db'
 import { userPreferences, users } from '@/db/schema'
 import { and, eq, isNotNull } from 'drizzle-orm'
+import { runFoWatch } from '@/lib/fo-watch/service'
 import logger from '@/lib/logger'
 import { recordMonthlySignals } from '@/lib/portfolio/signals'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
@@ -25,6 +26,8 @@ export async function runMarketDataUpdate(): Promise<UpdateSummary> {
   } catch (err: any) {
     logger.error('Recording monthly signals failed', { error: err.message })
   }
+  // The paper day-trade tracker reads the same evening's F&O files. Its failures are logged inside and never fail this run
+  await runFoWatch()
   return summary
 }
 
