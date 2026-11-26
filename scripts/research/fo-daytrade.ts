@@ -133,7 +133,14 @@ const results = Object.keys(SIDE).map(signal => ({
   book: signal === 'control' ? null : {
     tight: book(rows.get(`${signal}|main`) ?? [], COSTS.tight, sessions),
     cautious: book(rows.get(`${signal}|main`) ?? [], COSTS.cautious, sessions),
+    'cautious with a 3% stop': book(rows.get(`${signal}|stop3`) ?? [], COSTS.cautious, sessions),
   },
+  // The biggest moves either way, to check for bad prices
+  extremes: (() => {
+    const list = (rows.get(`${signal}|main`) ?? []).slice().sort((x, y) => x.ret - y.ret)
+    const show = (r: Row) => `${r.symbol} ${r.date} ${pct(r.ret)}%`
+    return { worst: list.slice(0, 4).map(show), best: list.slice(-4).map(show) }
+  })(),
 }))
 
 mkdirSync('research/results', { recursive: true })
@@ -153,6 +160,7 @@ for (const r of results) {
     console.log(`  ${v.label.padEnd(28)} n ${String(s.trades).padStart(5)}  gross ${s.grossPct.toFixed(2).padStart(6)}% (t ${s.t.toFixed(1)})  vs NIFTY ${s.hedgedPct.toFixed(2).padStart(6)}% (t ${s.hedgedT.toFixed(1)})  net ${s.netTightPct.toFixed(2)} / ${s.netCautiousPct.toFixed(2)}  win ${s.winPct.toFixed(0)}%  stopped ${s.stoppedPct.toFixed(0)}%  worst ${s.worstPct.toFixed(1)}%`)
   }
   console.log(`  by year (09:20 to 15:15, gross / net cautious): ${Object.entries(r.byYear).map(([y, s]: any) => `${y}: ${s.grossPct.toFixed(2)}/${s.netCautiousPct.toFixed(2)} (${s.trades})`).join('  ')}`)
+  console.log(`  extremes: worst ${r.extremes.worst.join(', ')} | best ${r.extremes.best.join(', ')}`)
   if (r.book) for (const [name, b] of Object.entries(r.book) as any) {
     console.log(`  book, ${name} costs: ${b.annualReturnPct}% a year, Sharpe ${b.sharpe}, worst fall ${b.maxDrawdownPct}%, worst day ${b.worstDayPct}%, ${b.daysTraded} days traded. ${Object.entries(b.byYear).map(([y, v]) => `${y}: ${v}`).join(' ')}`)
   }
