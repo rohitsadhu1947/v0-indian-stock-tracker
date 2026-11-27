@@ -22,7 +22,7 @@ import { calendarYearReturns, periodStats, slice, type Curve } from '@/lib/resea
 import { simulate, type SimOptions, type Strategy } from '@/lib/research/simulate'
 import { factorPortfolio } from '@/lib/research/strategies'
 import { BOND_FUND_TAX, GOLD_AND_FOREIGN_FUND_TAX, type TaxGroup } from '@/lib/research/tax'
-import { PORTFOLIO_RULES } from '@/lib/portfolio/config'
+import { MODES, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import { SECTOR_BY_SYMBOL } from '@/lib/portfolio/sectors'
 
 const START = 20110131
@@ -137,11 +137,26 @@ console.log(Object.entries(byYear).map(([y, r]) => `${y.slice(2)}: ${r.growth} /
 const g = pick('growth').stats.full
 console.log(`\nGrowth's worst fall ran from ${g.drawdownFrom} to ${g.drawdownTo}.`)
 
+// ---- Every mode of the Monthly Plan with the three funds, for the figures the page shows ----
+const PLAN_SHARES = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+const byMode: Record<string, Record<string, { cagrPct: number; maxDrawdownPct: number; worstYearPct: number }>> = {}
+console.log('\nEach mode with gold, bonds and US: growth a year (worst fall) by share in funds')
+for (const mode of Object.keys(MODES) as RiskMode[]) {
+  const base = factorPortfolio({ factors: MODES[mode].factors, exitRank: PORTFOLIO_RULES.exitRank, maxPerSector: PORTFOLIO_RULES.maxPerSector, sectorOf: s => SECTOR_BY_SYMBOL[s] })
+  byMode[mode] = {}
+  for (const share of PLAN_SHARES) {
+    const full = run(share ? withFunds(base, [GOLD, BOND, US], share) : base).stats.full
+    byMode[mode][String(share * 100)] = { cagrPct: full.cagrPct, maxDrawdownPct: full.maxDrawdownPct, worstYearPct: full.worstYearPct }
+  }
+  console.log(`${mode.padEnd(11)}${PLAN_SHARES.map(sh => { const x = byMode[mode][String(sh * 100)]; return `${sh * 100}%: ${x.cagrPct}% (${x.maxDrawdownPct})` }).join('   ')}`)
+}
+
 mkdirSync('research/results', { recursive: true })
 writeFileSync('research/results/funds.json', JSON.stringify({
   generatedAt: new Date().toISOString(), from: START, to: END,
   note: 'One book on daily prices, Rs 10 lakh at the start. Charges and 0.1% slippage a side on every order, funds charged like shares. Idle cash earns 6%. Tax: shares and share index funds under the equity rules; gold and US funds 12.5% after 12 months and 30% before; bond funds 30% always; 4% cess; a loss in one group is not set off against another. A fund not yet listed leaves its share in cash. The bond fund starts in 2015 and the US fund in 2011.',
   funds: fundRows,
   books: results.map(({ curve, ...rest }) => rest),
+  byModeAndFundSharePct: byMode,
   byYear,
 }, null, 1))

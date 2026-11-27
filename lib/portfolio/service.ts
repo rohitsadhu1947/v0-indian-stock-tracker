@@ -15,16 +15,16 @@
 
 import { db } from '@/db'
 import { modelPortfolios, modelPortfolioEvents } from '@/db/schema'
-import { and, eq, asc } from 'drizzle-orm'
+import { and, eq, asc, desc } from 'drizzle-orm'
 import type { BrokerClient, BrokerHolding } from '@/lib/broker'
-import { MODES, PORTFOLIO_RULES, type RiskMode } from './config'
+import { FUND_SHARES, MODES, PLAN_FUNDS, PORTFOLIO_RULES, type RiskMode } from './config'
 import type { TrendRegime } from './regime'
 import { exposure, rebalanceStatus, type Exposure } from './allocation'
 import { rankByFactors, selectWithBuffer, stockFacts, type FactorRanked, type StockFacts } from './factors'
 import { planRebalance, applyOrders, bookValue, type BookState, type Order } from './rebalance'
 import { loadBars, dataFreshness, signalDate, istDate, type DataFreshness } from './data'
 import { brokerHoldings, liveQuotes, type LiveQuote } from './live'
-import { actionKind, exitReason, holdingValue, isMarketHours, orderReason, type ActionKind, type ReasonContext } from './plan-core'
+import { actionKind, exitReason, fundLabel, fundOrderReason, holdingValue, isMarketHours, isPlanFund, orderReason, planTargets, type ActionKind, type ReasonContext } from './plan-core'
 import { rankingInputs, SECTOR_CAP } from './signals'
 import { SECTOR_BY_SYMBOL, sectorOf } from './sectors'
 
@@ -40,6 +40,16 @@ async function getPortfolio(userId: number) {
   const [p] = await db.select().from(modelPortfolios)
     .where(and(eq(modelPortfolios.userId, userId), eq(modelPortfolios.kind, BOOK_KIND))).limit(1)
   return p ?? null
+}
+
+/** The share of the book kept in funds at the last rebalance. 0 for a book that has never held them. */
+async function bookFundShare(portfolioId: number | undefined): Promise<number> {
+  if (!portfolioId) return 0
+  const [last] = await db.select({ details: modelPortfolioEvents.details }).from(modelPortfolioEvents)
+    .where(and(eq(modelPortfolioEvents.portfolioId, portfolioId), eq(modelPortfolioEvents.type, 'rebalance')))
+    .orderBy(desc(modelPortfolioEvents.id)).limit(1)
+  const share = Number((last?.details as Record<string, unknown> | null)?.fundShare ?? 0)
+  return FUND_SHARES.includes(share) ? share : 0
 }
 
 function stateOf(p: { cash: number; holdings: unknown } | null, capital: number): BookState {
@@ -88,6 +98,10 @@ export interface MonthlyPlan {
   /** The mode being looked at. */
   mode: RiskMode
   trendFilter: boolean
+  /** Share of the book this plan keeps in funds, 0 to 0.5. */
+  fundShare: number
+  /** The funds and what each is meant to be of the book, in percent. Empty when the share is 0. */
+  funds: Array<{ symbol: string; label: string; targetPct: number; price: number | null }>
   modeInfo: (typeof MODES)[RiskMode]
   regime: TrendRegime | null
   exposure: Exposure
@@ -107,6 +121,8 @@ export interface MonthlyPlan {
     exists: boolean
     /** The mode the book follows (the mode it was last rebalanced in). */
     mode: RiskMode | null
+    /** Share kept in funds at the last rebalance. */
+    fundShare: number
     startingCapital: number
     cash: number
     value: number
@@ -142,6 +158,8 @@ export async function buildMonthlyPlan(params: {
   userId: number
   mode: RiskMode
   trendFilter?: boolean
+  /** Share of the book to keep in funds. Left out: the share the book already uses. */
+  fundShare?: number
   capital?: number
   client: BrokerClient | null
 }): Promise<MonthlyPlan> {
@@ -154,6 +172,9 @@ export async function buildMonthlyPlan(params: {
   const asOf = asOfDate ?? istDate()
   const state = stateOf(portfolio, capital)
   const held = Object.keys(state.holdings)
+  const ownFundShare = await bookFundShare(portfolio?.id)
+  const fundShare = params.fundShare != null && FUND_SHARES.includes(params.fundShare) ? params.fundShare : ownFundShare
+  const shareChanged = !!portfolio && fundShare !== ownFundShare
   const bookMode = portfolio ? ((portfolio.mode in MODES ? portfolio.mode : mode) as RiskMode) : null
   const kind = actionKind(bookMode, mode)
 
@@ -163,7 +184,7 @@ export async function buildMonthlyPlan(params: {
   const viewed = ranked[mode]
 
   // A share that costs more than one position's budget cannot be bought even once
-  const budget = (portfolio ? bookValue(state, {}) : capital) / topN
+  const budget = (portfolio ? bookValue(state, {}) : capital) * (1 - fundShare) / topN
   const lastClose = new Map(viewed.list.map(r => [r.symbol, r.lastClose]))
   const affordable = (symbol: string) => lastClose.get(symbol)! <= budget
   // The monthly rebalance keeps holdings still inside the exit rank; a start or a switch takes the mode's picks as they are
@@ -171,10 +192,10 @@ export async function buildMonthlyPlan(params: {
   const selected = new Set(pickSymbols)
   const skippedUnaffordable = viewed.list.slice(0, topN).filter(r => !selected.has(r.symbol) && r.lastClose > budget).map(r => r.symbol)
 
-  const targets: Record<string, number> = invested.invested && freshness.ok
-    ? Object.fromEntries(pickSymbols.map(symbol => [symbol, 1 / topN]))
-    : {}
-  const live = await liveQuotes([...new Set([...pickSymbols, ...held])], client)
+  // The trend filter moves the shares to cash; the funds stay
+  const targets: Record<string, number> = freshness.ok ? planTargets(pickSymbols, topN, fundShare, invested.invested) : {}
+  const fundSymbols = fundShare > 0 ? PLAN_FUNDS.map(f => f.symbol) : []
+  const live = await liveQuotes([...new Set([...pickSymbols, ...held, ...fundSymbols])], client)
   const prices = Object.fromEntries(Object.entries(live.quotes).map(([symbol, q]) => [symbol, q.price]))
   const rebalance = planRebalance({ state, targets, prices })
 
@@ -187,7 +208,7 @@ export async function buildMonthlyPlan(params: {
   const blocked =
     !freshness.ok ? freshness.message
     : rebalance.missingPrices.length ? `No price for ${rebalance.missingPrices.join(', ')}`
-    : kind === 'rebalance' && !due.due ? due.reason
+    : kind === 'rebalance' && !due.due && !shareChanged ? due.reason
     : rebalance.orders.length === 0 ? 'Nothing to trade: the book already matches.'
     : null
 
@@ -207,12 +228,13 @@ export async function buildMonthlyPlan(params: {
   const holdings: HoldingRow[] = held.map(symbol => {
     const h = state.holdings[symbol]
     const quote: LiveQuote = live.quotes[symbol] ?? { price: h.avgPrice, previousClose: null }
-    const keep = invested.invested && ownKeeps.has(symbol)
+    const fund = isPlanFund(symbol)
+    const keep = fund ? ownFundShare > 0 : invested.invested && ownKeeps.has(symbol)
     return {
-      symbol, sector: SECTOR_BY_SYMBOL[symbol] ?? '', qty: h.qty, avgPrice: h.avgPrice,
+      symbol, sector: fund ? fundLabel(symbol) : SECTOR_BY_SYMBOL[symbol] ?? '', qty: h.qty, avgPrice: h.avgPrice,
       price: quote.price, previousClose: quote.previousClose,
       ...holdingValue(h.qty, h.avgPrice, quote.price, quote.previousClose),
-      rank: own.rankOf.get(symbol) ?? null, keep, note: keep ? '' : exitReason(symbol, ownContext),
+      rank: own.rankOf.get(symbol) ?? null, keep, note: keep ? '' : fund ? 'The share kept in funds is set to 0' : exitReason(symbol, ownContext),
     }
   }).sort((a, b) => b.value - a.value)
   const investedValue = holdings.reduce((sum, h) => sum + h.value, 0)
@@ -224,12 +246,16 @@ export async function buildMonthlyPlan(params: {
 
   const notes: string[] = []
   if (!invested.invested) notes.push(invested.reason)
+  if (!invested.invested && fundShare > 0) notes.push('The trend filter moves only the shares to cash. The funds are kept.')
+  if (shareChanged) notes.push(`The share kept in funds changes from ${Math.round(ownFundShare * 100)}% to ${Math.round(fundShare * 100)}%.`)
   if (live.source !== 'live' && isMarketHours()) {
     notes.push('The market is open but Zerodha is not connected, so these orders are priced at the last close, not the current price.')
   }
 
   return {
-    asOf, mode, trendFilter, modeInfo: MODES[mode], regime, exposure: invested, freshness,
+    asOf, mode, trendFilter, fundShare,
+    funds: fundShare > 0 ? PLAN_FUNDS.map(f => ({ symbol: f.symbol, label: f.label, targetPct: (fundShare / PLAN_FUNDS.length) * 100, price: live.quotes[f.symbol]?.price ?? null })) : [],
+    modeInfo: MODES[mode], regime, exposure: invested, freshness,
     universe: { size: universe.length, ranked: viewed.list.length },
     brokerConnected: !!client,
     marketOpen: isMarketHours(),
@@ -239,14 +265,14 @@ export async function buildMonthlyPlan(params: {
     modeRanks,
     modePicks: Object.fromEntries(MODE_IDS.map(m => [m, selectWithBuffer(ranked[m].list, [], topN, exitRank, undefined, SECTOR_CAP)])) as Record<RiskMode, string[]>,
     book: {
-      exists: !!portfolio, mode: bookMode, startingCapital, cash: state.cash, value, invested: investedValue,
+      exists: !!portfolio, mode: bookMode, fundShare: ownFundShare, startingCapital, cash: state.cash, value, invested: investedValue,
       pnl: value - startingCapital, pnlPct: (value / startingCapital - 1) * 100, lastRebalance: last, holdings,
     },
     action: {
       kind,
       canExecute: blocked === null,
       blocked,
-      orders: rebalance.orders.map(o => ({ ...o, why: orderReason(o, reasonContext) })),
+      orders: rebalance.orders.map(o => ({ ...o, why: isPlanFund(o.symbol) ? fundOrderReason(o, fundShare) : orderReason(o, reasonContext) })),
       estimatedCosts: rebalance.estimatedCosts,
       cashAfter: rebalance.cashAfter,
       skippedUnaffordable,
@@ -265,12 +291,13 @@ export async function executeRebalance(params: {
   userId: number
   mode: RiskMode
   trendFilter?: boolean
+  fundShare?: number
   capital?: number
   client: BrokerClient | null
 }) {
   const capital = params.capital ?? DEFAULT_CAPITAL
   const plan = await buildMonthlyPlan({
-    userId: params.userId, mode: params.mode, trendFilter: params.trendFilter, capital, client: params.client,
+    userId: params.userId, mode: params.mode, trendFilter: params.trendFilter, fundShare: params.fundShare, capital, client: params.client,
   })
   if (!plan.action.canExecute) throw new RebalanceRefused(plan.action.blocked ?? 'Nothing to do.')
 
@@ -308,6 +335,7 @@ export async function executeRebalance(params: {
       mode: params.mode,
       kind: plan.action.kind,
       trendFilter: plan.trendFilter,
+      fundShare: plan.fundShare,
       signalDate: plan.asOf,
       regime: plan.regime,
       exposure: plan.exposure,

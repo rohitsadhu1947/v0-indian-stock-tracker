@@ -1,6 +1,6 @@
 /**
  * POST /api/model-portfolio/rebalance
- * Body: { mode, trendFilter?, capital? }
+ * Body: { mode, trendFilter?, fundShare? (percent), capital? }
  *
  * Carries out the plan's action for that mode on the paper book at current
  * prices, with slippage and Indian delivery charges: starts the book, does
@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { parseFundShare } from '@/lib/portfolio/config'
 import { executeRebalance, RebalanceRefused } from '@/lib/portfolio/service'
 import { brokerClientFor, parseCapital, parseMode } from '../_shared'
 import logger from '@/lib/logger'
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       userId,
       mode: parseMode(body.mode),
       trendFilter: body.trendFilter === true,
+      fundShare: parseFundShare(body.fundShare),
       capital: parseCapital(body.capital),
       client: await brokerClientFor(userId),
     })

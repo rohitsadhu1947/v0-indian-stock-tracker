@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
+import { parseFundShare } from '@/lib/portfolio/config'
 import { buildMonthlyPlan } from '@/lib/portfolio/service'
 import { brokerClientFor, parseCapital, parseMode } from '../_shared'
 import logger from '@/lib/logger'
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
       userId,
       mode: parseMode(sp.get('mode')),
       trendFilter: sp.get('trend') === '1',
+      fundShare: parseFundShare(sp.get('funds')),
       capital: parseCapital(sp.get('capital')),
       client: await brokerClientFor(userId),
     })

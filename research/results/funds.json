@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-27T08:08:19.854Z",
+ "generatedAt": "2026-11-27T08:15:18.689Z",
  "from": 20110131,
  "to": 20261111,
  "note": "One book on daily prices, Rs 10 lakh at the start. Charges and 0.1% slippage a side on every order, funds charged like shares. Idle cash earns 6%. Tax: shares and share index funds under the equity rules; gold and US funds 12.5% after 12 months and 30% before; bond funds 30% always; 4% cess; a loss in one group is not set off against another. A fund not yet listed leaves its share in cash. The bond fund starts in 2015 and the US fund in 2011.",
@@ -1144,6 +1144,104 @@
    "endLakh": 128.9
   }
  ],
+ "byModeAndFundSharePct": {
+  "growth": {
+   "0": {
+    "cagrPct": 21.4,
+    "maxDrawdownPct": -44.4,
+    "worstYearPct": -19.4
+   },
+   "10": {
+    "cagrPct": 20.9,
+    "maxDrawdownPct": -40.5,
+    "worstYearPct": -18.2
+   },
+   "20": {
+    "cagrPct": 20.3,
+    "maxDrawdownPct": -35.9,
+    "worstYearPct": -16.9
+   },
+   "30": {
+    "cagrPct": 19.6,
+    "maxDrawdownPct": -29.5,
+    "worstYearPct": -13.7
+   },
+   "40": {
+    "cagrPct": 19.2,
+    "maxDrawdownPct": -25.4,
+    "worstYearPct": -11.7
+   },
+   "50": {
+    "cagrPct": 18.5,
+    "maxDrawdownPct": -22.4,
+    "worstYearPct": -9.5
+   }
+  },
+  "balanced": {
+   "0": {
+    "cagrPct": 17.6,
+    "maxDrawdownPct": -28,
+    "worstYearPct": -7.7
+   },
+   "10": {
+    "cagrPct": 17.6,
+    "maxDrawdownPct": -25.8,
+    "worstYearPct": -7.6
+   },
+   "20": {
+    "cagrPct": 17.1,
+    "maxDrawdownPct": -24.4,
+    "worstYearPct": -7.5
+   },
+   "30": {
+    "cagrPct": 16.9,
+    "maxDrawdownPct": -22.6,
+    "worstYearPct": -7.3
+   },
+   "40": {
+    "cagrPct": 16.7,
+    "maxDrawdownPct": -20.7,
+    "worstYearPct": -7.3
+   },
+   "50": {
+    "cagrPct": 16.5,
+    "maxDrawdownPct": -19.4,
+    "worstYearPct": -6.9
+   }
+  },
+  "defensive": {
+   "0": {
+    "cagrPct": 13.6,
+    "maxDrawdownPct": -26.1,
+    "worstYearPct": -4.4
+   },
+   "10": {
+    "cagrPct": 13.8,
+    "maxDrawdownPct": -24.5,
+    "worstYearPct": -2.1
+   },
+   "20": {
+    "cagrPct": 13.8,
+    "maxDrawdownPct": -22.7,
+    "worstYearPct": -2.3
+   },
+   "30": {
+    "cagrPct": 14,
+    "maxDrawdownPct": -21.2,
+    "worstYearPct": -3
+   },
+   "40": {
+    "cagrPct": 14.1,
+    "maxDrawdownPct": -19.3,
+    "worstYearPct": -3.3
+   },
+   "50": {
+    "cagrPct": 14.4,
+    "maxDrawdownPct": -17.9,
+    "worstYearPct": -3.9
+   }
+  }
+ },
  "byYear": {
   "2011": {
    "growth": -5.8,

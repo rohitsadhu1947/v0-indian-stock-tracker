@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { actionKind, exitReason, holdingValue, isMarketHours, orderReason, type ReasonContext } from '../portfolio/plan-core'
+import { actionKind, exitReason, fundOrderReason, holdingValue, isMarketHours, isPlanFund, orderReason, planTargets, type ReasonContext } from '../portfolio/plan-core'
+import { parseFundShare } from '../portfolio/config'
 
 const ctx = (over: Partial<ReasonContext> = {}): ReasonContext => ({
   kind: 'rebalance', modeLabel: 'Balanced', exitRank: 60, maxPerSector: 4, invested: true,
@@ -57,5 +58,44 @@ describe('isMarketHours', () => {
     expect(isMarketHours(ist('2026-11-17T09:14:00'))).toBe(false)
     expect(isMarketHours(ist('2026-11-17T15:31:00'))).toBe(false)
     expect(isMarketHours(ist('2026-11-15T11:00:00'))).toBe(false) // Sunday
+  })
+})
+
+describe('funds in the plan', () => {
+  const picks = Array.from({ length: 20 }, (_, i) => `S${i}`)
+
+  it('splits the fund share equally and the rest between the stock slots', () => {
+    const t = planTargets(picks, 20, 0.3, true)
+    expect(t.S0).toBeCloseTo(0.035, 6)
+    expect(t.GOLDBEES).toBeCloseTo(0.1, 6)
+    expect(t.LTGILTBEES).toBeCloseTo(0.1, 6)
+    expect(t.MON100).toBeCloseTo(0.1, 6)
+    expect(Object.values(t).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6)
+  })
+
+  it('holds no funds at a share of 0', () => {
+    const t = planTargets(picks, 20, 0, true)
+    expect(Object.keys(t)).toHaveLength(20)
+    expect(t.S0).toBeCloseTo(0.05, 6)
+  })
+
+  it('keeps the funds when the trend filter has the shares in cash', () => {
+    expect(planTargets(picks, 20, 0.3, false)).toEqual({ GOLDBEES: 0.3 / 3, LTGILTBEES: 0.3 / 3, MON100: 0.3 / 3 })
+    expect(planTargets(picks, 20, 0, false)).toEqual({})
+  })
+
+  it('explains fund orders', () => {
+    expect(isPlanFund('GOLDBEES')).toBe(true)
+    expect(isPlanFund('TCS')).toBe(false)
+    expect(fundOrderReason({ symbol: 'GOLDBEES', side: 'BUY', reason: 'entry' }, 0.3)).toBe('Gold fund: 10% of the book')
+    expect(fundOrderReason({ symbol: 'MON100', side: 'SELL', reason: 'resize' }, 0.2)).toBe('US Nasdaq 100 fund: back to 6.7% of the book')
+    expect(fundOrderReason({ symbol: 'GOLDBEES', side: 'SELL', reason: 'exit' }, 0)).toBe('The share kept in funds is set to 0')
+  })
+
+  it('reads the share from a percent and refuses values not offered', () => {
+    expect(parseFundShare('30')).toBe(0.3)
+    expect(parseFundShare(0)).toBe(0)
+    expect(parseFundShare('35')).toBeUndefined()
+    expect(parseFundShare(null)).toBeUndefined()
   })
 })

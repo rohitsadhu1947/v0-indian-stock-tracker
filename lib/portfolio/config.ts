@@ -95,3 +95,25 @@ export const MIN_TRADE_VALUE = 2000
  * trade in full.
  */
 export const RESIZE_BAND = 0.2
+
+/**
+ * Funds the plan can keep part of the book in, to soften falls. They moved
+ * differently from shares in testing (research/results/funds.json). The bond
+ * fund tested there, LICNETFGSC, trades too little to use, so the plan holds
+ * LTGILTBEES, which tracks the same kind of bonds.
+ */
+export const PLAN_FUNDS = [
+  { symbol: 'GOLDBEES', label: 'Gold fund' },
+  { symbol: 'LTGILTBEES', label: 'Government bond fund' },
+  { symbol: 'MON100', label: 'US Nasdaq 100 fund' },
+] as const
+
+/** The shares of the book the page offers for the funds, as fractions. */
+export const FUND_SHARES = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+
+/** The nearest offered share to a number given as a percent (30) or left out. */
+export function parseFundShare(value: string | number | null | undefined): number | undefined {
+  if (value == null || value === '') return undefined
+  const n = Number(value) / 100
+  return FUND_SHARES.find(s => Math.abs(s - n) < 0.001)
+}
