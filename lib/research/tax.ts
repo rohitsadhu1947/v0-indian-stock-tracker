@@ -29,6 +29,24 @@ export const INDIA_EQUITY_TAX: TaxRules = {
   carryForwardYears: 8,
 }
 
+/**
+ * Gold funds and funds that hold foreign shares, listed on the exchange:
+ * 12.5% when held over 12 months, with no exempt amount; otherwise the
+ * investor's income tax rate, taken here as the top 30% slab.
+ */
+export const GOLD_AND_FOREIGN_FUND_TAX: TaxRules = { shortTermRate: 0.3, longTermRate: 0.125, longTermExemption: 0, cess: 0.04, carryForwardYears: 8 }
+
+/** Bond funds: every gain is taxed at the investor's income tax rate, however long the fund was held. */
+export const BOND_FUND_TAX: TaxRules = { shortTermRate: 0.3, longTermRate: 0.3, longTermExemption: 0, cess: 0.04, carryForwardYears: 8 }
+
+export interface TaxGroup { applies: (symbol: string) => boolean; rules: TaxRules }
+
+export interface Ledger {
+  buy(symbol: string, units: number, cost: number, date: number): void
+  sell(symbol: string, units: number, proceeds: number, date: number): number
+  settleYear(year: number): YearTax
+}
+
 interface Lot { units: number; costPerUnit: number; date: number }
 interface CarriedLoss { year: number; amount: number }
 
@@ -39,7 +57,7 @@ export interface YearTax {
   tax: number
 }
 
-export class TaxLedger {
+export class TaxLedger implements Ledger {
   private lots = new Map<string, Lot[]>()
   private shortTerm = 0
   private longTerm = 0
@@ -111,5 +129,38 @@ export class TaxLedger {
     const tax = Math.max(short, 0) * r.shortTermRate + Math.max(long - r.longTermExemption, 0) * r.longTermRate
     result.tax = tax * (1 + r.cess)
     return result
+  }
+}
+
+/**
+ * A ledger for a book that holds assets taxed under different rules. Each
+ * group keeps its own gains and losses. A loss in one group is not set off
+ * against a gain in another, which slightly overstates the tax.
+ */
+export class GroupedTaxLedger implements Ledger {
+  private base: TaxLedger
+  private others: Array<{ applies: (symbol: string) => boolean; ledger: TaxLedger }>
+
+  constructor(rules: TaxRules, groups: TaxGroup[]) {
+    this.base = new TaxLedger(rules)
+    this.others = groups.map(g => ({ applies: g.applies, ledger: new TaxLedger(g.rules) }))
+  }
+
+  private of(symbol: string): TaxLedger {
+    return this.others.find(o => o.applies(symbol))?.ledger ?? this.base
+  }
+
+  buy(symbol: string, units: number, cost: number, date: number): void { this.of(symbol).buy(symbol, units, cost, date) }
+  sell(symbol: string, units: number, proceeds: number, date: number): number { return this.of(symbol).sell(symbol, units, proceeds, date) }
+
+  settleYear(year: number): YearTax {
+    const total: YearTax = { year, shortTermGain: 0, longTermGain: 0, tax: 0 }
+    for (const ledger of [this.base, ...this.others.map(o => o.ledger)]) {
+      const y = ledger.settleYear(year)
+      total.shortTermGain += y.shortTermGain
+      total.longTermGain += y.longTermGain
+      total.tax += y.tax
+    }
+    return total
   }
 }

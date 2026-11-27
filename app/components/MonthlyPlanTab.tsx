@@ -11,10 +11,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { MonthlyPlan, BrokerHoldingRow } from '@/lib/portfolio/service'
-import { holdingValue } from '@/lib/portfolio/plan-core'
+import { holdingValue, isPlanFund } from '@/lib/portfolio/plan-core'
 import type { TrackRecord } from '@/lib/portfolio/signals'
-import { MODES, DEFAULT_MODE, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
+import { FUND_SHARES, MODES, DEFAULT_MODE, PLAN_FUNDS, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
+import fundResearch from '@/research/results/funds.json'
 
 type Mode = RiskMode
 const MODE_IDS = Object.keys(MODES) as Mode[]
@@ -67,6 +68,12 @@ function backtestFor(mode: Mode, trendFilter: boolean): Backtest | undefined {
   return (research.strategies as unknown as Backtest[]).find(s => s.key === key)
 }
 
+/** The backtest of a mode with a share of the book in the three funds. */
+function fundBacktest(mode: Mode, share: number): { cagrPct: number; maxDrawdownPct: number } | undefined {
+  const byShare = (fundResearch.byModeAndFundSharePct as Record<string, Record<string, { cagrPct: number; maxDrawdownPct: number }>>)[mode]
+  return byShare?.[String(Math.round(share * 100))]
+}
+
 /** Prices from /api/model-portfolio/live, polled while the market is open. */
 interface LiveView {
   brokerConnected: boolean
@@ -92,6 +99,8 @@ const smallButton: React.CSSProperties = {
 export default function MonthlyPlanTab() {
   const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
   const [trendFilter, setTrendFilter] = useState(false)
+  // Null: use the share the book already keeps in funds
+  const [fundShare, setFundShare] = useState<number | null>(null)
   const [view, setView] = useState<View>('book')
   const [plan, setPlan] = useState<MonthlyPlan | null>(null)
   const [live, setLive] = useState<LiveView | null>(null)
@@ -114,13 +123,13 @@ export default function MonthlyPlanTab() {
 
   // Only the latest request may update the page: an earlier mode's answer can arrive later
   const latestLoad = useRef(0)
-  const load = useCallback(async (m: Mode, trend: boolean, quiet = false) => {
+  const load = useCallback(async (m: Mode, trend: boolean, funds: number | null, quiet = false) => {
     const request = ++latestLoad.current
     if (!quiet) setLoading(true)
     setError(null)
     try {
       const [planRes, perfRes, recordRes] = await Promise.all([
-        fetch(`/api/model-portfolio/plan?mode=${m}&trend=${trend ? 1 : 0}`),
+        fetch(`/api/model-portfolio/plan?mode=${m}&trend=${trend ? 1 : 0}${funds == null ? '' : `&funds=${Math.round(funds * 100)}`}`),
         fetch('/api/model-portfolio/performance'),
         fetch('/api/model-portfolio/track-record'),
       ])
@@ -143,7 +152,7 @@ export default function MonthlyPlanTab() {
     }
   }, [])
 
-  useEffect(() => { load(mode, trendFilter) }, [mode, trendFilter, load])
+  useEffect(() => { load(mode, trendFilter, fundShare) }, [mode, trendFilter, fundShare, load])
 
   const loadLive = useCallback(async () => {
     try {
@@ -188,7 +197,7 @@ export default function MonthlyPlanTab() {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Failed')
       setMessage(done(json))
-      await Promise.all([load(mode, trendFilter, true), loadLive()])
+      await Promise.all([load(mode, trendFilter, fundShare, true), loadLive()])
     } catch (e: any) {
       setMessage(`Not done: ${e.message}`)
     } finally {
@@ -208,7 +217,7 @@ export default function MonthlyPlanTab() {
       `No real orders are placed.`
     )
     if (!ok) return
-    post('/api/model-portfolio/rebalance', { mode, trendFilter },
+    post('/api/model-portfolio/rebalance', { mode, trendFilter, fundShare: plan.fundShare * 100 },
       json => `Recorded: ${json.fills.length} fills, book value ${inr(json.value)}.`)
   }
 
@@ -228,6 +237,8 @@ export default function MonthlyPlanTab() {
 
   const plain = backtestFor(mode, false)
   const filtered = backtestFor(mode, true)
+  const shownFundShare = fundShare ?? plan?.fundShare ?? 0
+  const noFunds = fundBacktest(mode, 0), withFunds = fundBacktest(mode, shownFundShare)
 
   const modePicker = (
     <div style={card}>
@@ -261,6 +272,26 @@ export default function MonthlyPlanTab() {
               year, and its worst fall from {plain.afterTax.full.maxDrawdownPct.toFixed(0)}% to {filtered.afterTax.full.maxDrawdownPct.toFixed(0)}%.
             </span>
           )}
+        </span>
+      </label>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginTop: 12, flexWrap: 'wrap' }}>
+        <span>Share kept in funds:</span>
+        <select
+          value={Math.round(shownFundShare * 100)} onChange={e => setFundShare(Number(e.target.value) / 100)} aria-label="Share of the book kept in funds"
+          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(0,0,0,0.25)', color: '#fff' }}
+        >
+          {FUND_SHARES.map(s => <option key={s} value={Math.round(s * 100)}>{s === 0 ? 'None' : `${Math.round(s * 100)}%`}</option>)}
+        </select>
+        <span style={{ ...muted, flex: '1 1 320px' }}>
+          Split equally between {PLAN_FUNDS.map(f => `${f.label.toLowerCase()} (${f.symbol})`).join(', ')}. They moved differently from shares in
+          testing, so they soften the falls.
+          {noFunds && withFunds && shownFundShare > 0 && (
+            <> In the backtest {Math.round(shownFundShare * 100)}% in funds took this mode from {noFunds.cagrPct.toFixed(1)}% to {withFunds.cagrPct.toFixed(1)}% a
+              year, and its worst fall from {noFunds.maxDrawdownPct.toFixed(0)}% to {withFunds.maxDrawdownPct.toFixed(0)}%.</>
+          )}
+          {' '}Gold and the US fund had unusually good years in the test period.
+          {trendFilter && shownFundShare > 0 && ' Funds and the trend filter have not been tested together.'}
+          {plan && plan.book.exists && shownFundShare !== plan.book.fundShare && ` Your book keeps ${Math.round(plan.book.fundShare * 100)}% in funds now. The orders below would change that.`}
         </span>
       </label>
     </div>
@@ -565,7 +596,7 @@ function HoldingsCard({ plan, live, busy, onTrade }: {
                   <td style={{ ...td, ...gain(h.dayChangePct ?? 0) }}>{h.dayChangePct == null ? '' : pct(h.dayChangePct, 2)}</td>
                   <td style={td}>{inr(h.value)}</td>
                   <td style={{ ...td, ...gain(h.pnl), whiteSpace: 'nowrap' }}>{h.pnl >= 0 ? '+' : '-'}{inr(Math.abs(h.pnl))} ({pct(h.pnlPct)})</td>
-                  <td style={td}>{h.rank ?? 'Not ranked'}</td>
+                  <td style={td}>{isPlanFund(h.symbol) ? 'Fund' : h.rank ?? 'Not ranked'}</td>
                   <td style={td}>{h.keep ? 'Keep' : <span style={{ color: '#fbbf24' }}>Sell. {h.note}</span>}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     <button style={smallButton} disabled={busy} onClick={() => onTrade(h.symbol, 'SELL', h.qty)}>Exit</button>
@@ -574,7 +605,7 @@ function HoldingsCard({ plan, live, busy, onTrade }: {
                 </tr>
               ))}
               <tr>
-                <td style={{ ...td, fontWeight: 700 }} colSpan={5}>Shares</td>
+                <td style={{ ...td, fontWeight: 700 }} colSpan={5}>Shares and funds</td>
                 <td style={{ ...td, fontWeight: 700 }}>{inr(invested)}</td>
                 <td style={{ ...td, fontWeight: 700, ...gain(invested - cost) }} colSpan={4}>
                   {invested - cost >= 0 ? '+' : '-'}{inr(Math.abs(invested - cost))}{cost > 0 ? ` (${pct((invested / cost - 1) * 100)})` : ''}

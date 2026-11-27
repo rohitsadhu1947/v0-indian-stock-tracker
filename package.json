@@ -27,6 +27,7 @@
     "research:crude": "tsx scripts/research/crude-daytrade.ts",
     "research:combine": "tsx scripts/research/combine.ts",
     "research:diversifiers": "tsx scripts/research/diversifiers.ts",
+    "research:funds": "tsx scripts/research/funds.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",

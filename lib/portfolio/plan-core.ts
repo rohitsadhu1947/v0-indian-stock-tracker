@@ -3,7 +3,7 @@
  * what kind of step the user is looking at, and why each order or holding is
  * what it is. Pure functions, so every sentence the page shows is tested.
  */
-import type { RiskMode } from './config'
+import { PLAN_FUNDS, type RiskMode } from './config'
 
 /**
  * start     no book yet: buy the mode's picks
@@ -15,6 +15,30 @@ export type ActionKind = 'start' | 'rebalance' | 'switch'
 export function actionKind(bookMode: RiskMode | null, viewedMode: RiskMode): ActionKind {
   if (!bookMode) return 'start'
   return bookMode === viewedMode ? 'rebalance' : 'switch'
+}
+
+const FUND_LABEL = new Map<string, string>(PLAN_FUNDS.map(f => [f.symbol, f.label]))
+export const isPlanFund = (symbol: string): boolean => FUND_LABEL.has(symbol)
+export const fundLabel = (symbol: string): string => FUND_LABEL.get(symbol) ?? symbol
+
+/**
+ * Target weights for the whole book: `fundShare` split equally between the
+ * funds, and the rest split equally between `topN` stock slots. With
+ * `stocksInvested` false (the trend filter is in cash) only the funds are held.
+ */
+export function planTargets(picks: string[], topN: number, fundShare: number, stocksInvested: boolean): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (stocksInvested) for (const symbol of picks) out[symbol] = (1 - fundShare) / topN
+  if (fundShare > 0) for (const f of PLAN_FUNDS) out[f.symbol] = fundShare / PLAN_FUNDS.length
+  return out
+}
+
+/** One sentence for an order in a fund. */
+export function fundOrderReason(order: { symbol: string; side: 'BUY' | 'SELL'; reason: 'exit' | 'entry' | 'resize' }, fundShare: number): string {
+  const each = Math.round((fundShare / PLAN_FUNDS.length) * 1000) / 10
+  if (order.reason === 'exit') return 'The share kept in funds is set to 0'
+  if (order.reason === 'entry') return `${fundLabel(order.symbol)}: ${each}% of the book`
+  return `${fundLabel(order.symbol)}: back to ${each}% of the book`
 }
 
 export interface ReasonContext {
