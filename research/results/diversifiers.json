@@ -1,0 +1,369 @@
+{
+ "generatedAt": "2026-11-27T08:01:48.567Z",
+ "to": 20261111,
+ "note": "A rough first look. Monthly prices. Growth is after tax and costs. The funds pay a flat 0.2% on what is traded and no tax; idle money earns 6%. Falls are on month-end values, so they are shallower than daily figures. The bond fund starts in 2016 and the US fund in 2011, so the sleeve holds fewer funds in its early years.",
+ "assets": [
+  {
+   "key": "nifty500",
+   "label": "NIFTY 500 index",
+   "from": 201304,
+   "months": 164,
+   "yearPct": 13.1,
+   "worstFallPct": -30,
+   "sharpe": 0.47,
+   "growthSameMonths": {
+    "yearPct": 23.3,
+    "worstFallPct": -33.1,
+    "sharpe": 0.76
+   },
+   "correlationWithGrowth": 0.75,
+   "inGrowthWorstMonths": {
+    "count": 16,
+    "growthAvgPct": -11.5,
+    "assetAvgPct": -6.7
+   }
+  },
+  {
+   "key": "value20",
+   "label": "NIFTY 50 Value 20 index",
+   "from": 201512,
+   "months": 132,
+   "yearPct": 12,
+   "worstFallPct": -22.8,
+   "sharpe": 0.43,
+   "growthSameMonths": {
+    "yearPct": 24.2,
+    "worstFallPct": -33.1,
+    "sharpe": 0.75
+   },
+   "correlationWithGrowth": 0.65,
+   "inGrowthWorstMonths": {
+    "count": 13,
+    "growthAvgPct": -12.2,
+    "assetAvgPct": -4.9
+   }
+  },
+  {
+   "key": "dividend",
+   "label": "NIFTY Dividend Opportunities 50",
+   "from": 201202,
+   "months": 178,
+   "yearPct": 10,
+   "worstFallPct": -30.9,
+   "sharpe": 0.3,
+   "growthSameMonths": {
+    "yearPct": 22.5,
+    "worstFallPct": -33.1,
+    "sharpe": 0.74
+   },
+   "correlationWithGrowth": 0.67,
+   "inGrowthWorstMonths": {
+    "count": 18,
+    "growthAvgPct": -11,
+    "assetAvgPct": -5.3
+   }
+  },
+  {
+   "key": "lowvol30",
+   "label": "NIFTY 100 Low Volatility 30",
+   "from": 201803,
+   "months": 105,
+   "yearPct": 11.2,
+   "worstFallPct": -22.6,
+   "sharpe": 0.39,
+   "growthSameMonths": {
+    "yearPct": 21.8,
+    "worstFallPct": -33.1,
+    "sharpe": 0.67
+   },
+   "correlationWithGrowth": 0.67,
+   "inGrowthWorstMonths": {
+    "count": 11,
+    "growthAvgPct": -12.5,
+    "assetAvgPct": -4.9
+   }
+  },
+  {
+   "key": "NIFTYBEES",
+   "label": "NIFTY 50 fund (NIFTYBEES)",
+   "from": 201102,
+   "months": 190,
+   "yearPct": 11.3,
+   "worstFallPct": -28.8,
+   "sharpe": 0.38,
+   "growthSameMonths": {
+    "yearPct": 21.4,
+    "worstFallPct": -33.1,
+    "sharpe": 0.7
+   },
+   "correlationWithGrowth": 0.69,
+   "inGrowthWorstMonths": {
+    "count": 19,
+    "growthAvgPct": -10.8,
+    "assetAvgPct": -5.5
+   }
+  },
+  {
+   "key": "JUNIORBEES",
+   "label": "Next 50 fund (JUNIORBEES)",
+   "from": 201102,
+   "months": 190,
+   "yearPct": 13.4,
+   "worstFallPct": -32.1,
+   "sharpe": 0.44,
+   "growthSameMonths": {
+    "yearPct": 21.4,
+    "worstFallPct": -33.1,
+    "sharpe": 0.7
+   },
+   "correlationWithGrowth": 0.77,
+   "inGrowthWorstMonths": {
+    "count": 19,
+    "growthAvgPct": -10.8,
+    "assetAvgPct": -7.5
+   }
+  },
+  {
+   "key": "GOLDBEES",
+   "label": "Gold fund (GOLDBEES)",
+   "from": 201102,
+   "months": 190,
+   "yearPct": 11.9,
+   "worstFallPct": -24.4,
+   "sharpe": 0.42,
+   "growthSameMonths": {
+    "yearPct": 21.4,
+    "worstFallPct": -33.1,
+    "sharpe": 0.7
+   },
+   "correlationWithGrowth": -0.11,
+   "inGrowthWorstMonths": {
+    "count": 19,
+    "growthAvgPct": -10.8,
+    "assetAvgPct": 2.6
+   }
+  },
+  {
+   "key": "gilt",
+   "label": "Government bond fund (LICNETFGSC)",
+   "from": 201502,
+   "months": 142,
+   "yearPct": 6.6,
+   "worstFallPct": -13.8,
+   "sharpe": 0.09,
+   "growthSameMonths": {
+    "yearPct": 22,
+    "worstFallPct": -33.1,
+    "sharpe": 0.69
+   },
+   "correlationWithGrowth": 0.04,
+   "inGrowthWorstMonths": {
+    "count": 14,
+    "growthAvgPct": -12,
+    "assetAvgPct": 0.3
+   }
+  },
+  {
+   "key": "MON100",
+   "label": "US Nasdaq 100 fund (MON100)",
+   "from": 201104,
+   "months": 188,
+   "yearPct": 24,
+   "worstFallPct": -31.6,
+   "sharpe": 0.81,
+   "growthSameMonths": {
+    "yearPct": 21.1,
+    "worstFallPct": -33.1,
+    "sharpe": 0.69
+   },
+   "correlationWithGrowth": 0.25,
+   "inGrowthWorstMonths": {
+    "count": 19,
+    "growthAvgPct": -10.8,
+    "assetAvgPct": -0.1
+   }
+  }
+ ],
+ "mixes": [
+  {
+   "key": "growth",
+   "label": "Growth mode alone",
+   "full": {
+    "yearPct": 22.5,
+    "worstFallPct": -33.1,
+    "sharpe": 0.74
+   },
+   "to2019": {
+    "yearPct": 15.6,
+    "worstFallPct": -26.3,
+    "sharpe": 0.53
+   },
+   "since2020": {
+    "yearPct": 30.8,
+    "worstFallPct": -33.1,
+    "sharpe": 0.94
+   },
+   "correlationWithGrowth": 1
+  },
+  {
+   "key": "hold",
+   "label": "The five funds, always held",
+   "full": {
+    "yearPct": 15.1,
+    "worstFallPct": -9.5,
+    "sharpe": 0.9
+   },
+   "to2019": {
+    "yearPct": 13.9,
+    "worstFallPct": -7.2,
+    "sharpe": 0.95
+   },
+   "since2020": {
+    "yearPct": 16.5,
+    "worstFallPct": -9.5,
+    "sharpe": 0.89
+   },
+   "correlationWithGrowth": 0.61
+  },
+  {
+   "key": "trend",
+   "label": "The five funds, trend rule",
+   "full": {
+    "yearPct": 11.3,
+    "worstFallPct": -9.8,
+    "sharpe": 0.66
+   },
+   "to2019": {
+    "yearPct": 9.4,
+    "worstFallPct": -9.8,
+    "sharpe": 0.45
+   },
+   "since2020": {
+    "yearPct": 13.5,
+    "worstFallPct": -6.4,
+    "sharpe": 0.87
+   },
+   "correlationWithGrowth": 0.44
+  },
+  {
+   "key": "growth-hold-30",
+   "label": "Growth 70%, funds held 30%",
+   "full": {
+    "yearPct": 20.6,
+    "worstFallPct": -24.9,
+    "sharpe": 0.81
+   },
+   "to2019": {
+    "yearPct": 15.4,
+    "worstFallPct": -16.8,
+    "sharpe": 0.63
+   },
+   "since2020": {
+    "yearPct": 26.9,
+    "worstFallPct": -24.9,
+    "sharpe": 0.97
+   },
+   "correlationWithGrowth": 0.99
+  },
+  {
+   "key": "growth-trend-30",
+   "label": "Growth 70%, trend sleeve 30%",
+   "full": {
+    "yearPct": 19.5,
+    "worstFallPct": -24.2,
+    "sharpe": 0.78
+   },
+   "to2019": {
+    "yearPct": 14.1,
+    "worstFallPct": -19,
+    "sharpe": 0.56
+   },
+   "since2020": {
+    "yearPct": 26.1,
+    "worstFallPct": -24.2,
+    "sharpe": 0.99
+   },
+   "correlationWithGrowth": 0.99
+  },
+  {
+   "key": "growth-hold-50",
+   "label": "Growth 50%, funds held 50%",
+   "full": {
+    "yearPct": 19.2,
+    "worstFallPct": -19,
+    "sharpe": 0.86
+   },
+   "to2019": {
+    "yearPct": 15.2,
+    "worstFallPct": -12.7,
+    "sharpe": 0.72
+   },
+   "since2020": {
+    "yearPct": 24.1,
+    "worstFallPct": -19,
+    "sharpe": 1
+   },
+   "correlationWithGrowth": 0.97
+  },
+  {
+   "key": "growth-trend-50",
+   "label": "Growth 50%, trend sleeve 50%",
+   "full": {
+    "yearPct": 17.4,
+    "worstFallPct": -17.9,
+    "sharpe": 0.81
+   },
+   "to2019": {
+    "yearPct": 12.9,
+    "worstFallPct": -15.4,
+    "sharpe": 0.58
+   },
+   "since2020": {
+    "yearPct": 22.7,
+    "worstFallPct": -17.9,
+    "sharpe": 1.03
+   },
+   "correlationWithGrowth": 0.97
+  },
+  {
+   "key": "growth-cash-30",
+   "label": "Growth 70%, cash 30%",
+   "full": {
+    "yearPct": 18,
+    "worstFallPct": -22.6,
+    "sharpe": 0.74
+   },
+   "to2019": {
+    "yearPct": 13.2,
+    "worstFallPct": -16.8,
+    "sharpe": 0.53
+   },
+   "since2020": {
+    "yearPct": 23.8,
+    "worstFallPct": -22.6,
+    "sharpe": 0.94
+   },
+   "correlationWithGrowth": 1
+  },
+  {
+   "key": "growth-gold-20",
+   "label": "Growth 80%, gold 20%",
+   "full": {
+    "yearPct": 20.7,
+    "worstFallPct": -26,
+    "sharpe": 0.8
+   },
+   "to2019": {
+    "yearPct": 13.6,
+    "worstFallPct": -19.4,
+    "sharpe": 0.51
+   },
+   "since2020": {
+    "yearPct": 29.4,
+    "worstFallPct": -26,
+    "sharpe": 1.06
+   },
+   "correlationWithGrowth": 0.99
+  }
+ ]
+}

@@ -7,7 +7,7 @@
  * would have done.
  */
 import { calculateTradeCosts, DEFAULT_COSTS, type CostConfig } from '@/lib/backtest/costs'
-import { financialYear, lastAtOrBefore } from './dates'
+import { daysBetween, financialYear, lastAtOrBefore } from './dates'
 import type { Market } from './market'
 import type { Curve } from './metrics'
 import { indicators, type SignalContext, type SwingSignal } from './swing'
@@ -20,6 +20,8 @@ export interface Candidate {
   /** 5-session return at the signal, and rupees traded that day. */
   ret5: number
   turnover: number
+  /** Rise over the two sessions before the signal, when the rule is about a jump. */
+  jump?: number
 }
 
 /** Every time `signal` fires for a stock in the universe, keyed by the session to buy on. */
@@ -68,6 +70,8 @@ export interface BookOptions {
   /** Which candidates to take first when there are more than free slots. */
   priority: (a: Candidate, b: Candidate) => number
   payTax: boolean
+  /** Yearly return on idle cash, as a fraction. Left out: cash earns nothing. */
+  cashYield?: number
   costs?: CostConfig
 }
 
@@ -81,6 +85,8 @@ export interface BookResult {
   skipped: number
   /** Average share of the book in shares rather than cash. */
   avgInvested: number
+  /** Share of the book in shares at each close, in step with the curve. */
+  invested: number[]
   charges: number
   tax: number
 }
@@ -92,10 +98,12 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
   const curve: Curve = { dates: [], equity: [] }
   let cash = options.capital, equity = options.capital
   let trades = 0, wins = 0, skipped = 0, charges = 0, tax = 0, investedSum = 0
+  const invested: number[] = []
 
   const sessions = market.sessions
   for (let si = lastAtOrBefore(sessions, options.start - 1) + 1; si < sessions.length; si++) {
     const date = sessions[si]
+    if (options.cashYield && curve.dates.length && cash > 0) cash *= (1 + options.cashYield) ** (daysBetween(sessions[si - 1], date) / 365)
 
     // Buy this morning's candidates, sized on last night's book value
     const today = (candidates.get(date) ?? []).filter(c => !positions.has(c.symbol)).sort(options.priority)
@@ -154,8 +162,9 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
 
     equity = cash + held
     investedSum += held / equity
+    invested.push(held / equity)
     curve.dates.push(date)
     curve.equity.push(equity)
   }
-  return { curve, trades, wins, skipped, avgInvested: investedSum / curve.dates.length, charges, tax }
+  return { curve, trades, wins, skipped, avgInvested: investedSum / curve.dates.length, invested, charges, tax }
 }
