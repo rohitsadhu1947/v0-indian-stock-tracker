@@ -75,9 +75,11 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
       if (!results.has(r.symbol)) continue
       bars.set(r.symbol, [...(bars.get(r.symbol) ?? []), { date: String(r.date), close: r.close, turnover: r.turnover }])
     }
+    // One trade per stock at a time: a second strong day in the same results week is not a second signal
+    const held = new Set((await db.select({ symbol: positionalTrades.symbol }).from(positionalTrades).where(inArray(positionalTrades.status, ['new', 'open']))).map(r => r.symbol))
     const found: Array<{ symbol: string; detail: Record<string, unknown> }> = []
     for (const [symbol, list] of bars) {
-      if (list[list.length - 1].date !== asOf) continue
+      if (list[list.length - 1].date !== asOf || held.has(symbol)) continue
       const signal = resultsJump(list, results.get(symbol)!)
       if (signal) found.push({ symbol, detail: { ...signal, signalClose: list[list.length - 1].close } })
     }
