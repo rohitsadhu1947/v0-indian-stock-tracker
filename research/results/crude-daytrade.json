@@ -1,0 +1,553 @@
+{
+ "generatedAt": "2026-11-27T05:42:30.003Z",
+ "costsPct": {
+  "tight": 0.21,
+  "cautious": 0.31
+ },
+ "note": "Every figure is the gain from selling short at 09:20 and buying back at 15:15, as a percentage of the entry value, before costs unless it says net. Against NIFTY takes off the index move over the same minutes.",
+ "results": [
+  {
+   "key": "users-crude-up",
+   "label": "Oil users after crude rose 3% (the rule)",
+   "all": {
+    "trades": 1168,
+    "days": 239,
+    "shortPct": 0.2,
+    "t": 2.36,
+    "againstNiftyPct": 0.15,
+    "withStopPct": 0.2,
+    "netTightPct": 0,
+    "netCautiousPct": -0.1,
+    "winPct": 50.6
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 403,
+     "days": 86,
+     "shortPct": 0.2,
+     "t": 1.54,
+     "againstNiftyPct": 0.11,
+     "withStopPct": 0.14,
+     "netTightPct": -0.01,
+     "netCautiousPct": -0.11,
+     "winPct": 49.88
+    },
+    "2020-2022": {
+     "trades": 380,
+     "days": 76,
+     "shortPct": 0.23,
+     "t": 1.3,
+     "againstNiftyPct": 0.21,
+     "withStopPct": 0.26,
+     "netTightPct": 0.02,
+     "netCautiousPct": -0.08,
+     "winPct": 54.21
+    },
+    "2023-now": {
+     "trades": 385,
+     "days": 77,
+     "shortPct": 0.18,
+     "t": 1.26,
+     "againstNiftyPct": 0.13,
+     "withStopPct": 0.19,
+     "netTightPct": -0.02,
+     "netCautiousPct": -0.12,
+     "winPct": 47.79
+    }
+   },
+   "stocks": {
+    "BPCL": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.12,
+     "t": 0.98,
+     "againstNiftyPct": 0.06,
+     "withStopPct": 0.12,
+     "netTightPct": -0.09,
+     "netCautiousPct": -0.19,
+     "winPct": 49.79
+    },
+    "HINDPETRO": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.23,
+     "t": 1.59,
+     "againstNiftyPct": 0.17,
+     "withStopPct": 0.13,
+     "netTightPct": 0.02,
+     "netCautiousPct": -0.08,
+     "winPct": 52.72
+    },
+    "IOC": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.21,
+     "t": 1.71,
+     "againstNiftyPct": 0.15,
+     "withStopPct": 0.19,
+     "netTightPct": 0,
+     "netCautiousPct": -0.1,
+     "winPct": 51.05
+    },
+    "INDIGO": {
+     "trades": 212,
+     "days": 212,
+     "shortPct": 0.44,
+     "t": 3.01,
+     "againstNiftyPct": 0.4,
+     "withStopPct": 0.49,
+     "netTightPct": 0.23,
+     "netCautiousPct": 0.13,
+     "winPct": 54.72
+    },
+    "ASIANPAINT": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.05,
+     "t": 0.51,
+     "againstNiftyPct": -0.01,
+     "withStopPct": 0.09,
+     "netTightPct": -0.15,
+     "netCautiousPct": -0.25,
+     "winPct": 45.19
+    }
+   }
+  },
+  {
+   "key": "producers-crude-down",
+   "label": "Oil producers after crude fell 3% (the rule)",
+   "all": {
+    "trades": 476,
+    "days": 238,
+    "shortPct": 0.19,
+    "t": 1.56,
+    "againstNiftyPct": 0.02,
+    "withStopPct": 0.17,
+    "netTightPct": -0.02,
+    "netCautiousPct": -0.12,
+    "winPct": 52.31
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 190,
+     "days": 95,
+     "shortPct": 0.37,
+     "t": 3.06,
+     "againstNiftyPct": 0.26,
+     "withStopPct": 0.3,
+     "netTightPct": 0.16,
+     "netCautiousPct": 0.06,
+     "winPct": 51.05
+    },
+    "2020-2022": {
+     "trades": 152,
+     "days": 76,
+     "shortPct": 0.09,
+     "t": 0.29,
+     "againstNiftyPct": -0.28,
+     "withStopPct": 0.11,
+     "netTightPct": -0.12,
+     "netCautiousPct": -0.22,
+     "winPct": 53.29
+    },
+    "2023-now": {
+     "trades": 134,
+     "days": 67,
+     "shortPct": 0.04,
+     "t": 0.23,
+     "againstNiftyPct": 0.02,
+     "withStopPct": 0.04,
+     "netTightPct": -0.16,
+     "netCautiousPct": -0.26,
+     "winPct": 52.99
+    }
+   },
+   "stocks": {
+    "ONGC": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.17,
+     "t": 1.26,
+     "againstNiftyPct": 0,
+     "withStopPct": 0.15,
+     "netTightPct": -0.04,
+     "netCautiousPct": -0.14,
+     "winPct": 51.68
+    },
+    "OIL": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.21,
+     "t": 1.48,
+     "againstNiftyPct": 0.04,
+     "withStopPct": 0.19,
+     "netTightPct": 0,
+     "netCautiousPct": -0.1,
+     "winPct": 52.94
+    }
+   }
+  },
+  {
+   "key": "users-crude-down",
+   "label": "Oil users after crude fell 3%",
+   "all": {
+    "trades": 1169,
+    "days": 238,
+    "shortPct": 0.12,
+    "t": 1.12,
+    "againstNiftyPct": -0.05,
+    "withStopPct": 0.06,
+    "netTightPct": -0.09,
+    "netCautiousPct": -0.19,
+    "winPct": 49.02
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 454,
+     "days": 95,
+     "shortPct": 0.21,
+     "t": 1.44,
+     "againstNiftyPct": 0.11,
+     "withStopPct": 0.18,
+     "netTightPct": 0.01,
+     "netCautiousPct": -0.09,
+     "winPct": 52.42
+    },
+    "2020-2022": {
+     "trades": 380,
+     "days": 76,
+     "shortPct": 0.27,
+     "t": 1.16,
+     "againstNiftyPct": -0.1,
+     "withStopPct": 0.11,
+     "netTightPct": 0.06,
+     "netCautiousPct": -0.04,
+     "winPct": 53.95
+    },
+    "2023-now": {
+     "trades": 335,
+     "days": 67,
+     "shortPct": -0.19,
+     "t": -1.14,
+     "againstNiftyPct": -0.21,
+     "withStopPct": -0.14,
+     "netTightPct": -0.4,
+     "netCautiousPct": -0.5,
+     "winPct": 38.81
+    }
+   },
+   "stocks": {
+    "BPCL": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.21,
+     "t": 1.43,
+     "againstNiftyPct": 0.05,
+     "withStopPct": 0.18,
+     "netTightPct": 0.01,
+     "netCautiousPct": -0.09,
+     "winPct": 54.62
+    },
+    "HINDPETRO": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.06,
+     "t": 0.33,
+     "againstNiftyPct": -0.1,
+     "withStopPct": 0.01,
+     "netTightPct": -0.15,
+     "netCautiousPct": -0.25,
+     "winPct": 50.84
+    },
+    "IOC": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.3,
+     "t": 2.21,
+     "againstNiftyPct": 0.13,
+     "withStopPct": 0.17,
+     "netTightPct": 0.09,
+     "netCautiousPct": -0.01,
+     "winPct": 50
+    },
+    "INDIGO": {
+     "trades": 217,
+     "days": 217,
+     "shortPct": -0.09,
+     "t": -0.63,
+     "againstNiftyPct": -0.25,
+     "withStopPct": -0.13,
+     "netTightPct": -0.3,
+     "netCautiousPct": -0.4,
+     "winPct": 42.86
+    },
+    "ASIANPAINT": {
+     "trades": 238,
+     "days": 238,
+     "shortPct": 0.08,
+     "t": 0.85,
+     "againstNiftyPct": -0.08,
+     "withStopPct": 0.08,
+     "netTightPct": -0.13,
+     "netCautiousPct": -0.23,
+     "winPct": 46.22
+    }
+   }
+  },
+  {
+   "key": "producers-crude-up",
+   "label": "Oil producers after crude rose 3%",
+   "all": {
+    "trades": 478,
+    "days": 239,
+    "shortPct": 0.06,
+    "t": 0.63,
+    "againstNiftyPct": 0.01,
+    "withStopPct": 0.07,
+    "netTightPct": -0.14,
+    "netCautiousPct": -0.24,
+    "winPct": 47.7
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 172,
+     "days": 86,
+     "shortPct": 0.11,
+     "t": 0.79,
+     "againstNiftyPct": 0.01,
+     "withStopPct": 0.11,
+     "netTightPct": -0.1,
+     "netCautiousPct": -0.2,
+     "winPct": 48.84
+    },
+    "2020-2022": {
+     "trades": 152,
+     "days": 76,
+     "shortPct": 0.1,
+     "t": 0.43,
+     "againstNiftyPct": 0.08,
+     "withStopPct": 0.14,
+     "netTightPct": -0.1,
+     "netCautiousPct": -0.2,
+     "winPct": 50
+    },
+    "2023-now": {
+     "trades": 154,
+     "days": 77,
+     "shortPct": -0.02,
+     "t": -0.15,
+     "againstNiftyPct": -0.07,
+     "withStopPct": -0.05,
+     "netTightPct": -0.23,
+     "netCautiousPct": -0.33,
+     "winPct": 44.16
+    }
+   },
+   "stocks": {
+    "ONGC": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.02,
+     "t": 0.16,
+     "againstNiftyPct": -0.04,
+     "withStopPct": 0.07,
+     "netTightPct": -0.19,
+     "netCautiousPct": -0.29,
+     "winPct": 46.86
+    },
+    "OIL": {
+     "trades": 239,
+     "days": 239,
+     "shortPct": 0.11,
+     "t": 0.87,
+     "againstNiftyPct": 0.05,
+     "withStopPct": 0.07,
+     "netTightPct": -0.1,
+     "netCautiousPct": -0.2,
+     "winPct": 48.54
+    }
+   }
+  },
+  {
+   "key": "users-control",
+   "label": "Oil users, ordinary days",
+   "all": {
+    "trades": 1446,
+    "days": 570,
+    "shortPct": 0.08,
+    "t": -0.05,
+    "againstNiftyPct": 0.04,
+    "withStopPct": 0.09,
+    "netTightPct": -0.12,
+    "netCautiousPct": -0.22,
+    "winPct": 49.17
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 620,
+     "days": 239,
+     "shortPct": 0.03,
+     "t": -0.04,
+     "againstNiftyPct": -0.06,
+     "withStopPct": 0.04,
+     "netTightPct": -0.18,
+     "netCautiousPct": -0.28,
+     "winPct": 47.42
+    },
+    "2020-2022": {
+     "trades": 368,
+     "days": 146,
+     "shortPct": 0.04,
+     "t": -0.88,
+     "againstNiftyPct": 0.07,
+     "withStopPct": 0.04,
+     "netTightPct": -0.17,
+     "netCautiousPct": -0.27,
+     "winPct": 49.73
+    },
+    "2023-now": {
+     "trades": 458,
+     "days": 185,
+     "shortPct": 0.19,
+     "t": 0.92,
+     "againstNiftyPct": 0.15,
+     "withStopPct": 0.21,
+     "netTightPct": -0.01,
+     "netCautiousPct": -0.11,
+     "winPct": 51.09
+    }
+   },
+   "stocks": {
+    "BPCL": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.12,
+     "t": 1.19,
+     "againstNiftyPct": 0.08,
+     "withStopPct": 0.13,
+     "netTightPct": -0.08,
+     "netCautiousPct": -0.18,
+     "winPct": 50.34
+    },
+    "HINDPETRO": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.23,
+     "t": 1.85,
+     "againstNiftyPct": 0.19,
+     "withStopPct": 0.26,
+     "netTightPct": 0.02,
+     "netCautiousPct": -0.08,
+     "winPct": 55.48
+    },
+    "IOC": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.17,
+     "t": 1.59,
+     "againstNiftyPct": 0.12,
+     "withStopPct": 0.17,
+     "netTightPct": -0.04,
+     "netCautiousPct": -0.14,
+     "winPct": 52.4
+    },
+    "INDIGO": {
+     "trades": 278,
+     "days": 278,
+     "shortPct": -0.15,
+     "t": -1.43,
+     "againstNiftyPct": -0.19,
+     "withStopPct": -0.15,
+     "netTightPct": -0.36,
+     "netCautiousPct": -0.46,
+     "winPct": 43.53
+    },
+    "ASIANPAINT": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.04,
+     "t": 0.51,
+     "againstNiftyPct": -0.01,
+     "withStopPct": 0.04,
+     "netTightPct": -0.17,
+     "netCautiousPct": -0.27,
+     "winPct": 43.84
+    }
+   }
+  },
+  {
+   "key": "producers-control",
+   "label": "Oil producers, ordinary days",
+   "all": {
+    "trades": 584,
+    "days": 292,
+    "shortPct": 0.3,
+    "t": 3.53,
+    "againstNiftyPct": 0.25,
+    "withStopPct": 0.28,
+    "netTightPct": 0.09,
+    "netCautiousPct": -0.01,
+    "winPct": 53.42
+   },
+   "periods": {
+    "2015-2019": {
+     "trades": 254,
+     "days": 127,
+     "shortPct": 0.19,
+     "t": 1.58,
+     "againstNiftyPct": 0.1,
+     "withStopPct": 0.18,
+     "netTightPct": -0.01,
+     "netCautiousPct": -0.11,
+     "winPct": 50.79
+    },
+    "2020-2022": {
+     "trades": 148,
+     "days": 74,
+     "shortPct": 0.43,
+     "t": 2.23,
+     "againstNiftyPct": 0.47,
+     "withStopPct": 0.4,
+     "netTightPct": 0.22,
+     "netCautiousPct": 0.12,
+     "winPct": 56.76
+    },
+    "2023-now": {
+     "trades": 182,
+     "days": 91,
+     "shortPct": 0.33,
+     "t": 2.4,
+     "againstNiftyPct": 0.29,
+     "withStopPct": 0.32,
+     "netTightPct": 0.13,
+     "netCautiousPct": 0.03,
+     "winPct": 54.4
+    }
+   },
+   "stocks": {
+    "ONGC": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.22,
+     "t": 2.48,
+     "againstNiftyPct": 0.18,
+     "withStopPct": 0.19,
+     "netTightPct": 0.01,
+     "netCautiousPct": -0.09,
+     "winPct": 49.32
+    },
+    "OIL": {
+     "trades": 292,
+     "days": 292,
+     "shortPct": 0.37,
+     "t": 3.42,
+     "againstNiftyPct": 0.33,
+     "withStopPct": 0.38,
+     "netTightPct": 0.17,
+     "netCautiousPct": 0.07,
+     "winPct": 57.53
+    }
+   }
+  }
+ ]
+}
