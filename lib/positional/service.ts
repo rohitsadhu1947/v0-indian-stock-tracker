@@ -13,7 +13,7 @@ import { INDEX_INSTRUMENTS, PORTFOLIO_RULES } from '@/lib/portfolio/config'
 import { dataFreshness, liveUniverse } from '@/lib/portfolio/data'
 import { liveQuotes } from '@/lib/portfolio/live'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
-import { averagePrice, HOLD_SESSIONS, netPct, resultsJump, roughDateAfter, sessionsHeld, SIGNAL, type Bar } from './core'
+import { averagePrice, HOLD_SESSIONS, isWeak, netPct, resultsJump, roughDateAfter, sessionsHeld, SIGNAL, strengthLabel, strengthRank, yearReturn, type Bar } from './core'
 
 const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * 86400000).toISOString().slice(0, 10)
 const firstLine = (error: any) => String(error?.cause?.message ?? error?.message ?? error).split('\n')[0]
@@ -46,7 +46,43 @@ async function adminTelegram(): Promise<Array<{ token: string; chat: string }>> 
   return rows.map(r => ({ token: r.token!, chat: r.chat! }))
 }
 
-export interface PositionalRun { asOf: string | null; signals: string[]; opened: number; closed: string[]; dueTomorrow: string[]; problem?: string }
+/**
+ * Each stock's 12-month strength at a close: its return from 252 sessions ago
+ * to 21 sessions ago, ranked among the universe (0 weakest, 1 strongest). A
+ * stock without a price on both days gets no rank.
+ */
+export async function strengthRanks(asOf: string, universe: string[]): Promise<Map<string, number>> {
+  const sessions = await sessionsSince(addDays(asOf, -420), asOf)
+  const out = new Map<string, number>()
+  if (sessions.length < 253 || !universe.length) return out
+  const monthAgo = sessions[sessions.length - 22], yearAgo = sessions[sessions.length - 253]
+  const rows = await db.select({ symbol: dailyBars.symbol, date: dailyBars.date, close: dailyBars.close })
+    .from(dailyBars).where(and(inArray(dailyBars.symbol, universe), inArray(dailyBars.date, [monthAgo, yearAgo])))
+  const near = new Map<string, number>(), far = new Map<string, number>()
+  for (const r of rows) (String(r.date) === monthAgo ? near : far).set(r.symbol, r.close)
+  const returns = new Map<string, number>()
+  for (const symbol of universe) { const r = yearReturn(far.get(symbol), near.get(symbol)); if (r != null) returns.set(symbol, r) }
+  const all = [...returns.values()]
+  for (const [symbol, r] of returns) out.set(symbol, Math.round(strengthRank(r, all) * 1000) / 1000)
+  return out
+}
+
+/** Work out the strength of trades stored before the rule used it. Changes nothing else about them. */
+export async function backfillStrength(): Promise<Array<{ symbol: string; signalDate: string; status: string; rank: number | null }>> {
+  const rows = (await db.select().from(positionalTrades)).filter(r => (r.detail as Record<string, unknown>)?.strengthRank === undefined)
+  const done: Array<{ symbol: string; signalDate: string; status: string; rank: number | null }> = []
+  for (const date of [...new Set(rows.map(r => r.signalDate))].sort()) {
+    const ranks = await strengthRanks(date, await liveUniverse(date, PORTFOLIO_RULES.universeSize))
+    for (const r of rows.filter(x => x.signalDate === date)) {
+      const rank = ranks.get(r.symbol) ?? null
+      await db.update(positionalTrades).set({ detail: { ...(r.detail as Record<string, unknown>), strengthRank: rank } }).where(eq(positionalTrades.id, r.id))
+      done.push({ symbol: r.symbol, signalDate: r.signalDate, status: r.status, rank })
+    }
+  }
+  return done
+}
+
+export interface PositionalRun { asOf: string | null; signals: string[]; /** Jumped on results but too weak over 12 months to buy. */ skippedWeak: string[]; opened: number; closed: string[]; dueTomorrow: string[]; problem?: string }
 
 /**
  * One run, on the latest session in the price table (or `asOf`). Safe to run
@@ -54,7 +90,7 @@ export interface PositionalRun { asOf: string | null; signals: string[]; opened:
  * there is a new session.
  */
 export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean } = {}): Promise<PositionalRun> {
-  const run: PositionalRun = { asOf: null, signals: [], opened: 0, closed: [], dueTomorrow: [] }
+  const run: PositionalRun = { asOf: null, signals: [], skippedWeak: [], opened: 0, closed: [], dueTomorrow: [] }
   try {
     const asOf = opts.asOf ?? (await dataFreshness()).latestDate
     if (!asOf) return run
@@ -84,10 +120,16 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
       if (signal) found.push({ symbol, detail: { ...signal, signalClose: list[list.length - 1].close } })
     }
     if (found.length) {
+      // A jump on a stock that has been weak for a year is stored but not bought
+      const ranks = await strengthRanks(asOf, universe)
+      for (const f of found) f.detail.strengthRank = ranks.get(f.symbol) ?? null
+      const weak = (f: typeof found[number]) => isWeak(f.detail.strengthRank as number | null)
       const inserted = await db.insert(positionalTrades)
-        .values(found.map(f => ({ signal: SIGNAL, symbol: f.symbol, signalDate: asOf, detail: f.detail })))
-        .onConflictDoNothing().returning({ symbol: positionalTrades.symbol })
-      run.signals = inserted.map(r => r.symbol)
+        .values(found.map(f => ({ signal: SIGNAL, symbol: f.symbol, signalDate: asOf, status: weak(f) ? 'skipped' : 'new', detail: weak(f) ? { ...f.detail, weak: true } : f.detail })))
+        .onConflictDoNothing().returning({ symbol: positionalTrades.symbol, status: positionalTrades.status })
+      const strength = (symbol: string) => (found.find(f => f.symbol === symbol)!.detail.strengthRank as number | null) ?? -1
+      run.signals = inserted.filter(r => r.status === 'new').map(r => r.symbol).sort((a, b) => strength(b) - strength(a))
+      run.skippedWeak = inserted.filter(r => r.status === 'skipped').map(r => r.symbol)
     }
 
     // 2. Open yesterday's signals at the entry session's average price; close trades that have run 60 sessions
@@ -125,7 +167,7 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
       }
     }
 
-    if (opts.notify !== false && (run.signals.length || run.dueTomorrow.length)) {
+    if (opts.notify !== false && (run.signals.length || run.skippedWeak.length || run.dueTomorrow.length)) {
       await notify(run, found).catch(error => logger.error('Positional message failed', { error: firstLine(error) }))
     }
   } catch (error) {
@@ -141,14 +183,16 @@ async function notify(run: PositionalRun, found: Array<{ symbol: string; detail:
   const safe = (s: string) => s.replace(/[<>&]/g, ' ')
   const lines: string[] = []
   for (const symbol of run.signals) {
-    const d = found.find(f => f.symbol === symbol)!.detail as { jumpPct: number; turnoverRatio: number; signalClose: number }
+    const d = found.find(f => f.symbol === symbol)!.detail as { jumpPct: number; turnoverRatio: number; signalClose: number; strengthRank: number | null }
     lines.push(
       `<b>BUY ${safe(symbol)}</b> (jumped on results)`,
       `Why: up ${d.jumpPct}% over two sessions around results, on ${d.turnoverRatio} times its usual turnover.`,
+      `12-month strength: ${strengthLabel(d.strengthRank)} of the 500.`,
       `Entry: next session, spread through the day. Last close ${rupees(d.signalClose)}.`,
       `Exit: sell after ${HOLD_SESSIONS} trading sessions, about ${roughDateAfter(run.asOf!, HOLD_SESSIONS)}.`,
       'Stop: none in the tested rule. It can fall a long way before the exit date.', '')
   }
+  if (run.skippedWeak.length) lines.push(`Not bought: ${run.skippedWeak.map(safe).join(', ')}. They jumped on results but are in the bottom fifth on 12-month strength, where the rule earned nothing in testing.`, '')
   for (const symbol of run.dueTomorrow) lines.push(`<b>SELL ${safe(symbol)} at the next session's close</b>: its ${HOLD_SESSIONS} sessions are up.`, '')
   lines.push('Evidence is moderate: the rule beat the index in backtests, with deep falls. The app places no orders.')
   for (const a of await adminTelegram()) await sendTelegramMessage(a.token, a.chat, lines.join('\n'))
@@ -157,6 +201,8 @@ async function notify(run: PositionalRun, found: Array<{ symbol: string; detail:
 export interface PositionalRow {
   symbol: string; status: string; signalDate: string
   jumpPct: number | null; turnoverRatio: number | null; signalClose: number | null
+  /** 12-month strength among the 500 at the signal: 0 weakest, 1 strongest. Null when not known. */
+  strengthRank: number | null
   entryDate: string | null; entryPrice: number | null
   /** While open: the latest price, the move so far before costs, sessions held and the estimated exit date. */
   lastPrice: number | null; movePct: number | null; sessionsHeld: number | null; exitAbout: string | null
@@ -169,6 +215,8 @@ export interface PositionalView {
   prices: 'live' | 'last close'
   /** Signalled at the last close: buy next session. */
   fresh: PositionalRow[]
+  /** Jumped on results at the last close but too weak to buy. */
+  skippedWeak: PositionalRow[]
   open: PositionalRow[]
   closed: PositionalRow[]
   tally: { trades: number; wins: number; avgNetPct: number }
@@ -188,7 +236,7 @@ export async function positionalView(client: BrokerClient | null): Promise<Posit
       const lastPrice = quotes?.quotes[r.symbol]?.price ?? null
       const held = r.status === 'open' && latestDate ? sessionsHeld(sessions, r.entryDate!, latestDate) : null
       return {
-        symbol: r.symbol, status: r.status, signalDate: r.signalDate, jumpPct: d.jumpPct ?? null, turnoverRatio: d.turnoverRatio ?? null, signalClose: d.signalClose ?? null,
+        symbol: r.symbol, status: r.status, signalDate: r.signalDate, jumpPct: d.jumpPct ?? null, turnoverRatio: d.turnoverRatio ?? null, signalClose: d.signalClose ?? null, strengthRank: d.strengthRank ?? null,
         entryDate: r.entryDate, entryPrice: r.entryPrice, lastPrice,
         movePct: r.status === 'open' && r.entryPrice && lastPrice ? (lastPrice / r.entryPrice - 1) * 100 : null,
         sessionsHeld: held,
@@ -200,7 +248,9 @@ export async function positionalView(client: BrokerClient | null): Promise<Posit
     const nets = closed.map(r => r.netPct ?? 0)
     return {
       asOf: latestDate, holdSessions: HOLD_SESSIONS, prices: quotes?.source ?? (client ? 'live' : 'last close'),
-      fresh: rows.filter(r => r.status === 'new').map(row), open: rows.filter(r => r.status === 'open').map(row), closed: closed.slice(0, 50).map(row),
+      fresh: rows.filter(r => r.status === 'new').map(row).sort((a, b) => (b.strengthRank ?? -1) - (a.strengthRank ?? -1)),
+      skippedWeak: rows.filter(r => r.status === 'skipped' && r.signalDate === latestDate && (r.detail as Record<string, unknown>)?.weak === true).map(row),
+      open: rows.filter(r => r.status === 'open').map(row), closed: closed.slice(0, 50).map(row),
       tally: { trades: nets.length, wins: nets.filter(n => n > 0).length, avgNetPct: nets.length ? nets.reduce((a, b) => a + b, 0) / nets.length : 0 },
     }
   } catch (error) {

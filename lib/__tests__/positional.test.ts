@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averagePrice, netPct, resultsJump, roughDateAfter, sessionsHeld, type Bar } from '@/lib/positional/core'
+import { averagePrice, isWeak, netPct, resultsJump, roughDateAfter, sessionsHeld, strengthLabel, strengthRank, yearReturn, type Bar } from '@/lib/positional/core'
 
 /** 30 flat sessions at 100 on turnover 10, then the closes and turnovers given. */
 function bars(tail: Array<[number, number]>): Bar[] {
@@ -51,5 +51,29 @@ describe('helpers', () => {
   it('skips weekends when estimating the exit date', () => {
     // Friday 27 Nov 2026 plus five sessions is Friday 4 Dec
     expect(roughDateAfter('2026-11-27', 5)).toBe('2026-12-04')
+  })
+})
+
+describe('12-month strength', () => {
+  it('measures the return from a year ago to a month ago', () => {
+    expect(yearReturn(100, 150)).toBeCloseTo(0.5, 6)
+    expect(yearReturn(null, 150)).toBeNull()
+    expect(yearReturn(100, undefined)).toBeNull()
+  })
+
+  it('ranks a return among all of them from 0 to 1', () => {
+    const all = [-0.2, 0, 0.1, 0.3, 0.9]
+    expect(strengthRank(-0.2, all)).toBe(0)
+    expect(strengthRank(0.1, all)).toBe(0.5)
+    expect(strengthRank(0.9, all)).toBe(1)
+  })
+
+  it('calls the bottom fifth weak, and an unknown rank not weak', () => {
+    expect(isWeak(0.19)).toBe(true)
+    expect(isWeak(0.2)).toBe(false)
+    expect(isWeak(null)).toBe(false)
+    expect(strengthLabel(0.85)).toBe('top fifth')
+    expect(strengthLabel(0.1)).toBe('bottom fifth')
+    expect(strengthLabel(null)).toBe('not known')
   })
 })
