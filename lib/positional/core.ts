@@ -16,6 +16,32 @@ export const HOLD_SESSIONS = 60
 /** Delivery charges and slippage for buying and selling, as a fraction. */
 export const ROUND_TRIP_COST = 0.0045
 
+/**
+ * A results jump on a stock in the bottom fifth of the 500 on 12-month
+ * strength earned nothing in testing, so it is skipped
+ * (research/results/combine.json).
+ */
+export const WEAK_BELOW = 0.2
+
+/** A stock's return from 12 months ago to one month ago, as a fraction. Null without both prices. */
+export function yearReturn(closeYearAgo: number | null | undefined, closeMonthAgo: number | null | undefined): number | null {
+  return closeYearAgo && closeMonthAgo && closeYearAgo > 0 && closeMonthAgo > 0 ? closeMonthAgo / closeYearAgo - 1 : null
+}
+
+/** Where a return stands among all of them: 0 is the weakest, 1 the strongest. */
+export function strengthRank(own: number, all: readonly number[]): number {
+  if (all.length < 2) return 1
+  return Math.min(1, all.filter(x => x < own).length / (all.length - 1))
+}
+
+export const isWeak = (rank: number | null | undefined): boolean => rank != null && rank < WEAK_BELOW
+
+/** The rank in words, for the page and the Telegram message. */
+export function strengthLabel(rank: number | null | undefined): string {
+  if (rank == null) return 'not known'
+  return rank >= 0.8 ? 'top fifth' : rank >= 0.6 ? 'second fifth' : rank >= 0.4 ? 'middle fifth' : rank >= 0.2 ? 'fourth fifth' : 'bottom fifth'
+}
+
 export interface Bar { date: string; close: number; turnover: number | null }
 
 export interface JumpSignal {
