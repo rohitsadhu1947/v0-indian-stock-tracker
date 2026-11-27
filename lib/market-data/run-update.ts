@@ -8,6 +8,7 @@ import { userPreferences, users } from '@/db/schema'
 import { and, eq, isNotNull } from 'drizzle-orm'
 import { runFoWatch, sendEntryAlerts } from '@/lib/fo-watch/service'
 import logger from '@/lib/logger'
+import { runPositionalWatch } from '@/lib/positional/service'
 import { recordMonthlySignals } from '@/lib/portfolio/signals'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
 import { updateFromNseArchive, type UpdateSummary } from './daily-update'
@@ -30,6 +31,8 @@ export async function runMarketDataUpdate(): Promise<UpdateSummary> {
   }
   // The paper day-trade tracker reads the same evening's F&O files. Its failures are logged inside and never fail this run
   await runFoWatch()
+  // Positional signals read the prices and results dates just loaded. Failures are logged inside
+  await runPositionalWatch()
   return summary
 }
 

@@ -22,9 +22,11 @@
     "research:fo": "tsx scripts/research/fo-signals.ts",
     "research:fo-daytrade": "tsx scripts/research/fo-daytrade.ts",
     "research:intraday": "tsx scripts/research/intraday-rules.ts",
+    "research:positional": "tsx scripts/research/positional.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
+    "positional": "tsx --env-file=.env.local scripts/positional/run.ts",
     "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
   },
   "dependencies": {

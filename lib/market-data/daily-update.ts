@@ -13,6 +13,7 @@ import { factorFromGap, resolveEvents, type RawPriceBar } from './adjust'
 import { securityKind } from './classify'
 import { parseCorporateAction } from './corporate-actions'
 import { indexBarSymbol } from './indices'
+import { storeResultsDates } from '@/lib/positional/service'
 import { deliveryUrl, extractPrBundle, fetchArchiveFile, prBundleUrl, SYMBOL_CHANGES_URL } from './nse-archive'
 import { continuity, parseCorporateActionsFile, parseDeliveryFile, parsePriceFile, parseSymbolChanges } from './nse-parse'
 
@@ -95,6 +96,8 @@ async function loadDay(
   const bundle = extractPrBundle(zip)
   if (!bundle.pd) throw new Error(`${date}: NSE bundle has no price file`)
   const { equities, indices } = parsePriceFile(bundle.pd)
+  // Results dates announced in the same bundle; used by the positional signals. Never fails the price update
+  await storeResultsDates(bundle.bm)
   if (equities.length < 500) {
     skipped.push({ date, reason: `only ${equities.length} securities (test session)` })
     return null

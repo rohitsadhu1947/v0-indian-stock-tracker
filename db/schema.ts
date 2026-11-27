@@ -906,6 +906,37 @@ export const paperDayTrades = pgTable('paper_day_trades', {
   tradeDateIdx: index('paper_day_trades_trade_date_idx').on(table.tradeDate),
 }))
 
+/** Days a company's board met to approve results, from NSE's board-meeting file. */
+export const resultsDates = pgTable('results_dates', {
+  symbol: text('symbol').notNull(),
+  date: date('date').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.symbol, table.date] }),
+  dateIdx: index('results_dates_date_idx').on(table.date),
+}))
+
+/**
+ * Positional trades signalled by the app (lib/positional), tracked on paper.
+ * status: new (buy next session), open, closed, skipped.
+ */
+export const positionalTrades = pgTable('positional_trades', {
+  id: serial('id').primaryKey(),
+  signal: text('signal').notNull(),
+  symbol: text('symbol').notNull(),
+  signalDate: date('signal_date').notNull(),
+  status: text('status').notNull().default('new'),
+  entryDate: date('entry_date'),
+  entryPrice: doublePrecision('entry_price'),
+  exitDate: date('exit_date'),
+  exitPrice: doublePrecision('exit_price'),
+  netPct: doublePrecision('net_pct'),
+  detail: jsonb('detail').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  unique: uniqueIndex('positional_trades_signal_symbol_signal_date_key').on(table.signal, table.symbol, table.signalDate),
+  statusIdx: index('positional_trades_status_idx').on(table.status),
+}))
+
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
 export const marketDataRuns = pgTable('market_data_runs', {
   id: serial('id').primaryKey(),

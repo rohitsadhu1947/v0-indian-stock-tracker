@@ -1,0 +1,2638 @@
+{
+ "generatedAt": "2026-11-27T04:46:23.283Z",
+ "from": 20110101,
+ "to": 20261111,
+ "universe": 500,
+ "note": "Returns are after slippage and delivery charges. Excess is against every universe stock bought the same morning for the same hold. The t-statistic is on each entry day's average; holds overlap, so it overstates certainty for the longer holds.",
+ "baselineAvgReturnPct": {
+  "10": -0.17,
+  "20": 0.37,
+  "40": 1.52,
+  "60": 2.72
+ },
+ "results": [
+  {
+   "key": "results-jump",
+   "label": "Jump on results",
+   "basis": "Up 5% or more over the two sessions around results, on 1.5 times the usual turnover.",
+   "holds": {
+    "10": {
+     "trades": 4421,
+     "winRatePct": 46.14,
+     "avgReturnPct": -0.08,
+     "avgExcessPct": 0.21,
+     "tStat": 2.02,
+     "tradesPerMonth": 23.4,
+     "periods": {
+      "2011-2019": {
+       "trades": 2503,
+       "winRatePct": 42.63,
+       "avgReturnPct": -0.71,
+       "avgExcessPct": 0.24,
+       "tStat": 2.37
+      },
+      "2020-2022": {
+       "trades": 784,
+       "winRatePct": 54.46,
+       "avgReturnPct": 1.94,
+       "avgExcessPct": 0.35,
+       "tStat": 0.47
+      },
+      "2023-now": {
+       "trades": 1134,
+       "winRatePct": 48.15,
+       "avgReturnPct": -0.08,
+       "avgExcessPct": 0.06,
+       "tStat": -0.09
+      }
+     }
+    },
+    "20": {
+     "trades": 4384,
+     "winRatePct": 50.68,
+     "avgReturnPct": 1.25,
+     "avgExcessPct": 0.86,
+     "tStat": 5.35,
+     "tradesPerMonth": 23.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 2500,
+       "winRatePct": 48.2,
+       "avgReturnPct": 0.5,
+       "avgExcessPct": 1.13,
+       "tStat": 5.55
+      },
+      "2020-2022": {
+       "trades": 784,
+       "winRatePct": 57.91,
+       "avgReturnPct": 3.73,
+       "avgExcessPct": 0.28,
+       "tStat": 0.21
+      },
+      "2023-now": {
+       "trades": 1100,
+       "winRatePct": 51.18,
+       "avgReturnPct": 1.2,
+       "avgExcessPct": 0.64,
+       "tStat": 2.12
+      }
+     }
+    },
+    "40": {
+     "trades": 4370,
+     "winRatePct": 54.94,
+     "avgReturnPct": 3.54,
+     "avgExcessPct": 1.55,
+     "tStat": 6.84,
+     "tradesPerMonth": 23.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 2496,
+       "winRatePct": 53.89,
+       "avgReturnPct": 2.69,
+       "avgExcessPct": 1.8,
+       "tStat": 6.82
+      },
+      "2020-2022": {
+       "trades": 776,
+       "winRatePct": 58.51,
+       "avgReturnPct": 6.23,
+       "avgExcessPct": 1.11,
+       "tStat": 0.98
+      },
+      "2023-now": {
+       "trades": 1098,
+       "winRatePct": 54.83,
+       "avgReturnPct": 3.56,
+       "avgExcessPct": 1.32,
+       "tStat": 2.93
+      }
+     }
+    },
+    "60": {
+     "trades": 4122,
+     "winRatePct": 55.8,
+     "avgReturnPct": 4.93,
+     "avgExcessPct": 1.83,
+     "tStat": 6.29,
+     "tradesPerMonth": 21.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 2358,
+       "winRatePct": 52.88,
+       "avgReturnPct": 3.02,
+       "avgExcessPct": 1.98,
+       "tStat": 6.03
+      },
+      "2020-2022": {
+       "trades": 725,
+       "winRatePct": 64.14,
+       "avgReturnPct": 10.02,
+       "avgExcessPct": 1.15,
+       "tStat": 0.66
+      },
+      "2023-now": {
+       "trades": 1039,
+       "winRatePct": 56.59,
+       "avgReturnPct": 5.72,
+       "avgExcessPct": 1.98,
+       "tStat": 3.11
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "results-jump-big",
+   "label": "Big jump on results",
+   "basis": "Up 8% or more around results, on 3 times the usual turnover.",
+   "holds": {
+    "10": {
+     "trades": 1741,
+     "winRatePct": 48.59,
+     "avgReturnPct": 0.47,
+     "avgExcessPct": 0.67,
+     "tStat": 3.2,
+     "tradesPerMonth": 9.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 921,
+       "winRatePct": 45.06,
+       "avgReturnPct": -0.15,
+       "avgExcessPct": 0.73,
+       "tStat": 2.93
+      },
+      "2020-2022": {
+       "trades": 338,
+       "winRatePct": 53.55,
+       "avgReturnPct": 2.14,
+       "avgExcessPct": 0.54,
+       "tStat": 0.36
+      },
+      "2023-now": {
+       "trades": 482,
+       "winRatePct": 51.87,
+       "avgReturnPct": 0.48,
+       "avgExcessPct": 0.62,
+       "tStat": 1.87
+      }
+     }
+    },
+    "20": {
+     "trades": 1727,
+     "winRatePct": 53.27,
+     "avgReturnPct": 1.99,
+     "avgExcessPct": 1.49,
+     "tStat": 5.19,
+     "tradesPerMonth": 9.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 921,
+       "winRatePct": 50.05,
+       "avgReturnPct": 1.34,
+       "avgExcessPct": 1.9,
+       "tStat": 4.73
+      },
+      "2020-2022": {
+       "trades": 338,
+       "winRatePct": 60.06,
+       "avgReturnPct": 4.1,
+       "avgExcessPct": 0.83,
+       "tStat": 0.65
+      },
+      "2023-now": {
+       "trades": 468,
+       "winRatePct": 54.7,
+       "avgReturnPct": 1.73,
+       "avgExcessPct": 1.17,
+       "tStat": 3.08
+      }
+     }
+    },
+    "40": {
+     "trades": 1721,
+     "winRatePct": 57,
+     "avgReturnPct": 4.44,
+     "avgExcessPct": 2.42,
+     "tStat": 6.21,
+     "tradesPerMonth": 9.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 919,
+       "winRatePct": 56.37,
+       "avgReturnPct": 3.96,
+       "avgExcessPct": 3,
+       "tStat": 5.91
+      },
+      "2020-2022": {
+       "trades": 336,
+       "winRatePct": 58.93,
+       "avgReturnPct": 6.41,
+       "avgExcessPct": 1.84,
+       "tStat": 1.42
+      },
+      "2023-now": {
+       "trades": 466,
+       "winRatePct": 56.87,
+       "avgReturnPct": 3.97,
+       "avgExcessPct": 1.68,
+       "tStat": 2.74
+      }
+     }
+    },
+    "60": {
+     "trades": 1656,
+     "winRatePct": 58.51,
+     "avgReturnPct": 7.09,
+     "avgExcessPct": 3.69,
+     "tStat": 7.04,
+     "tradesPerMonth": 8.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 883,
+       "winRatePct": 56.96,
+       "avgReturnPct": 6.16,
+       "avgExcessPct": 4.69,
+       "tStat": 6.93
+      },
+      "2020-2022": {
+       "trades": 322,
+       "winRatePct": 61.49,
+       "avgReturnPct": 10.69,
+       "avgExcessPct": 2.46,
+       "tStat": 1.45
+      },
+      "2023-now": {
+       "trades": 451,
+       "winRatePct": 59.42,
+       "avgReturnPct": 6.34,
+       "avgExcessPct": 2.59,
+       "tStat": 2.77
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "results-drop",
+   "label": "Fall on results",
+   "basis": "Down 5% or more over the two sessions around results. Expected to keep lagging.",
+   "holds": {
+    "10": {
+     "trades": 5749,
+     "winRatePct": 41.02,
+     "avgReturnPct": -1.49,
+     "avgExcessPct": -0.88,
+     "tStat": -7.28,
+     "tradesPerMonth": 30.5,
+     "periods": {
+      "2011-2019": {
+       "trades": 3656,
+       "winRatePct": 39.82,
+       "avgReturnPct": -1.9,
+       "avgExcessPct": -0.76,
+       "tStat": -4.28
+      },
+      "2020-2022": {
+       "trades": 794,
+       "winRatePct": 36.02,
+       "avgReturnPct": -1.69,
+       "avgExcessPct": -1.84,
+       "tStat": -5.27
+      },
+      "2023-now": {
+       "trades": 1299,
+       "winRatePct": 47.42,
+       "avgReturnPct": -0.22,
+       "avgExcessPct": -0.65,
+       "tStat": -4.3
+      }
+     }
+    },
+    "20": {
+     "trades": 5698,
+     "winRatePct": 43.38,
+     "avgReturnPct": -1.1,
+     "avgExcessPct": -0.85,
+     "tStat": -4.9,
+     "tradesPerMonth": 30.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 3647,
+       "winRatePct": 43.35,
+       "avgReturnPct": -1.28,
+       "avgExcessPct": -0.73,
+       "tStat": -2.88
+      },
+      "2020-2022": {
+       "trades": 792,
+       "winRatePct": 39.14,
+       "avgReturnPct": -2.21,
+       "avgExcessPct": -2.08,
+       "tStat": -4.05
+      },
+      "2023-now": {
+       "trades": 1259,
+       "winRatePct": 46.15,
+       "avgReturnPct": 0.11,
+       "avgExcessPct": -0.44,
+       "tStat": -2.21
+      }
+     }
+    },
+    "40": {
+     "trades": 5673,
+     "winRatePct": 49.25,
+     "avgReturnPct": 0.86,
+     "avgExcessPct": -0.73,
+     "tStat": -4.15,
+     "tradesPerMonth": 30.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 3638,
+       "winRatePct": 49.62,
+       "avgReturnPct": 0.75,
+       "avgExcessPct": -0.61,
+       "tStat": -2.38
+      },
+      "2020-2022": {
+       "trades": 779,
+       "winRatePct": 47.5,
+       "avgReturnPct": 0.32,
+       "avgExcessPct": -1.43,
+       "tStat": -3.45
+      },
+      "2023-now": {
+       "trades": 1256,
+       "winRatePct": 49.28,
+       "avgReturnPct": 1.54,
+       "avgExcessPct": -0.65,
+       "tStat": -1.9
+      }
+     }
+    },
+    "60": {
+     "trades": 5278,
+     "winRatePct": 49.22,
+     "avgReturnPct": 1.19,
+     "avgExcessPct": -1.42,
+     "tStat": -5.09,
+     "tradesPerMonth": 28,
+     "periods": {
+      "2011-2019": {
+       "trades": 3361,
+       "winRatePct": 49.39,
+       "avgReturnPct": 0.9,
+       "avgExcessPct": -1.31,
+       "tStat": -3.21
+      },
+      "2020-2022": {
+       "trades": 736,
+       "winRatePct": 46.33,
+       "avgReturnPct": 0.34,
+       "avgExcessPct": -2.72,
+       "tStat": -4.79
+      },
+      "2023-now": {
+       "trades": 1181,
+       "winRatePct": 50.55,
+       "avgReturnPct": 2.56,
+       "avgExcessPct": -0.91,
+       "tStat": -1.4
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "new-high",
+   "label": "New 52-week high",
+   "basis": "First close above the highest close of the last year.",
+   "holds": {
+    "10": {
+     "trades": 22261,
+     "winRatePct": 45.99,
+     "avgReturnPct": 0.06,
+     "avgExcessPct": 0.17,
+     "tStat": 1.73,
+     "tradesPerMonth": 118,
+     "periods": {
+      "2011-2019": {
+       "trades": 10967,
+       "winRatePct": 44.44,
+       "avgReturnPct": -0.16,
+       "avgExcessPct": 0.27,
+       "tStat": 2.96
+      },
+      "2020-2022": {
+       "trades": 4696,
+       "winRatePct": 46.19,
+       "avgReturnPct": 0.24,
+       "avgExcessPct": 0,
+       "tStat": -0.7
+      },
+      "2023-now": {
+       "trades": 6598,
+       "winRatePct": 48.41,
+       "avgReturnPct": 0.3,
+       "avgExcessPct": 0.14,
+       "tStat": -0.38
+      }
+     }
+    },
+    "20": {
+     "trades": 16006,
+     "winRatePct": 50.45,
+     "avgReturnPct": 1.14,
+     "avgExcessPct": 0.59,
+     "tStat": 5.13,
+     "tradesPerMonth": 84.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 7971,
+       "winRatePct": 49.22,
+       "avgReturnPct": 0.79,
+       "avgExcessPct": 0.85,
+       "tStat": 5.99
+      },
+      "2020-2022": {
+       "trades": 3412,
+       "winRatePct": 49.21,
+       "avgReturnPct": 1.21,
+       "avgExcessPct": 0.2,
+       "tStat": 0.53
+      },
+      "2023-now": {
+       "trades": 4623,
+       "winRatePct": 53.49,
+       "avgReturnPct": 1.69,
+       "avgExcessPct": 0.42,
+       "tStat": 0.83
+      }
+     }
+    },
+    "40": {
+     "trades": 11322,
+     "winRatePct": 53.68,
+     "avgReturnPct": 3.22,
+     "avgExcessPct": 1.47,
+     "tStat": 8.2,
+     "tradesPerMonth": 60,
+     "periods": {
+      "2011-2019": {
+       "trades": 5721,
+       "winRatePct": 52.89,
+       "avgReturnPct": 2.61,
+       "avgExcessPct": 2.09,
+       "tStat": 8.97
+      },
+      "2020-2022": {
+       "trades": 2449,
+       "winRatePct": 52.27,
+       "avgReturnPct": 3.08,
+       "avgExcessPct": 0.54,
+       "tStat": 0.55
+      },
+      "2023-now": {
+       "trades": 3152,
+       "winRatePct": 56.22,
+       "avgReturnPct": 4.42,
+       "avgExcessPct": 1.08,
+       "tStat": 2.75
+      }
+     }
+    },
+    "60": {
+     "trades": 9212,
+     "winRatePct": 55.04,
+     "avgReturnPct": 5.06,
+     "avgExcessPct": 1.78,
+     "tStat": 7.05,
+     "tradesPerMonth": 48.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 4681,
+       "winRatePct": 53.69,
+       "avgReturnPct": 4.08,
+       "avgExcessPct": 2.69,
+       "tStat": 8.82
+      },
+      "2020-2022": {
+       "trades": 2032,
+       "winRatePct": 52.85,
+       "avgReturnPct": 5.28,
+       "avgExcessPct": 0.68,
+       "tStat": 0
+      },
+      "2023-now": {
+       "trades": 2499,
+       "winRatePct": 59.34,
+       "avgReturnPct": 6.71,
+       "avgExcessPct": 0.96,
+       "tStat": 1.54
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "new-high-volume",
+   "label": "New 52-week high on volume",
+   "basis": "The same, on twice the usual turnover.",
+   "holds": {
+    "10": {
+     "trades": 11924,
+     "winRatePct": 45.19,
+     "avgReturnPct": -0.02,
+     "avgExcessPct": 0.09,
+     "tStat": 0.81,
+     "tradesPerMonth": 63.2,
+     "periods": {
+      "2011-2019": {
+       "trades": 5870,
+       "winRatePct": 42.9,
+       "avgReturnPct": -0.43,
+       "avgExcessPct": 0.08,
+       "tStat": 1.21
+      },
+      "2020-2022": {
+       "trades": 2687,
+       "winRatePct": 45.85,
+       "avgReturnPct": 0.31,
+       "avgExcessPct": 0.01,
+       "tStat": -0.55
+      },
+      "2023-now": {
+       "trades": 3367,
+       "winRatePct": 48.65,
+       "avgReturnPct": 0.43,
+       "avgExcessPct": 0.18,
+       "tStat": 0.37
+      }
+     }
+    },
+    "20": {
+     "trades": 10363,
+     "winRatePct": 50,
+     "avgReturnPct": 1.09,
+     "avgExcessPct": 0.51,
+     "tStat": 3.91,
+     "tradesPerMonth": 54.9,
+     "periods": {
+      "2011-2019": {
+       "trades": 5104,
+       "winRatePct": 48.2,
+       "avgReturnPct": 0.63,
+       "avgExcessPct": 0.69,
+       "tStat": 4.14
+      },
+      "2020-2022": {
+       "trades": 2324,
+       "winRatePct": 49.7,
+       "avgReturnPct": 1.18,
+       "avgExcessPct": 0.17,
+       "tStat": -0.1
+      },
+      "2023-now": {
+       "trades": 2935,
+       "winRatePct": 53.36,
+       "avgReturnPct": 1.84,
+       "avgExcessPct": 0.45,
+       "tStat": 1.7
+      }
+     }
+    },
+    "40": {
+     "trades": 8353,
+     "winRatePct": 52.78,
+     "avgReturnPct": 3.08,
+     "avgExcessPct": 1.27,
+     "tStat": 6.42,
+     "tradesPerMonth": 44.3,
+     "periods": {
+      "2011-2019": {
+       "trades": 4153,
+       "winRatePct": 51.55,
+       "avgReturnPct": 2.42,
+       "avgExcessPct": 1.77,
+       "tStat": 7.39
+      },
+      "2020-2022": {
+       "trades": 1891,
+       "winRatePct": 51.35,
+       "avgReturnPct": 2.78,
+       "avgExcessPct": 0.53,
+       "tStat": -0.29
+      },
+      "2023-now": {
+       "trades": 2309,
+       "winRatePct": 56.17,
+       "avgReturnPct": 4.53,
+       "avgExcessPct": 0.98,
+       "tStat": 2.16
+      }
+     }
+    },
+    "60": {
+     "trades": 7117,
+     "winRatePct": 55.14,
+     "avgReturnPct": 5.24,
+     "avgExcessPct": 1.71,
+     "tStat": 6.41,
+     "tradesPerMonth": 37.7,
+     "periods": {
+      "2011-2019": {
+       "trades": 3550,
+       "winRatePct": 53.07,
+       "avgReturnPct": 4.39,
+       "avgExcessPct": 2.58,
+       "tStat": 7.47
+      },
+      "2020-2022": {
+       "trades": 1620,
+       "winRatePct": 54.32,
+       "avgReturnPct": 4.97,
+       "avgExcessPct": 0.51,
+       "tStat": 0.22
+      },
+      "2023-now": {
+       "trades": 1947,
+       "winRatePct": 59.58,
+       "avgReturnPct": 6.99,
+       "avgExcessPct": 1.13,
+       "tStat": 1.84
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "base-breakout",
+   "label": "Breakout from a tight three-month range",
+   "basis": "Close above the highest close of the last 63 sessions, when those sessions stayed within a 25% range, on 1.5 times the usual turnover.",
+   "holds": {
+    "10": {
+     "trades": 13542,
+     "winRatePct": 44.36,
+     "avgReturnPct": -0.35,
+     "avgExcessPct": -0.11,
+     "tStat": -1.87,
+     "tradesPerMonth": 71.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 7275,
+       "winRatePct": 42.94,
+       "avgReturnPct": -0.66,
+       "avgExcessPct": -0.05,
+       "tStat": -1.13
+      },
+      "2020-2022": {
+       "trades": 2457,
+       "winRatePct": 45.18,
+       "avgReturnPct": 0.02,
+       "avgExcessPct": -0.39,
+       "tStat": -2.97
+      },
+      "2023-now": {
+       "trades": 3810,
+       "winRatePct": 46.54,
+       "avgReturnPct": 0.02,
+       "avgExcessPct": -0.05,
+       "tStat": 0.65
+      }
+     }
+    },
+    "20": {
+     "trades": 11671,
+     "winRatePct": 47.9,
+     "avgReturnPct": 0.22,
+     "avgExcessPct": 0.02,
+     "tStat": -0.09,
+     "tradesPerMonth": 61.9,
+     "periods": {
+      "2011-2019": {
+       "trades": 6275,
+       "winRatePct": 46.23,
+       "avgReturnPct": -0.3,
+       "avgExcessPct": 0.33,
+       "tStat": 1.66
+      },
+      "2020-2022": {
+       "trades": 2153,
+       "winRatePct": 47.84,
+       "avgReturnPct": 0.64,
+       "avgExcessPct": -0.5,
+       "tStat": -2.41
+      },
+      "2023-now": {
+       "trades": 3243,
+       "winRatePct": 51.16,
+       "avgReturnPct": 0.96,
+       "avgExcessPct": -0.24,
+       "tStat": -0.65
+      }
+     }
+    },
+    "40": {
+     "trades": 9929,
+     "winRatePct": 49.72,
+     "avgReturnPct": 1.21,
+     "avgExcessPct": 0.21,
+     "tStat": 0.44,
+     "tradesPerMonth": 52.6,
+     "periods": {
+      "2011-2019": {
+       "trades": 5356,
+       "winRatePct": 47.96,
+       "avgReturnPct": 0.66,
+       "avgExcessPct": 0.87,
+       "tStat": 3.31
+      },
+      "2020-2022": {
+       "trades": 1860,
+       "winRatePct": 48.82,
+       "avgReturnPct": 0.65,
+       "avgExcessPct": -0.57,
+       "tStat": -2.55
+      },
+      "2023-now": {
+       "trades": 2713,
+       "winRatePct": 53.81,
+       "avgReturnPct": 2.66,
+       "avgExcessPct": -0.56,
+       "tStat": -1.59
+      }
+     }
+    },
+    "60": {
+     "trades": 8866,
+     "winRatePct": 52.58,
+     "avgReturnPct": 3.07,
+     "avgExcessPct": 0.51,
+     "tStat": 2.52,
+     "tradesPerMonth": 47,
+     "periods": {
+      "2011-2019": {
+       "trades": 4824,
+       "winRatePct": 49.92,
+       "avgReturnPct": 2.26,
+       "avgExcessPct": 1.3,
+       "tStat": 5.17
+      },
+      "2020-2022": {
+       "trades": 1686,
+       "winRatePct": 52.73,
+       "avgReturnPct": 2.78,
+       "avgExcessPct": -0.51,
+       "tStat": -2.29
+      },
+      "2023-now": {
+       "trades": 2356,
+       "winRatePct": 57.94,
+       "avgReturnPct": 4.95,
+       "avgExcessPct": -0.38,
+       "tStat": -0.82
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "golden-cross",
+   "label": "50-day average crosses above the 200-day",
+   "basis": "The golden cross.",
+   "holds": {
+    "10": {
+     "trades": 4826,
+     "winRatePct": 43.76,
+     "avgReturnPct": -0.29,
+     "avgExcessPct": 0.05,
+     "tStat": 0.43,
+     "tradesPerMonth": 25.6,
+     "periods": {
+      "2011-2019": {
+       "trades": 2746,
+       "winRatePct": 42.68,
+       "avgReturnPct": -0.6,
+       "avgExcessPct": 0.12,
+       "tStat": 0.12
+      },
+      "2020-2022": {
+       "trades": 945,
+       "winRatePct": 45.71,
+       "avgReturnPct": 0.2,
+       "avgExcessPct": 0.04,
+       "tStat": 1.17
+      },
+      "2023-now": {
+       "trades": 1135,
+       "winRatePct": 44.76,
+       "avgReturnPct": 0.06,
+       "avgExcessPct": -0.13,
+       "tStat": -0.65
+      }
+     }
+    },
+    "20": {
+     "trades": 4798,
+     "winRatePct": 48.21,
+     "avgReturnPct": 0.47,
+     "avgExcessPct": 0.37,
+     "tStat": 2.51,
+     "tradesPerMonth": 25.4,
+     "periods": {
+      "2011-2019": {
+       "trades": 2731,
+       "winRatePct": 47.38,
+       "avgReturnPct": 0.29,
+       "avgExcessPct": 0.66,
+       "tStat": 3.24
+      },
+      "2020-2022": {
+       "trades": 942,
+       "winRatePct": 49.79,
+       "avgReturnPct": 0.57,
+       "avgExcessPct": 0.11,
+       "tStat": 0.47
+      },
+      "2023-now": {
+       "trades": 1125,
+       "winRatePct": 48.89,
+       "avgReturnPct": 0.81,
+       "avgExcessPct": -0.14,
+       "tStat": -0.32
+      }
+     }
+    },
+    "40": {
+     "trades": 4739,
+     "winRatePct": 50.09,
+     "avgReturnPct": 1.51,
+     "avgExcessPct": 0.36,
+     "tStat": 1.75,
+     "tradesPerMonth": 25.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 2694,
+       "winRatePct": 49.37,
+       "avgReturnPct": 1.29,
+       "avgExcessPct": 0.93,
+       "tStat": 3.37
+      },
+      "2020-2022": {
+       "trades": 936,
+       "winRatePct": 53.74,
+       "avgReturnPct": 1.81,
+       "avgExcessPct": 0.08,
+       "tStat": -0.26
+      },
+      "2023-now": {
+       "trades": 1109,
+       "winRatePct": 48.78,
+       "avgReturnPct": 1.77,
+       "avgExcessPct": -0.79,
+       "tStat": -1.6
+      }
+     }
+    },
+    "60": {
+     "trades": 4644,
+     "winRatePct": 50.73,
+     "avgReturnPct": 2.54,
+     "avgExcessPct": 0.48,
+     "tStat": 1.57,
+     "tradesPerMonth": 24.6,
+     "periods": {
+      "2011-2019": {
+       "trades": 2664,
+       "winRatePct": 48.8,
+       "avgReturnPct": 1.56,
+       "avgExcessPct": 1.18,
+       "tStat": 3.22
+      },
+      "2020-2022": {
+       "trades": 915,
+       "winRatePct": 57.05,
+       "avgReturnPct": 5.1,
+       "avgExcessPct": 0.48,
+       "tStat": 0.2
+      },
+      "2023-now": {
+       "trades": 1065,
+       "winRatePct": 50.14,
+       "avgReturnPct": 2.77,
+       "avgExcessPct": -1.27,
+       "tStat": -2.32
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "leader-recovers",
+   "label": "Strong stock back above its 20-day average",
+   "basis": "Up 50% or more over 12 months, above the 50-day average, closing back above the 20-day average after a close below it.",
+   "holds": {
+    "10": {
+     "trades": 13278,
+     "winRatePct": 45.09,
+     "avgReturnPct": -0.01,
+     "avgExcessPct": 0.16,
+     "tStat": 1.81,
+     "tradesPerMonth": 70.4,
+     "periods": {
+      "2011-2019": {
+       "trades": 6619,
+       "winRatePct": 43.03,
+       "avgReturnPct": -0.41,
+       "avgExcessPct": 0.05,
+       "tStat": 1.54
+      },
+      "2020-2022": {
+       "trades": 3185,
+       "winRatePct": 44.84,
+       "avgReturnPct": 0.12,
+       "avgExcessPct": 0.13,
+       "tStat": -0.26
+      },
+      "2023-now": {
+       "trades": 3474,
+       "winRatePct": 49.25,
+       "avgReturnPct": 0.63,
+       "avgExcessPct": 0.42,
+       "tStat": 1.59
+      }
+     }
+    },
+    "20": {
+     "trades": 10403,
+     "winRatePct": 47.94,
+     "avgReturnPct": 0.79,
+     "avgExcessPct": 0.35,
+     "tStat": 2.76,
+     "tradesPerMonth": 55.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 5192,
+       "winRatePct": 46.4,
+       "avgReturnPct": 0.23,
+       "avgExcessPct": 0.33,
+       "tStat": 1.85
+      },
+      "2020-2022": {
+       "trades": 2502,
+       "winRatePct": 46.96,
+       "avgReturnPct": 0.9,
+       "avgExcessPct": 0.28,
+       "tStat": 0.41
+      },
+      "2023-now": {
+       "trades": 2709,
+       "winRatePct": 51.79,
+       "avgReturnPct": 1.78,
+       "avgExcessPct": 0.44,
+       "tStat": 2.39
+      }
+     }
+    },
+    "40": {
+     "trades": 7788,
+     "winRatePct": 51.64,
+     "avgReturnPct": 2.89,
+     "avgExcessPct": 0.96,
+     "tStat": 4.11,
+     "tradesPerMonth": 41.3,
+     "periods": {
+      "2011-2019": {
+       "trades": 3891,
+       "winRatePct": 49.32,
+       "avgReturnPct": 1.75,
+       "avgExcessPct": 1.13,
+       "tStat": 3.44
+      },
+      "2020-2022": {
+       "trades": 1878,
+       "winRatePct": 52.13,
+       "avgReturnPct": 3.1,
+       "avgExcessPct": 0.28,
+       "tStat": 0
+      },
+      "2023-now": {
+       "trades": 2019,
+       "winRatePct": 55.67,
+       "avgReturnPct": 4.86,
+       "avgExcessPct": 1.27,
+       "tStat": 3.24
+      }
+     }
+    },
+    "60": {
+     "trades": 6410,
+     "winRatePct": 52.92,
+     "avgReturnPct": 4.85,
+     "avgExcessPct": 1.56,
+     "tStat": 4.97,
+     "tradesPerMonth": 34,
+     "periods": {
+      "2011-2019": {
+       "trades": 3219,
+       "winRatePct": 49.7,
+       "avgReturnPct": 2.46,
+       "avgExcessPct": 1.67,
+       "tStat": 4.43
+      },
+      "2020-2022": {
+       "trades": 1568,
+       "winRatePct": 53.57,
+       "avgReturnPct": 6.67,
+       "avgExcessPct": 0.8,
+       "tStat": 0.52
+      },
+      "2023-now": {
+       "trades": 1623,
+       "winRatePct": 58.66,
+       "avgReturnPct": 7.82,
+       "avgExcessPct": 2.07,
+       "tStat": 3.26
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "new-leader",
+   "label": "Enters the top 5% on 12-month momentum",
+   "basis": "The stock's 12-month return (skipping the last month) moves into the top 5% of the universe.",
+   "holds": {
+    "10": {
+     "trades": 3920,
+     "winRatePct": 48.09,
+     "avgReturnPct": 0.19,
+     "avgExcessPct": 0.41,
+     "tStat": 2.87,
+     "tradesPerMonth": 20.8,
+     "periods": {
+      "2011-2019": {
+       "trades": 2076,
+       "winRatePct": 47.4,
+       "avgReturnPct": -0.02,
+       "avgExcessPct": 0.36,
+       "tStat": 1.7
+      },
+      "2020-2022": {
+       "trades": 831,
+       "winRatePct": 50.3,
+       "avgReturnPct": 0.4,
+       "avgExcessPct": 0.56,
+       "tStat": 1.76
+      },
+      "2023-now": {
+       "trades": 1013,
+       "winRatePct": 47.68,
+       "avgReturnPct": 0.46,
+       "avgExcessPct": 0.4,
+       "tStat": 1.58
+      }
+     }
+    },
+    "20": {
+     "trades": 3100,
+     "winRatePct": 50.48,
+     "avgReturnPct": 1.08,
+     "avgExcessPct": 0.75,
+     "tStat": 2.97,
+     "tradesPerMonth": 16.4,
+     "periods": {
+      "2011-2019": {
+       "trades": 1652,
+       "winRatePct": 49.52,
+       "avgReturnPct": 0.58,
+       "avgExcessPct": 0.65,
+       "tStat": 1.7
+      },
+      "2020-2022": {
+       "trades": 650,
+       "winRatePct": 52.15,
+       "avgReturnPct": 1.9,
+       "avgExcessPct": 1.06,
+       "tStat": 1.55
+      },
+      "2023-now": {
+       "trades": 798,
+       "winRatePct": 51.13,
+       "avgReturnPct": 1.45,
+       "avgExcessPct": 0.68,
+       "tStat": 1.97
+      }
+     }
+    },
+    "40": {
+     "trades": 2401,
+     "winRatePct": 51.77,
+     "avgReturnPct": 3.31,
+     "avgExcessPct": 2,
+     "tStat": 4.1,
+     "tradesPerMonth": 12.7,
+     "periods": {
+      "2011-2019": {
+       "trades": 1298,
+       "winRatePct": 50.69,
+       "avgReturnPct": 2.16,
+       "avgExcessPct": 1.66,
+       "tStat": 3.09
+      },
+      "2020-2022": {
+       "trades": 498,
+       "winRatePct": 52.81,
+       "avgReturnPct": 5.22,
+       "avgExcessPct": 3,
+       "tStat": 1.9
+      },
+      "2023-now": {
+       "trades": 605,
+       "winRatePct": 53.22,
+       "avgReturnPct": 4.21,
+       "avgExcessPct": 1.9,
+       "tStat": 2.29
+      }
+     }
+    },
+    "60": {
+     "trades": 2052,
+     "winRatePct": 52.92,
+     "avgReturnPct": 5.22,
+     "avgExcessPct": 2.75,
+     "tStat": 4.43,
+     "tradesPerMonth": 10.9,
+     "periods": {
+      "2011-2019": {
+       "trades": 1119,
+       "winRatePct": 50.85,
+       "avgReturnPct": 2.85,
+       "avgExcessPct": 2.26,
+       "tStat": 2.78
+      },
+      "2020-2022": {
+       "trades": 425,
+       "winRatePct": 53.41,
+       "avgReturnPct": 8.41,
+       "avgExcessPct": 3.22,
+       "tStat": 2.07
+      },
+      "2023-now": {
+       "trades": 508,
+       "winRatePct": 57.09,
+       "avgReturnPct": 7.8,
+       "avgExcessPct": 3.43,
+       "tStat": 3.07
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "delivery-buying",
+   "label": "Heavy delivery buying over a week",
+   "basis": "Delivery share over five sessions 1.5 times its 20-day average, with the price up over the week.",
+   "holds": {
+    "10": {
+     "trades": 2758,
+     "winRatePct": 48.15,
+     "avgReturnPct": 0.47,
+     "avgExcessPct": 0.16,
+     "tStat": 0.17,
+     "tradesPerMonth": 14.6,
+     "periods": {
+      "2011-2019": {
+       "trades": 1823,
+       "winRatePct": 45.86,
+       "avgReturnPct": -0.11,
+       "avgExcessPct": 0.05,
+       "tStat": -0.37
+      },
+      "2020-2022": {
+       "trades": 613,
+       "winRatePct": 56.93,
+       "avgReturnPct": 2.9,
+       "avgExcessPct": 1.04,
+       "tStat": 2.07
+      },
+      "2023-now": {
+       "trades": 322,
+       "winRatePct": 44.41,
+       "avgReturnPct": -0.86,
+       "avgExcessPct": -0.95,
+       "tStat": -1.9
+      }
+     }
+    },
+    "20": {
+     "trades": 2650,
+     "winRatePct": 49.28,
+     "avgReturnPct": 0.72,
+     "avgExcessPct": -0.1,
+     "tStat": -0.99,
+     "tradesPerMonth": 14,
+     "periods": {
+      "2011-2019": {
+       "trades": 1754,
+       "winRatePct": 45.72,
+       "avgReturnPct": -0.29,
+       "avgExcessPct": -0.1,
+       "tStat": -0.76
+      },
+      "2020-2022": {
+       "trades": 585,
+       "winRatePct": 57.78,
+       "avgReturnPct": 3.7,
+       "avgExcessPct": 0.41,
+       "tStat": 0.23
+      },
+      "2023-now": {
+       "trades": 311,
+       "winRatePct": 53.38,
+       "avgReturnPct": 0.79,
+       "avgExcessPct": -1.04,
+       "tStat": -1.51
+      }
+     }
+    },
+    "40": {
+     "trades": 2471,
+     "winRatePct": 49.25,
+     "avgReturnPct": 1.14,
+     "avgExcessPct": -0.38,
+     "tStat": -1.07,
+     "tradesPerMonth": 13.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 1616,
+       "winRatePct": 45.48,
+       "avgReturnPct": -0.5,
+       "avgExcessPct": -0.32,
+       "tStat": -0.55
+      },
+      "2020-2022": {
+       "trades": 553,
+       "winRatePct": 56.06,
+       "avgReturnPct": 5.04,
+       "avgExcessPct": 0.26,
+       "tStat": 0.01
+      },
+      "2023-now": {
+       "trades": 302,
+       "winRatePct": 56.95,
+       "avgReturnPct": 2.75,
+       "avgExcessPct": -1.94,
+       "tStat": -1.92
+      }
+     }
+    },
+    "60": {
+     "trades": 2322,
+     "winRatePct": 49.01,
+     "avgReturnPct": 2.01,
+     "avgExcessPct": -0.88,
+     "tStat": -1.83,
+     "tradesPerMonth": 12.3,
+     "periods": {
+      "2011-2019": {
+       "trades": 1512,
+       "winRatePct": 43.92,
+       "avgReturnPct": -0.88,
+       "avgExcessPct": -1.04,
+       "tStat": -1.41
+      },
+      "2020-2022": {
+       "trades": 518,
+       "winRatePct": 59.07,
+       "avgReturnPct": 8.41,
+       "avgExcessPct": -0.07,
+       "tStat": -0.66
+      },
+      "2023-now": {
+       "trades": 292,
+       "winRatePct": 57.53,
+       "avgReturnPct": 5.61,
+       "avgExcessPct": -1.53,
+       "tStat": -1.08
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "three-month-low-reversal",
+   "label": "Bounce from a three-month low",
+   "basis": "Closed at a 63-session low within the last five sessions and is now up 5% from it, above the 200-day average.",
+   "holds": {
+    "10": {
+     "trades": 5386,
+     "winRatePct": 44.45,
+     "avgReturnPct": -0.6,
+     "avgExcessPct": -0.64,
+     "tStat": -4.66,
+     "tradesPerMonth": 28.5,
+     "periods": {
+      "2011-2019": {
+       "trades": 2976,
+       "winRatePct": 42,
+       "avgReturnPct": -0.99,
+       "avgExcessPct": -0.78,
+       "tStat": -3.57
+      },
+      "2020-2022": {
+       "trades": 982,
+       "winRatePct": 46.95,
+       "avgReturnPct": -0.21,
+       "avgExcessPct": -0.57,
+       "tStat": -3.09
+      },
+      "2023-now": {
+       "trades": 1428,
+       "winRatePct": 47.83,
+       "avgReturnPct": -0.07,
+       "avgExcessPct": -0.39,
+       "tStat": -1.23
+      }
+     }
+    },
+    "20": {
+     "trades": 4922,
+     "winRatePct": 47.24,
+     "avgReturnPct": 0.09,
+     "avgExcessPct": -0.62,
+     "tStat": -3.21,
+     "tradesPerMonth": 26.1,
+     "periods": {
+      "2011-2019": {
+       "trades": 2733,
+       "winRatePct": 45.33,
+       "avgReturnPct": -0.54,
+       "avgExcessPct": -0.8,
+       "tStat": -2.32
+      },
+      "2020-2022": {
+       "trades": 919,
+       "winRatePct": 51.36,
+       "avgReturnPct": 1.36,
+       "avgExcessPct": -0.49,
+       "tStat": -2.31
+      },
+      "2023-now": {
+       "trades": 1270,
+       "winRatePct": 48.35,
+       "avgReturnPct": 0.55,
+       "avgExcessPct": -0.33,
+       "tStat": -0.74
+      }
+     }
+    },
+    "40": {
+     "trades": 4442,
+     "winRatePct": 49.48,
+     "avgReturnPct": 1.55,
+     "avgExcessPct": -0.4,
+     "tStat": -1.84,
+     "tradesPerMonth": 23.5,
+     "periods": {
+      "2011-2019": {
+       "trades": 2492,
+       "winRatePct": 47.43,
+       "avgReturnPct": 0.71,
+       "avgExcessPct": -0.68,
+       "tStat": -1.91
+      },
+      "2020-2022": {
+       "trades": 843,
+       "winRatePct": 53.14,
+       "avgReturnPct": 3.33,
+       "avgExcessPct": -0.11,
+       "tStat": -0.75
+      },
+      "2023-now": {
+       "trades": 1107,
+       "winRatePct": 51.31,
+       "avgReturnPct": 2.07,
+       "avgExcessPct": 0.01,
+       "tStat": -0.01
+      }
+     }
+    },
+    "60": {
+     "trades": 4273,
+     "winRatePct": 50.71,
+     "avgReturnPct": 3.09,
+     "avgExcessPct": -0.4,
+     "tStat": -1.46,
+     "tradesPerMonth": 22.6,
+     "periods": {
+      "2011-2019": {
+       "trades": 2408,
+       "winRatePct": 49.92,
+       "avgReturnPct": 2.1,
+       "avgExcessPct": -0.1,
+       "tStat": -0.79
+      },
+      "2020-2022": {
+       "trades": 817,
+       "winRatePct": 49.69,
+       "avgReturnPct": 3.88,
+       "avgExcessPct": -1.8,
+       "tStat": -1.6
+      },
+      "2023-now": {
+       "trades": 1048,
+       "winRatePct": 53.34,
+       "avgReturnPct": 4.72,
+       "avgExcessPct": 0.02,
+       "tStat": 0.06
+      }
+     }
+    }
+   }
+  }
+ ],
+ "bookNote": "Each rule run as a book of Rs 5 lakh: limited positions, whole shares, delivery charges, 0.1% slippage a side, capital gains tax paid each March. Idle cash earns nothing. NIFTY 500 is the price index, without dividends, costs or tax.",
+ "nifty500": {
+  "full": {
+   "cagrPct": 10.4,
+   "maxDrawdownPct": -38.3,
+   "sharpe": 0.32
+  },
+  "2011-2019": {
+   "cagrPct": 7.9,
+   "maxDrawdownPct": -28.7,
+   "sharpe": 0.18
+  },
+  "2020-2022": {
+   "cagrPct": 16.1,
+   "maxDrawdownPct": -38.3,
+   "sharpe": 0.52
+  },
+  "2023-now": {
+   "cagrPct": 11.8,
+   "maxDrawdownPct": -18.8,
+   "sharpe": 0.45
+  }
+ },
+ "books": [
+  {
+   "key": "results-jump",
+   "note": "20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 19,
+     "maxDrawdownPct": -59.6,
+     "sharpe": 0.67
+    },
+    "2011-2019": {
+     "cagrPct": 14.8,
+     "maxDrawdownPct": -37,
+     "sharpe": 0.5
+    },
+    "2020-2022": {
+     "cagrPct": 26.3,
+     "maxDrawdownPct": -43.7,
+     "sharpe": 0.86
+    },
+    "2023-now": {
+     "cagrPct": 23.4,
+     "maxDrawdownPct": -25.3,
+     "sharpe": 0.92
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 15.4,
+     "maxDrawdownPct": -61.6,
+     "sharpe": 0.51
+    },
+    "2011-2019": {
+     "cagrPct": 11.2,
+     "maxDrawdownPct": -40.3,
+     "sharpe": 0.33
+    },
+    "2020-2022": {
+     "cagrPct": 24.1,
+     "maxDrawdownPct": -43.6,
+     "sharpe": 0.79
+    },
+    "2023-now": {
+     "cagrPct": 18.9,
+     "maxDrawdownPct": -26.7,
+     "sharpe": 0.7
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -16.2,
+    "2012": 55.8,
+    "2013": 9.5,
+    "2014": 85.9,
+    "2015": 9.2,
+    "2016": 2.8,
+    "2017": 36.3,
+    "2018": -24.4,
+    "2019": -15.3,
+    "2020": 36,
+    "2021": 45.4,
+    "2022": -3.2,
+    "2023": 91.3,
+    "2024": 10.2,
+    "2025": -9.3,
+    "2026": 2.2
+   },
+   "tradesPerYear": 76,
+   "winRatePct": 57.4,
+   "signalsSkippedPct": 76.3,
+   "avgInvestedPct": 88.8
+  },
+  {
+   "key": "results-jump-big",
+   "note": "20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 23.9,
+     "maxDrawdownPct": -45,
+     "sharpe": 0.91
+    },
+    "2011-2019": {
+     "cagrPct": 20.1,
+     "maxDrawdownPct": -29.6,
+     "sharpe": 0.76
+    },
+    "2020-2022": {
+     "cagrPct": 30.4,
+     "maxDrawdownPct": -42.3,
+     "sharpe": 1.05
+    },
+    "2023-now": {
+     "cagrPct": 27.8,
+     "maxDrawdownPct": -23.2,
+     "sharpe": 1.1
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 19.4,
+     "maxDrawdownPct": -48,
+     "sharpe": 0.7
+    },
+    "2011-2019": {
+     "cagrPct": 16.3,
+     "maxDrawdownPct": -31.6,
+     "sharpe": 0.58
+    },
+    "2020-2022": {
+     "cagrPct": 24.9,
+     "maxDrawdownPct": -42.1,
+     "sharpe": 0.84
+    },
+    "2023-now": {
+     "cagrPct": 22.5,
+     "maxDrawdownPct": -25.5,
+     "sharpe": 0.85
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -25.6,
+    "2012": 57.2,
+    "2013": 7,
+    "2014": 113,
+    "2015": 23.4,
+    "2016": 0,
+    "2017": 49.9,
+    "2018": -19.2,
+    "2019": -2.6,
+    "2020": 48.6,
+    "2021": 45.3,
+    "2022": -8.9,
+    "2023": 60.8,
+    "2024": 25,
+    "2025": -8,
+    "2026": 18.6
+   },
+   "tradesPerYear": 67,
+   "winRatePct": 60,
+   "signalsSkippedPct": 40.9,
+   "avgInvestedPct": 78.8
+  },
+  {
+   "key": "results-jump-big-10",
+   "note": "10 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 28.4,
+     "maxDrawdownPct": -41.8,
+     "sharpe": 0.99
+    },
+    "2011-2019": {
+     "cagrPct": 26.9,
+     "maxDrawdownPct": -29.8,
+     "sharpe": 0.94
+    },
+    "2020-2022": {
+     "cagrPct": 33.4,
+     "maxDrawdownPct": -41.6,
+     "sharpe": 1.08
+    },
+    "2023-now": {
+     "cagrPct": 28.2,
+     "maxDrawdownPct": -25,
+     "sharpe": 1.02
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 23.5,
+     "maxDrawdownPct": -43.4,
+     "sharpe": 0.79
+    },
+    "2011-2019": {
+     "cagrPct": 22.6,
+     "maxDrawdownPct": -31.7,
+     "sharpe": 0.76
+    },
+    "2020-2022": {
+     "cagrPct": 27.1,
+     "maxDrawdownPct": -41.6,
+     "sharpe": 0.86
+    },
+    "2023-now": {
+     "cagrPct": 22.6,
+     "maxDrawdownPct": -25.3,
+     "sharpe": 0.8
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -12.8,
+    "2012": 53,
+    "2013": 9.8,
+    "2014": 134.8,
+    "2015": 31.3,
+    "2016": 12,
+    "2017": 46.4,
+    "2018": -14.1,
+    "2019": -1.6,
+    "2020": 48,
+    "2021": 46,
+    "2022": -4.9,
+    "2023": 60.5,
+    "2024": 32.5,
+    "2025": -9.4,
+    "2026": 14.3
+   },
+   "tradesPerYear": 37,
+   "winRatePct": 62.2,
+   "signalsSkippedPct": 69.4,
+   "avgInvestedPct": 85.4
+  },
+  {
+   "key": "results-jump-big-stop10",
+   "note": "20 positions, 60 sessions, 10% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 14.9,
+     "maxDrawdownPct": -30.5,
+     "sharpe": 0.62
+    },
+    "2011-2019": {
+     "cagrPct": 11,
+     "maxDrawdownPct": -30.5,
+     "sharpe": 0.38
+    },
+    "2020-2022": {
+     "cagrPct": 27.3,
+     "maxDrawdownPct": -17.1,
+     "sharpe": 1.36
+    },
+    "2023-now": {
+     "cagrPct": 14.8,
+     "maxDrawdownPct": -20.8,
+     "sharpe": 0.63
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 12.2,
+     "maxDrawdownPct": -33.2,
+     "sharpe": 0.45
+    },
+    "2011-2019": {
+     "cagrPct": 9,
+     "maxDrawdownPct": -33.2,
+     "sharpe": 0.25
+    },
+    "2020-2022": {
+     "cagrPct": 22.1,
+     "maxDrawdownPct": -17.4,
+     "sharpe": 1.03
+    },
+    "2023-now": {
+     "cagrPct": 12.2,
+     "maxDrawdownPct": -23.9,
+     "sharpe": 0.45
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -19.5,
+    "2012": 32.1,
+    "2013": 3.1,
+    "2014": 91.5,
+    "2015": 2.1,
+    "2016": -7,
+    "2017": 36.1,
+    "2018": -17.9,
+    "2019": -2.6,
+    "2020": 49.5,
+    "2021": 39.2,
+    "2022": -11.8,
+    "2023": 53.2,
+    "2024": 1.9,
+    "2025": -11.5,
+    "2026": 13.1
+   },
+   "tradesPerYear": 81,
+   "winRatePct": 41.9,
+   "signalsSkippedPct": 27.8,
+   "avgInvestedPct": 61.9
+  },
+  {
+   "key": "results-jump-big-stop15",
+   "note": "20 positions, 60 sessions, 15% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 17.7,
+     "maxDrawdownPct": -34.1,
+     "sharpe": 0.73
+    },
+    "2011-2019": {
+     "cagrPct": 12.6,
+     "maxDrawdownPct": -34,
+     "sharpe": 0.45
+    },
+    "2020-2022": {
+     "cagrPct": 30.9,
+     "maxDrawdownPct": -19.6,
+     "sharpe": 1.41
+    },
+    "2023-now": {
+     "cagrPct": 19.8,
+     "maxDrawdownPct": -23.2,
+     "sharpe": 0.85
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 14.7,
+     "maxDrawdownPct": -36.9,
+     "sharpe": 0.55
+    },
+    "2011-2019": {
+     "cagrPct": 10.3,
+     "maxDrawdownPct": -36.9,
+     "sharpe": 0.31
+    },
+    "2020-2022": {
+     "cagrPct": 26.4,
+     "maxDrawdownPct": -19.3,
+     "sharpe": 1.15
+    },
+    "2023-now": {
+     "cagrPct": 16.3,
+     "maxDrawdownPct": -23.2,
+     "sharpe": 0.64
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -26.4,
+    "2012": 36.5,
+    "2013": 3,
+    "2014": 110.7,
+    "2015": 12.3,
+    "2016": -8.3,
+    "2017": 41.6,
+    "2018": -21.8,
+    "2019": -3.2,
+    "2020": 54.5,
+    "2021": 51.2,
+    "2022": -13,
+    "2023": 58.8,
+    "2024": 13.9,
+    "2025": -15.4,
+    "2026": 17.3
+   },
+   "tradesPerYear": 74,
+   "winRatePct": 51.7,
+   "signalsSkippedPct": 34.8,
+   "avgInvestedPct": 69.3
+  },
+  {
+   "key": "results-jump-big-stop20",
+   "note": "20 positions, 60 sessions, 20% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 16.5,
+     "maxDrawdownPct": -41.3,
+     "sharpe": 0.64
+    },
+    "2011-2019": {
+     "cagrPct": 11.7,
+     "maxDrawdownPct": -32.4,
+     "sharpe": 0.39
+    },
+    "2020-2022": {
+     "cagrPct": 27.7,
+     "maxDrawdownPct": -24.7,
+     "sharpe": 1.18
+    },
+    "2023-now": {
+     "cagrPct": 19.5,
+     "maxDrawdownPct": -27,
+     "sharpe": 0.8
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 13.7,
+     "maxDrawdownPct": -43.7,
+     "sharpe": 0.48
+    },
+    "2011-2019": {
+     "cagrPct": 9.3,
+     "maxDrawdownPct": -35.2,
+     "sharpe": 0.26
+    },
+    "2020-2022": {
+     "cagrPct": 24.1,
+     "maxDrawdownPct": -24.5,
+     "sharpe": 0.99
+    },
+    "2023-now": {
+     "cagrPct": 16.1,
+     "maxDrawdownPct": -27,
+     "sharpe": 0.61
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -28.8,
+    "2012": 44.3,
+    "2013": 0.4,
+    "2014": 109.7,
+    "2015": 10.2,
+    "2016": -6.3,
+    "2017": 40.7,
+    "2018": -20.8,
+    "2019": -10.5,
+    "2020": 47.8,
+    "2021": 48.5,
+    "2022": -12.6,
+    "2023": 59.5,
+    "2024": 14.7,
+    "2025": -15.8,
+    "2026": 15.5
+   },
+   "tradesPerYear": 71,
+   "winRatePct": 54.8,
+   "signalsSkippedPct": 37.6,
+   "avgInvestedPct": 73.7
+  },
+  {
+   "key": "results-jump-big-10-stop15",
+   "note": "10 positions, 60 sessions, 15% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 20.4,
+     "maxDrawdownPct": -35.1,
+     "sharpe": 0.77
+    },
+    "2011-2019": {
+     "cagrPct": 17.7,
+     "maxDrawdownPct": -31.5,
+     "sharpe": 0.64
+    },
+    "2020-2022": {
+     "cagrPct": 26.5,
+     "maxDrawdownPct": -22.5,
+     "sharpe": 1.06
+    },
+    "2023-now": {
+     "cagrPct": 21.9,
+     "maxDrawdownPct": -27.2,
+     "sharpe": 0.82
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 16.9,
+     "maxDrawdownPct": -35,
+     "sharpe": 0.6
+    },
+    "2011-2019": {
+     "cagrPct": 14.7,
+     "maxDrawdownPct": -31.6,
+     "sharpe": 0.5
+    },
+    "2020-2022": {
+     "cagrPct": 22,
+     "maxDrawdownPct": -23,
+     "sharpe": 0.85
+    },
+    "2023-now": {
+     "cagrPct": 18.1,
+     "maxDrawdownPct": -27.2,
+     "sharpe": 0.64
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -21.1,
+    "2012": 44.6,
+    "2013": 6.8,
+    "2014": 127.5,
+    "2015": 21.1,
+    "2016": -13.6,
+    "2017": 42.5,
+    "2018": -13.2,
+    "2019": -4.6,
+    "2020": 49.8,
+    "2021": 42.2,
+    "2022": -14.7,
+    "2023": 62.5,
+    "2024": 16.7,
+    "2025": -15.7,
+    "2026": 18.8
+   },
+   "tradesPerYear": 41,
+   "winRatePct": 52.6,
+   "signalsSkippedPct": 65.6,
+   "avgInvestedPct": 77.3
+  },
+  {
+   "key": "results-jump-big-40d",
+   "note": "20 positions, 40 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 13.9,
+     "maxDrawdownPct": -50,
+     "sharpe": 0.53
+    },
+    "2011-2019": {
+     "cagrPct": 12.2,
+     "maxDrawdownPct": -27.7,
+     "sharpe": 0.43
+    },
+    "2020-2022": {
+     "cagrPct": 17.9,
+     "maxDrawdownPct": -36.7,
+     "sharpe": 0.7
+    },
+    "2023-now": {
+     "cagrPct": 15,
+     "maxDrawdownPct": -19.3,
+     "sharpe": 0.63
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 11.3,
+     "maxDrawdownPct": -52.4,
+     "sharpe": 0.37
+    },
+    "2011-2019": {
+     "cagrPct": 9.4,
+     "maxDrawdownPct": -31,
+     "sharpe": 0.26
+    },
+    "2020-2022": {
+     "cagrPct": 16.2,
+     "maxDrawdownPct": -36.9,
+     "sharpe": 0.61
+    },
+    "2023-now": {
+     "cagrPct": 11.9,
+     "maxDrawdownPct": -19.3,
+     "sharpe": 0.44
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -19.9,
+    "2012": 38.6,
+    "2013": 10,
+    "2014": 74.1,
+    "2015": 0.4,
+    "2016": 7.5,
+    "2017": 29.1,
+    "2018": -23.7,
+    "2019": -0.9,
+    "2020": 9.1,
+    "2021": 43.9,
+    "2022": 0,
+    "2023": 37.6,
+    "2024": 12.7,
+    "2025": -6.2,
+    "2026": 6.3
+   },
+   "tradesPerYear": 74,
+   "winRatePct": 57.1,
+   "signalsSkippedPct": 36,
+   "avgInvestedPct": 57.4
+  },
+  {
+   "key": "results-jump-big-90d",
+   "note": "20 positions, 90 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 15,
+     "maxDrawdownPct": -42.7,
+     "sharpe": 0.58
+    },
+    "2011-2019": {
+     "cagrPct": 7.7,
+     "maxDrawdownPct": -42.7,
+     "sharpe": 0.17
+    },
+    "2020-2022": {
+     "cagrPct": 36.5,
+     "maxDrawdownPct": -20.6,
+     "sharpe": 1.62
+    },
+    "2023-now": {
+     "cagrPct": 17.3,
+     "maxDrawdownPct": -24.2,
+     "sharpe": 0.73
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 12.2,
+     "maxDrawdownPct": -44.8,
+     "sharpe": 0.42
+    },
+    "2011-2019": {
+     "cagrPct": 5.6,
+     "maxDrawdownPct": -44.8,
+     "sharpe": 0.05
+    },
+    "2020-2022": {
+     "cagrPct": 31.7,
+     "maxDrawdownPct": -20.6,
+     "sharpe": 1.35
+    },
+    "2023-now": {
+     "cagrPct": 14,
+     "maxDrawdownPct": -24.9,
+     "sharpe": 0.54
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -21.5,
+    "2012": 30,
+    "2013": -2.2,
+    "2014": 81.2,
+    "2015": 11.8,
+    "2016": -9.6,
+    "2017": 41.6,
+    "2018": -27.8,
+    "2019": -12.8,
+    "2020": 74.9,
+    "2021": 52.9,
+    "2022": -14.4,
+    "2023": 56.3,
+    "2024": 2.4,
+    "2025": -12.2,
+    "2026": 18.1
+   },
+   "tradesPerYear": 39,
+   "winRatePct": 56.1,
+   "signalsSkippedPct": 66.6,
+   "avgInvestedPct": 69.3
+  },
+  {
+   "key": "results-jump-40d",
+   "note": "20 positions, 40 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 9.5,
+     "maxDrawdownPct": -43.2,
+     "sharpe": 0.28
+    },
+    "2011-2019": {
+     "cagrPct": 6.6,
+     "maxDrawdownPct": -31.5,
+     "sharpe": 0.11
+    },
+    "2020-2022": {
+     "cagrPct": 13.9,
+     "maxDrawdownPct": -29.8,
+     "sharpe": 0.51
+    },
+    "2023-now": {
+     "cagrPct": 13.2,
+     "maxDrawdownPct": -16.5,
+     "sharpe": 0.53
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 7.7,
+     "maxDrawdownPct": -43.3,
+     "sharpe": 0.17
+    },
+    "2011-2019": {
+     "cagrPct": 5.2,
+     "maxDrawdownPct": -31.5,
+     "sharpe": 0.03
+    },
+    "2020-2022": {
+     "cagrPct": 11.5,
+     "maxDrawdownPct": -29.8,
+     "sharpe": 0.38
+    },
+    "2023-now": {
+     "cagrPct": 10.8,
+     "maxDrawdownPct": -16.4,
+     "sharpe": 0.37
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -30,
+    "2012": 40.1,
+    "2013": 1,
+    "2014": 82.1,
+    "2015": -8,
+    "2016": -5.9,
+    "2017": 25.2,
+    "2018": -23.3,
+    "2019": 5.4,
+    "2020": 24.2,
+    "2021": 18.9,
+    "2022": -6.1,
+    "2023": 54.8,
+    "2024": 4.4,
+    "2025": -2.5,
+    "2026": -5.8
+   },
+   "tradesPerYear": 78,
+   "winRatePct": 52.9,
+   "signalsSkippedPct": 75.7,
+   "avgInvestedPct": 60.5
+  },
+  {
+   "key": "results-jump-stop15",
+   "note": "20 positions, 60 sessions, 15% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 18.1,
+     "maxDrawdownPct": -38.8,
+     "sharpe": 0.72
+    },
+    "2011-2019": {
+     "cagrPct": 13,
+     "maxDrawdownPct": -34.8,
+     "sharpe": 0.45
+    },
+    "2020-2022": {
+     "cagrPct": 25.7,
+     "maxDrawdownPct": -21.6,
+     "sharpe": 1.09
+    },
+    "2023-now": {
+     "cagrPct": 24.8,
+     "maxDrawdownPct": -20,
+     "sharpe": 1.08
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 14.9,
+     "maxDrawdownPct": -40,
+     "sharpe": 0.54
+    },
+    "2011-2019": {
+     "cagrPct": 10.4,
+     "maxDrawdownPct": -37.1,
+     "sharpe": 0.31
+    },
+    "2020-2022": {
+     "cagrPct": 22.1,
+     "maxDrawdownPct": -21.6,
+     "sharpe": 0.89
+    },
+    "2023-now": {
+     "cagrPct": 20.2,
+     "maxDrawdownPct": -20.5,
+     "sharpe": 0.82
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -24.3,
+    "2012": 42.4,
+    "2013": 12.1,
+    "2014": 95.8,
+    "2015": 3.5,
+    "2016": -6.5,
+    "2017": 43.9,
+    "2018": -25.8,
+    "2019": 0,
+    "2020": 49.2,
+    "2021": 35.8,
+    "2022": -10,
+    "2023": 89.4,
+    "2024": 8.9,
+    "2025": -5.3,
+    "2026": 4.4
+   },
+   "tradesPerYear": 85,
+   "winRatePct": 52.7,
+   "signalsSkippedPct": 73.1,
+   "avgInvestedPct": 81.2
+  },
+  {
+   "key": "new-leader",
+   "note": "20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 16.8,
+     "maxDrawdownPct": -50.2,
+     "sharpe": 0.53
+    },
+    "2011-2019": {
+     "cagrPct": 7,
+     "maxDrawdownPct": -37.1,
+     "sharpe": 0.14
+    },
+    "2020-2022": {
+     "cagrPct": 42.1,
+     "maxDrawdownPct": -37.3,
+     "sharpe": 1.23
+    },
+    "2023-now": {
+     "cagrPct": 22.9,
+     "maxDrawdownPct": -37.1,
+     "sharpe": 0.73
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 11.7,
+     "maxDrawdownPct": -54.9,
+     "sharpe": 0.33
+    },
+    "2011-2019": {
+     "cagrPct": 6.2,
+     "maxDrawdownPct": -42.4,
+     "sharpe": 0.11
+    },
+    "2020-2022": {
+     "cagrPct": 26.1,
+     "maxDrawdownPct": -37.7,
+     "sharpe": 0.79
+    },
+    "2023-now": {
+     "cagrPct": 13.9,
+     "maxDrawdownPct": -39.6,
+     "sharpe": 0.41
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -16.9,
+    "2012": 43.6,
+    "2013": -0.5,
+    "2014": 49.6,
+    "2015": -5.3,
+    "2016": -11.8,
+    "2017": 63.8,
+    "2018": -29.2,
+    "2019": -0.1,
+    "2020": 22.9,
+    "2021": 74.9,
+    "2022": -6,
+    "2023": 67,
+    "2024": 23.5,
+    "2025": -18.5,
+    "2026": -1.5
+   },
+   "tradesPerYear": 81,
+   "winRatePct": 51.7,
+   "signalsSkippedPct": 64.9,
+   "avgInvestedPct": 93.6
+  },
+  {
+   "key": "new-high",
+   "note": "20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 12.4,
+     "maxDrawdownPct": -40.7,
+     "sharpe": 0.39
+    },
+    "2011-2019": {
+     "cagrPct": 9,
+     "maxDrawdownPct": -29.1,
+     "sharpe": 0.24
+    },
+    "2020-2022": {
+     "cagrPct": 23.1,
+     "maxDrawdownPct": -35.5,
+     "sharpe": 0.72
+    },
+    "2023-now": {
+     "cagrPct": 12.4,
+     "maxDrawdownPct": -38.7,
+     "sharpe": 0.39
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 10,
+     "maxDrawdownPct": -43.4,
+     "sharpe": 0.28
+    },
+    "2011-2019": {
+     "cagrPct": 7.3,
+     "maxDrawdownPct": -33.3,
+     "sharpe": 0.15
+    },
+    "2020-2022": {
+     "cagrPct": 19.6,
+     "maxDrawdownPct": -35.5,
+     "sharpe": 0.6
+    },
+    "2023-now": {
+     "cagrPct": 9.1,
+     "maxDrawdownPct": -38.5,
+     "sharpe": 0.24
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -15.3,
+    "2012": 33.9,
+    "2013": 8.8,
+    "2014": 33.4,
+    "2015": -8.5,
+    "2016": -2.2,
+    "2017": 46.6,
+    "2018": -21.1,
+    "2019": 10.5,
+    "2020": 26.1,
+    "2021": 17.3,
+    "2022": 16.1,
+    "2023": 39.5,
+    "2024": 3,
+    "2025": -15.4,
+    "2026": 15.3
+   },
+   "tradesPerYear": 82,
+   "winRatePct": 55.2,
+   "signalsSkippedPct": 96.4,
+   "avgInvestedPct": 95.3
+  },
+  {
+   "key": "leader-recovers",
+   "note": "20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 13.1,
+     "maxDrawdownPct": -59.6,
+     "sharpe": 0.41
+    },
+    "2011-2019": {
+     "cagrPct": 8.1,
+     "maxDrawdownPct": -42.6,
+     "sharpe": 0.19
+    },
+    "2020-2022": {
+     "cagrPct": 16.6,
+     "maxDrawdownPct": -40.3,
+     "sharpe": 0.51
+    },
+    "2023-now": {
+     "cagrPct": 22.5,
+     "maxDrawdownPct": -34.3,
+     "sharpe": 0.8
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 10,
+     "maxDrawdownPct": -61.3,
+     "sharpe": 0.27
+    },
+    "2011-2019": {
+     "cagrPct": 4.6,
+     "maxDrawdownPct": -45.2,
+     "sharpe": 0.02
+    },
+    "2020-2022": {
+     "cagrPct": 15.8,
+     "maxDrawdownPct": -40.1,
+     "sharpe": 0.48
+    },
+    "2023-now": {
+     "cagrPct": 18.6,
+     "maxDrawdownPct": -36.2,
+     "sharpe": 0.63
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -1.1,
+    "2012": 29.6,
+    "2013": 10.9,
+    "2014": 46.3,
+    "2015": 9.4,
+    "2016": -27,
+    "2017": 40,
+    "2018": -29.4,
+    "2019": -9,
+    "2020": 7.6,
+    "2021": 51.8,
+    "2022": -4.6,
+    "2023": 67.3,
+    "2024": 29.4,
+    "2025": -22.5,
+    "2026": 15.1
+   },
+   "tradesPerYear": 79,
+   "winRatePct": 51.8,
+   "signalsSkippedPct": 92.4,
+   "avgInvestedPct": 92.2
+  },
+  {
+   "key": "results-and-leaders",
+   "note": "both rules, 20 positions, 60 sessions",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 18.9,
+     "maxDrawdownPct": -55.7,
+     "sharpe": 0.62
+    },
+    "2011-2019": {
+     "cagrPct": 10.8,
+     "maxDrawdownPct": -45.4,
+     "sharpe": 0.31
+    },
+    "2020-2022": {
+     "cagrPct": 33,
+     "maxDrawdownPct": -34.3,
+     "sharpe": 0.99
+    },
+    "2023-now": {
+     "cagrPct": 28.3,
+     "maxDrawdownPct": -32.1,
+     "sharpe": 0.92
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 14.1,
+     "maxDrawdownPct": -59.1,
+     "sharpe": 0.43
+    },
+    "2011-2019": {
+     "cagrPct": 7.8,
+     "maxDrawdownPct": -45.4,
+     "sharpe": 0.18
+    },
+    "2020-2022": {
+     "cagrPct": 29,
+     "maxDrawdownPct": -36,
+     "sharpe": 0.87
+    },
+    "2023-now": {
+     "cagrPct": 18.4,
+     "maxDrawdownPct": -40,
+     "sharpe": 0.57
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -24,
+    "2012": 64.8,
+    "2013": 3.4,
+    "2014": 52.9,
+    "2015": 15.2,
+    "2016": -10.6,
+    "2017": 50.2,
+    "2018": -31.8,
+    "2019": -5.7,
+    "2020": 34.1,
+    "2021": 70,
+    "2022": -5.7,
+    "2023": 82.4,
+    "2024": 29.9,
+    "2025": -21.1,
+    "2026": 2.7
+   },
+   "tradesPerYear": 81,
+   "winRatePct": 53.7,
+   "signalsSkippedPct": 86.1,
+   "avgInvestedPct": 94.8
+  },
+  {
+   "key": "results-and-leaders-stop15",
+   "note": "both rules, 20 positions, 60 sessions, 15% stop",
+   "beforeTax": {
+    "full": {
+     "cagrPct": 17.2,
+     "maxDrawdownPct": -50.9,
+     "sharpe": 0.58
+    },
+    "2011-2019": {
+     "cagrPct": 8.6,
+     "maxDrawdownPct": -40.5,
+     "sharpe": 0.22
+    },
+    "2020-2022": {
+     "cagrPct": 33.7,
+     "maxDrawdownPct": -32.4,
+     "sharpe": 1.09
+    },
+    "2023-now": {
+     "cagrPct": 26.2,
+     "maxDrawdownPct": -27.3,
+     "sharpe": 0.91
+    }
+   },
+   "afterTax": {
+    "full": {
+     "cagrPct": 13.4,
+     "maxDrawdownPct": -53.7,
+     "sharpe": 0.42
+    },
+    "2011-2019": {
+     "cagrPct": 6.5,
+     "maxDrawdownPct": -44.2,
+     "sharpe": 0.11
+    },
+    "2020-2022": {
+     "cagrPct": 29.8,
+     "maxDrawdownPct": -32.4,
+     "sharpe": 0.95
+    },
+    "2023-now": {
+     "cagrPct": 18.1,
+     "maxDrawdownPct": -30.6,
+     "sharpe": 0.59
+    }
+   },
+   "yearsAfterTax": {
+    "2011": -19.1,
+    "2012": 48.6,
+    "2013": -11,
+    "2014": 69.6,
+    "2015": -1.8,
+    "2016": -3.2,
+    "2017": 55.4,
+    "2018": -36.2,
+    "2019": 2.8,
+    "2020": 10.8,
+    "2021": 113,
+    "2022": -7.3,
+    "2023": 63.6,
+    "2024": 24.5,
+    "2025": -7.9,
+    "2026": 1.6
+   },
+   "tradesPerYear": 106,
+   "winRatePct": 48.3,
+   "signalsSkippedPct": 82.2,
+   "avgInvestedPct": 94.7
+  }
+ ],
+ "overlapNote": "Monthly returns of the results book against the Monthly Plan's Growth mode, both after tax. Drawdowns here are on month-end values, so they are shallower than the daily figures above.",
+ "overlapWithGrowth": {
+  "results-jump-big": {
+   "months": 190,
+   "correlation": 0.69,
+   "whenGrowthFellBookFellPct": 71.6,
+   "growth": {
+    "cagrPct": 21.4,
+    "maxMonthlyDrawdownPct": -33.1
+   },
+   "book": {
+    "cagrPct": 19.5,
+    "maxMonthlyDrawdownPct": -40.2
+   },
+   "halfAndHalf": {
+    "cagrPct": 20.9,
+    "maxMonthlyDrawdownPct": -34.9
+   }
+  },
+  "results-jump-big-stop15": {
+   "months": 190,
+   "correlation": 0.62,
+   "whenGrowthFellBookFellPct": 70.1,
+   "growth": {
+    "cagrPct": 21.4,
+    "maxMonthlyDrawdownPct": -33.1
+   },
+   "book": {
+    "cagrPct": 14.8,
+    "maxMonthlyDrawdownPct": -33.6
+   },
+   "halfAndHalf": {
+    "cagrPct": 18.5,
+    "maxMonthlyDrawdownPct": -31.8
+   }
+  }
+ }
+}
