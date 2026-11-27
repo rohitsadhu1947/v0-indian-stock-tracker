@@ -48,7 +48,8 @@ async function tokensFor(client: BrokerClient, day: string) {
   return instruments.tokens
 }
 
-async function minuteBars(client: BrokerClient, symbol: string, day: string): Promise<MinuteBar[]> {
+/** A session's minute bars so far for one NSE stock. Empty when the broker has no such instrument. */
+export async function minuteBars(client: BrokerClient, symbol: string, day: string): Promise<MinuteBar[]> {
   const token = (await tokensFor(client, day)).get(symbol)
   if (!token) return []
   const candles = await client.getHistoricalData({

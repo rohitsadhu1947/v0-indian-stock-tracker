@@ -6,13 +6,15 @@
 import { db } from '@/db'
 import { userPreferences, users } from '@/db/schema'
 import { and, eq, isNotNull } from 'drizzle-orm'
-import { runFoWatch } from '@/lib/fo-watch/service'
+import { runFoWatch, sendEntryAlerts } from '@/lib/fo-watch/service'
 import logger from '@/lib/logger'
 import { recordMonthlySignals } from '@/lib/portfolio/signals'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
 import { updateFromNseArchive, type UpdateSummary } from './daily-update'
 
 export async function runMarketDataUpdate(): Promise<UpdateSummary> {
+  // First, because it is time-critical: the 09:20 message for today's day-trade shorts. Outside 09:20 to 15:00 it does nothing
+  await sendEntryAlerts().catch(err => logger.error('Day-trade entry message failed', { error: err.message }))
   const summary = await updateFromNseArchive()
   logger.info('Market data update', {
     ok: summary.ok, latest: summary.latestAfter, days: summary.days.length, problems: summary.problems,

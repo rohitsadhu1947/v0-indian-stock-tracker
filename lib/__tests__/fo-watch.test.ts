@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { banListDate, COST, findSignals, paperOutcome, tally } from '@/lib/fo-watch/core'
+import { banListDate, COST, entryMessage, findSignals, paperOutcome, tally } from '@/lib/fo-watch/core'
 import type { MinuteBar } from '@/lib/research/day-trade'
 
 const steady = (calls: number, puts: number) => Array.from({ length: 20 }, () => ({ calls, puts }))
@@ -62,5 +62,28 @@ describe('tally and banListDate', () => {
   it('reads the trade date from the ban list', () => {
     expect(banListDate('Securities in Ban For Trade Date 27-NOV-2026:\n1,APLAPOLLO')).toBe('2026-11-27')
     expect(banListDate('<!DOCTYPE html>')).toBeNull()
+  })
+})
+
+describe('entryMessage', () => {
+  const base = { symbol: 'APLAPOLLO', signal: 'ban-entry' as const, exampleAmount: 50000 }
+  it('gives the entry, the stop in rupees, the exit and the shares', () => {
+    const text = entryMessage({ ...base, entryPrice: 1527.4, lastPrice: 1526.8 })
+    expect(text).toContain('<b>SELL SHORT APLAPOLLO now</b> (enters the f&o ban list)')
+    expect(text).toContain('the 09:20 price was Rs 1,527.40.')
+    expect(text).not.toContain('Now Rs')
+    expect(text).toContain('stop-loss buy order at Rs 1,573.22')
+    expect(text).toContain('buy back at 15:15')
+    expect(text).toContain('Shares: 32 for Rs 50,000.')
+  })
+
+  it('adds the latest price when it has moved', () => {
+    expect(entryMessage({ ...base, entryPrice: 1527.4, lastPrice: 1540 })).toContain('Now Rs 1,540.00.')
+  })
+
+  it('falls back to a percentage stop without a price', () => {
+    const text = entryMessage({ ...base, entryPrice: null, lastPrice: null })
+    expect(text).toContain('Zerodha is not connected')
+    expect(text).toContain('3% above your sell price')
   })
 })
