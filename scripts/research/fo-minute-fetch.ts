@@ -2,7 +2,7 @@
  * Download Zerodha minute prices for the stock-days in data/fo/day-trades.json
  * (written by `npm run research:fo`), and for NIFTY 50 on the same days.
  *
- *   npx tsx --env-file=.env.local scripts/research/fo-minute-fetch.ts <app user id>
+ *   npx tsx --env-file=.env.local scripts/research/fo-minute-fetch.ts <app user id> [list file] [folder]
  *
  * Needs that user's Zerodha connection to be live today. One file per stock
  * in data/fo/minute. Safe to re-run: days already fetched are skipped.
@@ -13,7 +13,9 @@ import { getBrokerManager } from '@/lib/broker'
 import { isoDate, daysBetween } from '@/lib/research/dates'
 
 const userId = Number(process.argv[2])
-const DIR = 'data/fo/minute'
+// Optional: another list of { symbol, date } and another folder to save into
+const LIST = process.argv[3] ?? 'data/fo/day-trades.json'
+const DIR = process.argv[4] ?? 'data/fo/minute'
 const WINDOW_DAYS = 55   // Zerodha gives at most 60 days of minute bars in one request
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 const fileFor = (symbol: string) => `${DIR}/${symbol.replace(/[^A-Za-z0-9_-]/g, '-')}.json`
@@ -28,7 +30,7 @@ async function main() {
   const tokens = new Map<string, number | string>((await client.getInstruments('NSE')).map(i => [i.tradingsymbol, i.instrumentToken]))
   tokens.set('NIFTY 50', 256265)
 
-  const trades = JSON.parse(readFileSync('data/fo/day-trades.json', 'utf8')) as Array<{ symbol: string; date: number }>
+  const trades = JSON.parse(readFileSync(LIST, 'utf8')) as Array<{ symbol: string; date: number }>
   const wanted = new Map<string, Set<number>>()
   for (const t of trades) {
     if (!wanted.has(t.symbol)) wanted.set(t.symbol, new Set())

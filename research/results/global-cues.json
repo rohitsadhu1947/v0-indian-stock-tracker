@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-27T05:33:06.615Z",
+ "generatedAt": "2026-11-27T05:35:25.455Z",
  "from": 20110101,
  "to": 20261111,
  "note": "Before costs. A round trip in NIFTY futures costs about 0.05%; an intraday trade in a stock about 0.2% to 0.3%. The cue is the foreign move after the previous Indian close and before this open.",
@@ -981,6 +981,13 @@
    }
   }
  ],
+ "adrGapPerPercentOfLead": {
+  "INFY": 0.32,
+  "HDFCBANK": 0.24,
+  "ICICIBANK": 0.34,
+  "WIPRO": 0.21,
+  "DRREDDY": 0.26
+ },
  "crude": [
   {
    "symbol": "BPCL",

@@ -134,11 +134,35 @@ const crude = ['BPCL', 'HINDPETRO', 'IOC', 'ONGC', 'OIL', 'INDIGO', 'ASIANPAINT'
   return { symbol, crudeUp3: row(rows.filter(d => d.oil >= 0.03)), crudeDown3: row(rows.filter(d => d.oil <= -0.03)) }
 })
 
+// How much of an ADR's extra move shows in the local opening gap, for the pre-market panel
+const adrSlopes = Object.fromEntries(['INFY', 'HDFCBANK', 'ICICIBANK', 'WIPRO', 'DRREDDY'].map(symbol => {
+  const series = load(`adr-${symbol}`)
+  const rows = stockDays(symbol).map(d => ({ gap: d.gap, lead: cue(series, d.prev, d.date) - d.prevRet })).filter(d => Number.isFinite(d.lead))
+  const ml = mean(rows.map(r => r.lead)), mgap = mean(rows.map(r => r.gap))
+  return [symbol, round2(mean(rows.map(r => (r.lead - ml) * (r.gap - mgap))) / mean(rows.map(r => (r.lead - ml) ** 2)))]
+}))
+
+// Days for the minute-price test of the crude rule (scripts/research/crude-daytrade.ts): every session after Brent
+// moved 3% or more, and every eighth other session for comparison. Zerodha has minute prices from 2015.
+const CRUDE_STOCKS = ['BPCL', 'HINDPETRO', 'IOC', 'ONGC', 'OIL', 'INDIGO', 'ASIANPAINT']
+const crudeTrades: Array<{ signal: string; symbol: string; date: number; oil: number }> = []
+for (const symbol of CRUDE_STOCKS) {
+  stockDays(symbol).forEach((d, i) => {
+    if (d.date < 20150201) return
+    const oil = cue(SERIES.brent, d.prev, d.date)
+    if (!Number.isFinite(oil)) return
+    if (Math.abs(oil) >= 0.03) crudeTrades.push({ signal: oil > 0 ? 'crude-up' : 'crude-down', symbol, date: d.date, oil })
+    else if (i % 8 === 0) crudeTrades.push({ signal: 'control', symbol, date: d.date, oil })
+  })
+}
+mkdirSync('data/global', { recursive: true })
+writeFileSync('data/global/crude-trades.json', JSON.stringify(crudeTrades))
+
 mkdirSync('research/results', { recursive: true })
 writeFileSync('research/results/global-cues.json', JSON.stringify({
   generatedAt: new Date().toISOString(), from: START, to: days[days.length - 1].date,
   note: 'Before costs. A round trip in NIFTY futures costs about 0.05%; an intraday trade in a stock about 0.2% to 0.3%. The cue is the foreign move after the previous Indian close and before this open.',
-  nifty, adrs, crude,
+  nifty, adrs, adrGapPerPercentOfLead: adrSlopes, crude,
 }, null, 1))
 
 const cell = (s: { n: number; meanPct: number; t: number }) => `${s.meanPct >= 0 ? '+' : ''}${s.meanPct.toFixed(2)} (${s.t.toFixed(1)})`.padStart(14)
@@ -155,3 +179,4 @@ for (const a of adrs) for (const [k, label] of [['adrUp2', 'ADR up 2%+'], ['adrU
 }
 console.log('\nBrent up or down 3% overnight: the local gap and the session')
 for (const c of crude) console.log(`  ${c.symbol.padEnd(10)} crude up: ${String(c.crudeUp3.gap.n).padStart(4)} days gap ${cell(c.crudeUp3.gap)} session ${cell(c.crudeUp3.openToClose)}   crude down: ${String(c.crudeDown3.gap.n).padStart(4)} days gap ${cell(c.crudeDown3.gap)} session ${cell(c.crudeDown3.openToClose)}`)
+console.log(`\nADR lead to local gap, per 1%: ${JSON.stringify(adrSlopes)}. ${crudeTrades.length} stock-days written for the crude minute test.`)
