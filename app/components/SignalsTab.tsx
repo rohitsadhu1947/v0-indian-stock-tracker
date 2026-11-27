@@ -7,11 +7,13 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
+import type { PositionalRow, PositionalView } from '@/lib/positional/service'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
 import { sharesFor, type DayTradeSignal, type DayTradeState } from '@/lib/signals/core'
 import { useUIStore } from '@/lib/stores/ui-store'
 
 const AMOUNT_KEY = 'signals.dayTradeAmount'
+const POSITION_KEY = 'signals.positionAmount'
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 20, marginBottom: 16,
 }
@@ -19,7 +21,7 @@ const muted: React.CSSProperties = { opacity: 0.7, fontSize: '0.9em' }
 const th: React.CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid rgba(255,255,255,0.15)', fontWeight: 600, fontSize: '0.85em', opacity: 0.85, whiteSpace: 'nowrap' }
 const td: React.CSSProperties = { padding: '8px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.92em', whiteSpace: 'nowrap' }
 const rupees = (n: number | null | undefined, digits = 2) => (n == null ? 'n/a' : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: digits })}`)
-const day = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+const day = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit', timeZone: 'UTC' })
 const badge = (color: string): React.CSSProperties => ({
   display: 'inline-block', padding: '3px 10px', borderRadius: 6, fontWeight: 700, fontSize: '0.8em', letterSpacing: 0.3, color: '#fff', background: color,
 })
@@ -82,19 +84,47 @@ function DayTradeCard({ s, amount, today }: { s: DayTradeSignal; amount: number;
   )
 }
 
+function ResultsBuyCard({ r, amount, hold }: { r: PositionalRow; amount: number; hold: number }) {
+  const price = r.lastPrice ?? r.signalClose
+  const shares = sharesFor(amount, price)
+  return (
+    <div style={{ ...card, marginBottom: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+        <span style={badge(BUY)}>BUY</span>
+        <span style={{ fontWeight: 700, fontSize: '1.2em' }}>{r.symbol}</span>
+      </div>
+      <div style={{ ...muted, marginBottom: 8 }}>
+        Up {r.jumpPct}% over two sessions around results, on {r.turnoverRatio} times its usual turnover. Signal on {day(r.signalDate)}.
+      </div>
+      <Line label="Entry">Next session, spread through the day. Last price <b>{rupees(price)}</b></Line>
+      <Line label="Stop">None in the tested rule</Line>
+      <Line label="Exit">Sell after <b>{hold} sessions</b>, about <b>{r.exitAbout && day(r.exitAbout)}</b></Line>
+      <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
+    </div>
+  )
+}
+
 export default function SignalsTab() {
   const setActiveTab = useUIStore(s => s.setActiveTab)
   const [dayView, setDayView] = useState<DayTradeView | null>(null)
   const [monthly, setMonthly] = useState<MonthlyView | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [amount, setAmount] = useState(50000)
+  const [positional, setPositional] = useState<PositionalView | null | undefined>(undefined)
+  const [positionAmount, setPositionAmount] = useState(25000)
 
   useEffect(() => {
     try { const saved = Number(localStorage.getItem(AMOUNT_KEY)); if (saved >= 1000) setAmount(saved) } catch { /* no storage */ }
+    try { const saved = Number(localStorage.getItem(POSITION_KEY)); if (saved >= 1000) setPositionAmount(saved) } catch { /* no storage */ }
   }, [])
   const changeAmount = (value: number) => {
     setAmount(value)
     try { localStorage.setItem(AMOUNT_KEY, String(value)) } catch { /* no storage */ }
+  }
+
+  const changePositionAmount = (value: number) => {
+    setPositionAmount(value)
+    try { localStorage.setItem(POSITION_KEY, String(value)) } catch { /* no storage */ }
   }
 
   const load = useCallback(async (part?: 'day') => {
@@ -104,7 +134,7 @@ export default function SignalsTab() {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Could not load the signals')
       setDayView(json.day)
-      if (!part) setMonthly(json.monthly)
+      if (!part) { setMonthly(json.monthly); setPositional(json.positional) }
       setError(null)
     } catch (e: any) { setError(e.message) }
   }, [])
@@ -157,6 +187,72 @@ export default function SignalsTab() {
                 {dayView.signals.map(s => <DayTradeCard key={`${s.signal}-${s.symbol}-${s.tradeDate}`} s={s} amount={amount} today={today} />)}
               </div>
             )}
+        </div>
+      )}
+
+      {positional && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>Results buys: hold about three months</h3>
+            <label style={muted}>
+              Amount per stock ₹{' '}
+              <input
+                type="number" min={1000} step={5000} value={positionAmount} onChange={e => changePositionAmount(Number(e.target.value))} aria-label="Amount per results buy in rupees"
+                style={{ width: 110, padding: '5px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.25)', color: '#fff' }}
+              />
+            </label>
+          </div>
+          <p style={{ ...muted, margin: '6px 0 12px' }}>
+            Evidence: moderate. A stock that rises 8% or more around its results, on three times its usual turnover, went on to beat the
+            average stock by about 3.7% over the next {positional.holdSessions} sessions (2011 to 2026, after costs). Run as a book it made
+            11% to 23% a year depending on the settings, with falls of 35% to 50%. It moves with the Monthly Plan, so it is not a separate
+            source of return. Signals are as of {positional.asOf}. {positional.prices === 'live' ? 'Prices are live.' : 'Prices are the last close.'}
+          </p>
+
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Buy next session</div>
+          {positional.fresh.length === 0
+            ? <p style={{ marginTop: 0 }}>No new signal at the last close. They come in results season, a few a week.</p>
+            : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 12 }}>
+                {positional.fresh.map(r => <ResultsBuyCard key={r.symbol + r.signalDate} r={r} amount={positionAmount} hold={positional.holdSessions} />)}
+              </div>
+            )}
+
+          <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Open paper positions</div>
+          {positional.open.length === 0
+            ? <p style={{ marginTop: 0 }}>None open.</p>
+            : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Stock', 'Bought', 'At', 'Now', 'Move', 'Sessions held', 'Sell about'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {positional.open.map(r => (
+                      <tr key={r.symbol + r.signalDate}>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={td}>{r.entryDate && day(r.entryDate)}</td>
+                        <td style={td}>{rupees(r.entryPrice)}</td>
+                        <td style={td}>{rupees(r.lastPrice)}</td>
+                        <td style={{ ...td, fontWeight: 600, color: r.movePct == null ? undefined : r.movePct > 0 ? '#34d399' : r.movePct < 0 ? '#f87171' : undefined }}>
+                          {r.movePct == null ? '' : `${r.movePct >= 0 ? '+' : ''}${r.movePct.toFixed(1)}%`}
+                        </td>
+                        <td style={td}>{r.sessionsHeld} of {positional.holdSessions}</td>
+                        <td style={td}>
+                          {r.sessionsHeld != null && r.sessionsHeld >= positional.holdSessions - 1
+                            ? <span style={badge(SELL)}>SELL at the next close</span>
+                            : r.exitAbout && day(r.exitAbout)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          <p style={{ ...muted, marginBottom: 0 }}>
+            <b>Entry:</b> the session after the signal, spread through the day. The paper book uses that day&apos;s average price.{' '}
+            <b>Stop:</b> none. In testing a 15% stop cut the worst fall but also cut the return by about a quarter.{' '}
+            <b>Exit:</b> at the close of the {positional.holdSessions}th session.
+            {positional.tally.trades > 0 && ` Closed so far: ${positional.tally.trades}, ${positional.tally.wins} made money, average ${positional.tally.avgNetPct >= 0 ? '+' : ''}${positional.tally.avgNetPct.toFixed(1)}% after costs.`}
+          </p>
         </div>
       )}
 

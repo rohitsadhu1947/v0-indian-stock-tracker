@@ -26,6 +26,7 @@
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
+    "positional": "tsx --env-file=.env.local scripts/positional/run.ts",
     "data:publish": "tsx --env-file=.env.local scripts/data/publish-bars.ts"
   },
   "dependencies": {
