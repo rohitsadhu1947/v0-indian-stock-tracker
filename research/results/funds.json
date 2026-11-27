@@ -1,0 +1,1245 @@
+{
+ "generatedAt": "2026-11-27T08:08:19.854Z",
+ "from": 20110131,
+ "to": 20261111,
+ "note": "One book on daily prices, Rs 10 lakh at the start. Charges and 0.1% slippage a side on every order, funds charged like shares. Idle cash earns 6%. Tax: shares and share index funds under the equity rules; gold and US funds 12.5% after 12 months and 30% before; bond funds 30% always; 4% cess; a loss in one group is not set off against another. A fund not yet listed leaves its share in cash. The bond fund starts in 2015 and the US fund in 2011.",
+ "funds": [
+  {
+   "symbol": "GOLDBEES",
+   "label": "Gold fund",
+   "from": 20110131,
+   "cagrPct": 11.9,
+   "maxDrawdownPct": -27.1,
+   "tradedCrADay2016": 34.8,
+   "tradedCrADayLastYear": 3461.4
+  },
+  {
+   "symbol": "LICNETFGSC",
+   "label": "Government bond fund",
+   "from": 20150101,
+   "cagrPct": 6.6,
+   "maxDrawdownPct": -14.2,
+   "tradedCrADay2016": 0,
+   "tradedCrADayLastYear": 1.5
+  },
+  {
+   "symbol": "MON100",
+   "label": "US Nasdaq 100 fund",
+   "from": 20110331,
+   "cagrPct": 24.2,
+   "maxDrawdownPct": -36.6,
+   "tradedCrADay2016": 0.3,
+   "tradedCrADayLastYear": 206.5
+  },
+  {
+   "symbol": "NIFTYBEES",
+   "label": "NIFTY 50 fund",
+   "from": 20110131,
+   "cagrPct": 11.4,
+   "maxDrawdownPct": -36.3,
+   "tradedCrADay2016": 29.6,
+   "tradedCrADayLastYear": 1930.1
+  },
+  {
+   "symbol": "JUNIORBEES",
+   "label": "Next 50 fund",
+   "from": 20110131,
+   "cagrPct": 13.5,
+   "maxDrawdownPct": -38.7,
+   "tradedCrADay2016": 1.4,
+   "tradedCrADayLastYear": 291.8
+  }
+ ],
+ "books": [
+  {
+   "key": "growth",
+   "label": "Growth alone",
+   "stats": {
+    "full": {
+     "cagrPct": 21.4,
+     "maxDrawdownPct": -44.4,
+     "sharpe": 0.73,
+     "worstYearPct": -19.4,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.5,
+     "maxDrawdownPct": -34.5,
+     "sharpe": 0.48,
+     "worstYearPct": -19.4,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 33.3,
+     "maxDrawdownPct": -34.4,
+     "sharpe": 1.05,
+     "worstYearPct": -13.2,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 29.3,
+     "maxDrawdownPct": -29,
+     "sharpe": 0.95,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 31.6,
+   "chargesLakh": 8.4,
+   "orders": 1557,
+   "endLakh": 214.6
+  },
+  {
+   "key": "growth-80-cash",
+   "label": "Growth 80%, cash 20%",
+   "stats": {
+    "full": {
+     "cagrPct": 18.5,
+     "maxDrawdownPct": -36.6,
+     "sharpe": 0.71,
+     "worstYearPct": -16.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.8,
+     "maxDrawdownPct": -28.5,
+     "sharpe": 0.46,
+     "worstYearPct": -16.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 28.2,
+     "maxDrawdownPct": -28.4,
+     "sharpe": 1.05,
+     "worstYearPct": -8.8,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 24.8,
+     "maxDrawdownPct": -23.4,
+     "sharpe": 0.94,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 19.7,
+   "chargesLakh": 5.3,
+   "orders": 1545,
+   "endLakh": 145.5
+  },
+  {
+   "key": "growth-70-cash",
+   "label": "Growth 70%, cash 30%",
+   "stats": {
+    "full": {
+     "cagrPct": 17,
+     "maxDrawdownPct": -31.1,
+     "sharpe": 0.71,
+     "worstYearPct": -13.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.1,
+     "maxDrawdownPct": -24,
+     "sharpe": 0.46,
+     "worstYearPct": -13.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 25.1,
+     "maxDrawdownPct": -25,
+     "sharpe": 1.04,
+     "worstYearPct": -7.1,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 22.5,
+     "maxDrawdownPct": -20.6,
+     "sharpe": 0.93,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 15.3,
+   "chargesLakh": 4.1,
+   "orders": 1546,
+   "endLakh": 119.6
+  },
+  {
+   "key": "growth-60-cash",
+   "label": "Growth 60%, cash 40%",
+   "stats": {
+    "full": {
+     "cagrPct": 15.6,
+     "maxDrawdownPct": -25.4,
+     "sharpe": 0.71,
+     "worstYearPct": -10.6,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 11.4,
+     "maxDrawdownPct": -19.4,
+     "sharpe": 0.46,
+     "worstYearPct": -10.6,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 22.5,
+     "maxDrawdownPct": -21.8,
+     "sharpe": 1.04,
+     "worstYearPct": -5,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 20.4,
+     "maxDrawdownPct": -17.5,
+     "sharpe": 0.94,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 11.7,
+   "chargesLakh": 3.1,
+   "orders": 1548,
+   "endLakh": 98.5
+  },
+  {
+   "key": "growth-50-cash",
+   "label": "Growth 50%, cash 50%",
+   "stats": {
+    "full": {
+     "cagrPct": 14.1,
+     "maxDrawdownPct": -20,
+     "sharpe": 0.71,
+     "worstYearPct": -8.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 10.6,
+     "maxDrawdownPct": -16,
+     "sharpe": 0.46,
+     "worstYearPct": -8.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 19.8,
+     "maxDrawdownPct": -18.2,
+     "sharpe": 1.04,
+     "worstYearPct": -3.2,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 18.1,
+     "maxDrawdownPct": -14.5,
+     "sharpe": 0.94,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 8.7,
+   "chargesLakh": 2.3,
+   "orders": 1554,
+   "endLakh": 80.4
+  },
+  {
+   "key": "gold-bond-us-20",
+   "label": "Growth 80%, 20% in gold, bonds, US",
+   "stats": {
+    "full": {
+     "cagrPct": 20.3,
+     "maxDrawdownPct": -35.9,
+     "sharpe": 0.78,
+     "worstYearPct": -16.9,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.3,
+     "maxDrawdownPct": -27,
+     "sharpe": 0.54,
+     "worstYearPct": -16.9,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 28.7,
+     "maxDrawdownPct": -29.8,
+     "sharpe": 1.04,
+     "worstYearPct": -11.1,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 28.2,
+     "maxDrawdownPct": -23.8,
+     "sharpe": 1.06,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 24,
+   "chargesLakh": 6.1,
+   "orders": 1609,
+   "endLakh": 183.7
+  },
+  {
+   "key": "gold-bond-us-30",
+   "label": "Growth 70%, 30% in gold, bonds, US",
+   "stats": {
+    "full": {
+     "cagrPct": 19.6,
+     "maxDrawdownPct": -29.5,
+     "sharpe": 0.82,
+     "worstYearPct": -13.7,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.2,
+     "maxDrawdownPct": -21.6,
+     "sharpe": 0.58,
+     "worstYearPct": -13.7,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190219
+    },
+    "2020-2022": {
+     "cagrPct": 26,
+     "maxDrawdownPct": -27.5,
+     "sharpe": 1.02,
+     "worstYearPct": -10.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 27.7,
+     "maxDrawdownPct": -21,
+     "sharpe": 1.13,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 19.9,
+   "chargesLakh": 5.1,
+   "orders": 1592,
+   "endLakh": 168.6
+  },
+  {
+   "key": "gold-bond-us-40",
+   "label": "Growth 60%, 40% in gold, bonds, US",
+   "stats": {
+    "full": {
+     "cagrPct": 19.2,
+     "maxDrawdownPct": -25.4,
+     "sharpe": 0.88,
+     "worstYearPct": -11.7,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.2,
+     "maxDrawdownPct": -18.1,
+     "sharpe": 0.63,
+     "worstYearPct": -11.7,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190128
+    },
+    "2020-2022": {
+     "cagrPct": 23.9,
+     "maxDrawdownPct": -25.4,
+     "sharpe": 1,
+     "worstYearPct": -9.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 27.9,
+     "maxDrawdownPct": -18.2,
+     "sharpe": 1.25,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 17.6,
+   "chargesLakh": 4.3,
+   "orders": 1609,
+   "endLakh": 160.6
+  },
+  {
+   "key": "gold-bond-us-50",
+   "label": "Growth 50%, 50% in gold, bonds, US",
+   "stats": {
+    "full": {
+     "cagrPct": 18.5,
+     "maxDrawdownPct": -22.4,
+     "sharpe": 0.91,
+     "worstYearPct": -9.5,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.1,
+     "maxDrawdownPct": -15.2,
+     "sharpe": 0.68,
+     "worstYearPct": -9.4,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20181122
+    },
+    "2020-2022": {
+     "cagrPct": 21.5,
+     "maxDrawdownPct": -22.4,
+     "sharpe": 0.97,
+     "worstYearPct": -9.5,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 26.9,
+     "maxDrawdownPct": -15.6,
+     "sharpe": 1.32,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 14.2,
+   "chargesLakh": 3.4,
+   "orders": 1623,
+   "endLakh": 145.6
+  },
+  {
+   "key": "gold-bond-20",
+   "label": "Growth 80%, 20% in gold, bonds",
+   "stats": {
+    "full": {
+     "cagrPct": 19.2,
+     "maxDrawdownPct": -34.9,
+     "sharpe": 0.75,
+     "worstYearPct": -16.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.3,
+     "maxDrawdownPct": -27.4,
+     "sharpe": 0.49,
+     "worstYearPct": -16.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 28.2,
+     "maxDrawdownPct": -28.5,
+     "sharpe": 1.05,
+     "worstYearPct": -8.8,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 26.6,
+     "maxDrawdownPct": -22.7,
+     "sharpe": 1.01,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 21.3,
+   "chargesLakh": 5.5,
+   "orders": 1581,
+   "endLakh": 159.7
+  },
+  {
+   "key": "gold-bond-30",
+   "label": "Growth 70%, 30% in gold, bonds",
+   "stats": {
+    "full": {
+     "cagrPct": 18.4,
+     "maxDrawdownPct": -28.2,
+     "sharpe": 0.77,
+     "worstYearPct": -13.1,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.9,
+     "maxDrawdownPct": -23.9,
+     "sharpe": 0.5,
+     "worstYearPct": -13.1,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 25.4,
+     "maxDrawdownPct": -24.9,
+     "sharpe": 1.04,
+     "worstYearPct": -7.7,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 26.2,
+     "maxDrawdownPct": -19.2,
+     "sharpe": 1.09,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 18.2,
+   "chargesLakh": 4.5,
+   "orders": 1603,
+   "endLakh": 142.8
+  },
+  {
+   "key": "gold-bond-40",
+   "label": "Growth 60%, 40% in gold, bonds",
+   "stats": {
+    "full": {
+     "cagrPct": 17,
+     "maxDrawdownPct": -22.3,
+     "sharpe": 0.77,
+     "worstYearPct": -10.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 11.9,
+     "maxDrawdownPct": -20.4,
+     "sharpe": 0.48,
+     "worstYearPct": -10.5,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 22.9,
+     "maxDrawdownPct": -21.9,
+     "sharpe": 1.02,
+     "worstYearPct": -5.9,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 24.7,
+     "maxDrawdownPct": -15.6,
+     "sharpe": 1.12,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 13.7,
+   "chargesLakh": 3.4,
+   "orders": 1620,
+   "endLakh": 118.7
+  },
+  {
+   "key": "gold-bond-50",
+   "label": "Growth 50%, 50% in gold, bonds",
+   "stats": {
+    "full": {
+     "cagrPct": 15.9,
+     "maxDrawdownPct": -18.8,
+     "sharpe": 0.77,
+     "worstYearPct": -8.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 11.4,
+     "maxDrawdownPct": -17.5,
+     "sharpe": 0.48,
+     "worstYearPct": -8.2,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 19.8,
+     "maxDrawdownPct": -18.8,
+     "sharpe": 0.96,
+     "worstYearPct": -4.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 23.7,
+     "maxDrawdownPct": -12.2,
+     "sharpe": 1.18,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 10.7,
+   "chargesLakh": 2.6,
+   "orders": 1630,
+   "endLakh": 102.4
+  },
+  {
+   "key": "gold-20",
+   "label": "Growth 80%, 20% in gold",
+   "stats": {
+    "full": {
+     "cagrPct": 19.8,
+     "maxDrawdownPct": -34.7,
+     "sharpe": 0.78,
+     "worstYearPct": -16.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.1,
+     "maxDrawdownPct": -26.9,
+     "sharpe": 0.48,
+     "worstYearPct": -16.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 28.7,
+     "maxDrawdownPct": -28.5,
+     "sharpe": 1.07,
+     "worstYearPct": -9.1,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 29.5,
+     "maxDrawdownPct": -21.7,
+     "sharpe": 1.11,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 22.1,
+   "chargesLakh": 5.6,
+   "orders": 1581,
+   "endLakh": 173.1
+  },
+  {
+   "key": "gold-30",
+   "label": "Growth 70%, 30% in gold",
+   "stats": {
+    "full": {
+     "cagrPct": 19.2,
+     "maxDrawdownPct": -27.1,
+     "sharpe": 0.81,
+     "worstYearPct": -13.2,
+     "drawdownFrom": 20180112,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.7,
+     "maxDrawdownPct": -23.1,
+     "sharpe": 0.5,
+     "worstYearPct": -13.2,
+     "drawdownFrom": 20180112,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 27.1,
+     "maxDrawdownPct": -25.1,
+     "sharpe": 1.11,
+     "worstYearPct": -5.7,
+     "drawdownFrom": 20200219,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 29.2,
+     "maxDrawdownPct": -18.2,
+     "sharpe": 1.18,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 18.6,
+   "chargesLakh": 4.7,
+   "orders": 1615,
+   "endLakh": 160
+  },
+  {
+   "key": "gold-40",
+   "label": "Growth 60%, 40% in gold",
+   "stats": {
+    "full": {
+     "cagrPct": 18.4,
+     "maxDrawdownPct": -22.3,
+     "sharpe": 0.83,
+     "worstYearPct": -10,
+     "drawdownFrom": 20200224,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.1,
+     "maxDrawdownPct": -19.3,
+     "sharpe": 0.5,
+     "worstYearPct": -10,
+     "drawdownFrom": 20180112,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 25.2,
+     "maxDrawdownPct": -22.3,
+     "sharpe": 1.13,
+     "worstYearPct": -2.9,
+     "drawdownFrom": 20200224,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 28.5,
+     "maxDrawdownPct": -15.4,
+     "sharpe": 1.22,
+     "worstYearPct": 0,
+     "drawdownFrom": 20260129,
+     "drawdownTo": 20260323
+    }
+   },
+   "taxLakh": 14.3,
+   "chargesLakh": 3.6,
+   "orders": 1618,
+   "endLakh": 143
+  },
+  {
+   "key": "gold-50",
+   "label": "Growth 50%, 50% in gold",
+   "stats": {
+    "full": {
+     "cagrPct": 17.3,
+     "maxDrawdownPct": -20.4,
+     "sharpe": 0.82,
+     "worstYearPct": -7.6,
+     "drawdownFrom": 20200224,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 11,
+     "maxDrawdownPct": -15.8,
+     "sharpe": 0.45,
+     "worstYearPct": -7.6,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 22.2,
+     "maxDrawdownPct": -20.4,
+     "sharpe": 1.06,
+     "worstYearPct": -1,
+     "drawdownFrom": 20200224,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 29.4,
+     "maxDrawdownPct": -18.7,
+     "sharpe": 1.28,
+     "worstYearPct": 0,
+     "drawdownFrom": 20260129,
+     "drawdownTo": 20260323
+    }
+   },
+   "taxLakh": 11.2,
+   "chargesLakh": 2.7,
+   "orders": 1739,
+   "endLakh": 124.7
+  },
+  {
+   "key": "five-20",
+   "label": "Growth 80%, 20% in gold, bonds, US, NIFTY 50, Next 50",
+   "stats": {
+    "full": {
+     "cagrPct": 19.9,
+     "maxDrawdownPct": -38.9,
+     "sharpe": 0.75,
+     "worstYearPct": -17.2,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14.1,
+     "maxDrawdownPct": -28.6,
+     "sharpe": 0.51,
+     "worstYearPct": -17.2,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 29,
+     "maxDrawdownPct": -31.8,
+     "sharpe": 1.02,
+     "worstYearPct": -10.7,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 27.2,
+     "maxDrawdownPct": -24.7,
+     "sharpe": 1,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 22.9,
+   "chargesLakh": 6,
+   "orders": 1615,
+   "endLakh": 176.3
+  },
+  {
+   "key": "five-30",
+   "label": "Growth 70%, 30% in gold, bonds, US, NIFTY 50, Next 50",
+   "stats": {
+    "full": {
+     "cagrPct": 19.3,
+     "maxDrawdownPct": -34.7,
+     "sharpe": 0.77,
+     "worstYearPct": -14.9,
+     "drawdownFrom": 20180112,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 14,
+     "maxDrawdownPct": -24.4,
+     "sharpe": 0.54,
+     "worstYearPct": -14.9,
+     "drawdownFrom": 20180112,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 26.7,
+     "maxDrawdownPct": -30.2,
+     "sharpe": 0.99,
+     "worstYearPct": -9.4,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 26.3,
+     "maxDrawdownPct": -22,
+     "sharpe": 1.04,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250102,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 19.5,
+   "chargesLakh": 5,
+   "orders": 1606,
+   "endLakh": 162.1
+  },
+  {
+   "key": "five-40",
+   "label": "Growth 60%, 40% in gold, bonds, US, NIFTY 50, Next 50",
+   "stats": {
+    "full": {
+     "cagrPct": 18.7,
+     "maxDrawdownPct": -30.1,
+     "sharpe": 0.79,
+     "worstYearPct": -11.8,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.9,
+     "maxDrawdownPct": -20,
+     "sharpe": 0.57,
+     "worstYearPct": -11.8,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190219
+    },
+    "2020-2022": {
+     "cagrPct": 24.6,
+     "maxDrawdownPct": -28.5,
+     "sharpe": 0.96,
+     "worstYearPct": -8.6,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 25.5,
+     "maxDrawdownPct": -19.7,
+     "sharpe": 1.08,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 16.2,
+   "chargesLakh": 4.1,
+   "orders": 1604,
+   "endLakh": 148.5
+  },
+  {
+   "key": "five-50",
+   "label": "Growth 50%, 50% in gold, bonds, US, NIFTY 50, Next 50",
+   "stats": {
+    "full": {
+     "cagrPct": 18.1,
+     "maxDrawdownPct": -27.1,
+     "sharpe": 0.82,
+     "worstYearPct": -10.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.8,
+     "maxDrawdownPct": -17.2,
+     "sharpe": 0.61,
+     "worstYearPct": -10.2,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190219
+    },
+    "2020-2022": {
+     "cagrPct": 22.5,
+     "maxDrawdownPct": -27.1,
+     "sharpe": 0.94,
+     "worstYearPct": -6.9,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 24.8,
+     "maxDrawdownPct": -17.7,
+     "sharpe": 1.14,
+     "worstYearPct": 0,
+     "drawdownFrom": 20241216,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 13.4,
+   "chargesLakh": 3.3,
+   "orders": 1608,
+   "endLakh": 137.3
+  },
+  {
+   "key": "gold-bond-us-30-trend",
+   "label": "Growth 70%, 30% gold, bonds, US, trend rule",
+   "stats": {
+    "full": {
+     "cagrPct": 18.9,
+     "maxDrawdownPct": -30.9,
+     "sharpe": 0.79,
+     "worstYearPct": -13.6,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.1,
+     "maxDrawdownPct": -22.7,
+     "sharpe": 0.51,
+     "worstYearPct": -13.6,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190219
+    },
+    "2020-2022": {
+     "cagrPct": 26.8,
+     "maxDrawdownPct": -27.4,
+     "sharpe": 1.06,
+     "worstYearPct": -9.1,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 26.8,
+     "maxDrawdownPct": -20.9,
+     "sharpe": 1.09,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 19.2,
+   "chargesLakh": 5.4,
+   "orders": 1647,
+   "endLakh": 153.1
+  },
+  {
+   "key": "gold-bond-30-trend",
+   "label": "Growth 70%, 30% gold, bonds, trend rule",
+   "stats": {
+    "full": {
+     "cagrPct": 17.6,
+     "maxDrawdownPct": -30.7,
+     "sharpe": 0.73,
+     "worstYearPct": -14.8,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12,
+     "maxDrawdownPct": -24.5,
+     "sharpe": 0.45,
+     "worstYearPct": -14.8,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 25.4,
+     "maxDrawdownPct": -25.2,
+     "sharpe": 1.03,
+     "worstYearPct": -7.2,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 25.2,
+     "maxDrawdownPct": -19.2,
+     "sharpe": 1.04,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 16.4,
+   "chargesLakh": 4.7,
+   "orders": 1601,
+   "endLakh": 130
+  },
+  {
+   "key": "growth-3x-slippage",
+   "label": "Growth alone, three times the slippage",
+   "stats": {
+    "full": {
+     "cagrPct": 20.6,
+     "maxDrawdownPct": -45.2,
+     "sharpe": 0.7,
+     "worstYearPct": -19.8,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.7,
+     "maxDrawdownPct": -35.2,
+     "sharpe": 0.45,
+     "worstYearPct": -19.8,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20190822
+    },
+    "2020-2022": {
+     "cagrPct": 32.7,
+     "maxDrawdownPct": -34.3,
+     "sharpe": 1.03,
+     "worstYearPct": -13.4,
+     "drawdownFrom": 20200212,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 28.2,
+     "maxDrawdownPct": -29.1,
+     "sharpe": 0.91,
+     "worstYearPct": 0,
+     "drawdownFrom": 20240924,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 28.2,
+   "chargesLakh": 15.1,
+   "orders": 1563,
+   "endLakh": 192.5
+  },
+  {
+   "key": "gold-bond-us-30-3x-slippage",
+   "label": "Growth 70%, 30% gold, bonds, US, three times the slippage",
+   "stats": {
+    "full": {
+     "cagrPct": 19.2,
+     "maxDrawdownPct": -29.8,
+     "sharpe": 0.8,
+     "worstYearPct": -14.3,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 13.8,
+     "maxDrawdownPct": -22.2,
+     "sharpe": 0.55,
+     "worstYearPct": -14.3,
+     "drawdownFrom": 20180115,
+     "drawdownTo": 20190219
+    },
+    "2020-2022": {
+     "cagrPct": 25.8,
+     "maxDrawdownPct": -27.3,
+     "sharpe": 1.01,
+     "worstYearPct": -10.4,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 27.2,
+     "maxDrawdownPct": -21.2,
+     "sharpe": 1.11,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250407
+    }
+   },
+   "taxLakh": 19,
+   "chargesLakh": 9.5,
+   "orders": 1596,
+   "endLakh": 159.8
+  },
+  {
+   "key": "gold-bond-30-3x-slippage",
+   "label": "Growth 70%, 30% gold, bonds, three times the slippage",
+   "stats": {
+    "full": {
+     "cagrPct": 17.6,
+     "maxDrawdownPct": -29,
+     "sharpe": 0.73,
+     "worstYearPct": -13.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20200323
+    },
+    "2011-2019": {
+     "cagrPct": 12.3,
+     "maxDrawdownPct": -23.8,
+     "sharpe": 0.47,
+     "worstYearPct": -13.3,
+     "drawdownFrom": 20180111,
+     "drawdownTo": 20181009
+    },
+    "2020-2022": {
+     "cagrPct": 24.9,
+     "maxDrawdownPct": -24.6,
+     "sharpe": 1.01,
+     "worstYearPct": -8.2,
+     "drawdownFrom": 20200220,
+     "drawdownTo": 20200323
+    },
+    "2023-now": {
+     "cagrPct": 24.8,
+     "maxDrawdownPct": -19.3,
+     "sharpe": 1.02,
+     "worstYearPct": 0,
+     "drawdownFrom": 20250103,
+     "drawdownTo": 20250303
+    }
+   },
+   "taxLakh": 16,
+   "chargesLakh": 8.1,
+   "orders": 1591,
+   "endLakh": 128.9
+  }
+ ],
+ "byYear": {
+  "2011": {
+   "growth": -5.8,
+   "goldBondUs30": 1.5,
+   "goldBond30": 1.6,
+   "cash30": -2.4
+  },
+  "2012": {
+   "growth": 41.5,
+   "goldBondUs30": 32.7,
+   "goldBond30": 31.8,
+   "cash30": 31.2
+  },
+  "2013": {
+   "growth": 4.1,
+   "goldBondUs30": 7.5,
+   "goldBond30": 2.7,
+   "cash30": 3.9
+  },
+  "2014": {
+   "growth": 39.7,
+   "goldBondUs30": 28.8,
+   "goldBond30": 26.7,
+   "cash30": 29.3
+  },
+  "2015": {
+   "growth": 4.1,
+   "goldBondUs30": 4.4,
+   "goldBond30": 3,
+   "cash30": 5
+  },
+  "2016": {
+   "growth": -8.9,
+   "goldBondUs30": -1.9,
+   "goldBond30": -1.5,
+   "cash30": -4.4
+  },
+  "2017": {
+   "growth": 114.5,
+   "goldBondUs30": 78.1,
+   "goldBond30": 73.5,
+   "cash30": 75.7
+  },
+  "2018": {
+   "growth": -19.4,
+   "goldBondUs30": -13.7,
+   "goldBond30": -13.1,
+   "cash30": -13.5
+  },
+  "2019": {
+   "growth": 5.3,
+   "goldBondUs30": 11.2,
+   "goldBond30": 10.5,
+   "cash30": 5.9
+  },
+  "2020": {
+   "growth": 47.1,
+   "goldBondUs30": 41.3,
+   "goldBond30": 38.3,
+   "cash30": 33.9
+  },
+  "2021": {
+   "growth": 86,
+   "goldBondUs30": 58,
+   "goldBond30": 54.5,
+   "cash30": 57.9
+  },
+  "2022": {
+   "growth": -13.2,
+   "goldBondUs30": -10.2,
+   "goldBond30": -7.7,
+   "cash30": -7.1
+  },
+  "2023": {
+   "growth": 63.4,
+   "goldBondUs30": 50.5,
+   "goldBond30": 46.9,
+   "cash30": 45.1
+  },
+  "2024": {
+   "growth": 32.4,
+   "goldBondUs30": 30.8,
+   "goldBond30": 26.7,
+   "cash30": 24
+  },
+  "2025": {
+   "growth": 2.8,
+   "goldBondUs30": 9.4,
+   "goldBond30": 12.7,
+   "cash30": 4
+  },
+  "2026": {
+   "growth": 21.3,
+   "goldBondUs30": 19.6,
+   "goldBond30": 17.2,
+   "cash30": 17.2
+  }
+ }
+}

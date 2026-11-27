@@ -39,8 +39,27 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
   for (const symbol of new Set(rows.map(r => r.symbol))) {
     const segs = segments.get(symbol)
     if (!segs) continue
-    const bars = applyAdjustments(loadRawSeries(db, segs), loadEvents(db, symbol))
-    stocks.set(symbol, {
+    stocks.set(symbol, seriesFrom(symbol, applyAdjustments(loadRawSeries(db, segs), loadEvents(db, symbol)), resultsBySymbol.get(symbol)))
+  }
+
+  const indices = new Map<string, IndexSeries>()
+  const indexQuery = db.prepare('select date, close from index_bars where lower(name) = lower(?)')
+  for (const idx of INDEX_SERIES) {
+    const byDate = new Map<number, number>()
+    for (const name of idx.names) {
+      for (const r of indexQuery.all(name) as Array<{ date: number; close: number }>) byDate.set(r.date, r.close)
+    }
+    const dates = [...byDate.keys()].sort((a, b) => a - b)
+    indices.set(idx.barSymbol, { dates: Int32Array.from(dates), close: Float64Array.from(dates.map(d => byDate.get(d)!)) })
+  }
+
+  return { sessions, stocks, indices, universe, universeDates: Int32Array.from([...universe.keys()].sort((a, b) => a - b)) }
+}
+
+type Bars = ReturnType<typeof applyAdjustments<ReturnType<typeof loadRawSeries>[number]>>
+
+function seriesFrom(symbol: string, bars: Bars, results?: Set<number>): StockSeries {
+  return {
       symbol,
       dates: Int32Array.from(bars.map(b => b.date)),
       close: Float64Array.from(bars.map(b => b.close)),
@@ -57,22 +76,24 @@ export function loadMarket(db: DatabaseSync, universeSize = 1000): Market {
       // Delivered and traded quantities are on the same share basis, so the ratio needs no adjustment
       deliveryShare: Float64Array.from(bars.map(b => (b.delivQty != null && b.volume > 0 ? Math.min(1, (b.delivQty / b.shareFactor) / b.volume) : NaN))),
       dividendFactor: Float64Array.from(bars.map(b => b.totalReturnFactor / b.priceFactor)),
-      resultsDates: Int32Array.from([...(resultsBySymbol.get(symbol) ?? [])].sort((a, b) => a - b)),
-    })
+      resultsDates: Int32Array.from([...(results ?? [])].sort((a, b) => a - b)),
   }
+}
 
-  const indices = new Map<string, IndexSeries>()
-  const indexQuery = db.prepare('select date, close from index_bars where lower(name) = lower(?)')
-  for (const idx of INDEX_SERIES) {
-    const byDate = new Map<number, number>()
-    for (const name of idx.names) {
-      for (const r of indexQuery.all(name) as Array<{ date: number; close: number }>) byDate.set(r.date, r.close)
-    }
-    const dates = [...byDate.keys()].sort((a, b) => a - b)
-    indices.set(idx.barSymbol, { dates: Int32Array.from(dates), close: Float64Array.from(dates.map(d => byDate.get(d)!)) })
+/**
+ * Adjusted series for exchange-traded funds, which the universe leaves out.
+ * `symbols` are the names the funds trade under today.
+ */
+export function loadFunds(symbols: string[], storePath = STORE_PATH): Map<string, StockSeries> {
+  const db = openStore(storePath)
+  const segments = buildSegments(db, loadSymbolMap(db))
+  const out = new Map<string, StockSeries>()
+  for (const symbol of symbols) {
+    const segs = segments.get(symbol)
+    if (segs) out.set(symbol, seriesFrom(symbol, applyAdjustments(loadRawSeries(db, segs), loadEvents(db, symbol))))
   }
-
-  return { sessions, stocks, indices, universe, universeDates: Int32Array.from([...universe.keys()].sort((a, b) => a - b)) }
+  db.close()
+  return out
 }
 
 /** Bump when the shape of Market changes, so an old cache is not read. */

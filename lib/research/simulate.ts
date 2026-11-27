@@ -16,7 +16,7 @@ import { RESIZE_BAND } from '@/lib/portfolio/config'
 import type { DailyBar } from '@/lib/portfolio/momentum'
 import { daysBetween, financialYear, isoDate, lastAtOrBefore } from './dates'
 import { barsUpTo, indexBarsUpTo, universeAsOf, type Market, type StockSeries } from './market'
-import { INDIA_EQUITY_TAX, TaxLedger, type TaxRules, type YearTax } from './tax'
+import { GroupedTaxLedger, INDIA_EQUITY_TAX, TaxLedger, type Ledger, type TaxGroup, type TaxRules, type YearTax } from './tax'
 
 export interface StrategyContext {
   /** Signal date (YYYYMMDD). Its close is known; nothing later is. */
@@ -50,6 +50,8 @@ export interface SimOptions {
   cashYield: number
   /** null for a before-tax run. */
   tax: TaxRules | null
+  /** Holdings taxed under other rules than `tax` (gold, bond and foreign funds). */
+  taxGroups?: TaxGroup[]
   /** Reinvest ordinary dividends (total return) rather than ignore them (price return). */
   dividends: boolean
   /** Share of the last traded price lost when a holding is delisted. */
@@ -96,7 +98,7 @@ export function simulate(market: Market, strategy: Strategy, options: Partial<Si
 
   let cash = opt.capital
   const units = new Map<string, number>()
-  const ledger = opt.tax ? new TaxLedger(opt.tax) : null
+  const ledger: Ledger | null = !opt.tax ? null : opt.taxGroups?.length ? new GroupedTaxLedger(opt.tax, opt.taxGroups) : new TaxLedger(opt.tax)
   const result: SimResult = {
     strategy: strategy.name, dates: [], equity: [], trades: [], rebalances: [], taxes: [], delistings: [],
     totals: { traded: 0, charges: 0, slippage: 0, tax: 0 },
