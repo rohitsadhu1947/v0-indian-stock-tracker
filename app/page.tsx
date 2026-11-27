@@ -23,6 +23,7 @@ const PortfolioAnalyst = lazy(() => import('./components/PortfolioAnalyst'))
 const MonthlyPlanTab = lazy(() => import('./components/MonthlyPlanTab'))
 const ScreenerTab = lazy(() => import('./components/ScreenerTab'))
 const FoWatchTab = lazy(() => import('./components/FoWatchTab'))
+const SignalsTab = lazy(() => import('./components/SignalsTab'))
 const MorningBriefTab = lazy(() => import('./components/MorningBriefTab'))
 const StockCheckTab = lazy(() => import('./components/StockCheckTab'))
 
@@ -626,6 +627,12 @@ export default function StockTracker() {
           🧭 Monthly Plan
         </button>
         <button
+          className={`tab ${activeTab === 'signals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('signals')}
+        >
+          🎯 Signals
+        </button>
+        <button
           className={`tab ${activeTab === 'brief' ? 'active' : ''}`}
           onClick={() => setActiveTab('brief')}
         >
@@ -708,6 +715,7 @@ export default function StockTracker() {
 
       {activeTab === 'brief' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Morning brief"><MorningBriefTab /></TabErrorBoundary></Suspense>}
 
+      {activeTab === 'signals' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Signals"><SignalsTab /></TabErrorBoundary></Suspense>}
       {activeTab === 'fowatch' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Day-trade watch"><FoWatchTab /></TabErrorBoundary></Suspense>}
       {activeTab === 'screen' && <Suspense fallback={<div className="loading">Loading...</div>}><TabErrorBoundary tabName="Screener"><ScreenerTab /></TabErrorBoundary></Suspense>}
 
