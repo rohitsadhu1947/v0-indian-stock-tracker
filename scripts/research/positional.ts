@@ -19,6 +19,11 @@ import type { StockSeries } from '@/lib/research/market'
 import { calendarYearReturns, periodStats, slice, type Curve } from '@/lib/research/metrics'
 import { indicators, meanAndT, tradeOutcome, type Indicators } from '@/lib/research/swing'
 import { simulateSwingBook, type BookOptions, type Candidate } from '@/lib/research/swing-book'
+import { simulate } from '@/lib/research/simulate'
+import { factorPortfolio } from '@/lib/research/strategies'
+import { monthly } from '@/lib/research/metrics'
+import { PORTFOLIO_RULES } from '@/lib/portfolio/config'
+import { SECTOR_BY_SYMBOL } from '@/lib/portfolio/sectors'
 
 const START = 20110101
 const UNIVERSE = 500
@@ -187,6 +192,12 @@ const BOOKS: Array<{ key: string; rules: string[]; note: string; options: Omit<B
   { key: 'results-jump', rules: ['results-jump'], note: '20 positions, 60 sessions', options: BASE },
   { key: 'results-jump-big', rules: ['results-jump-big'], note: '20 positions, 60 sessions', options: BASE },
   { key: 'results-jump-big-10', rules: ['results-jump-big'], note: '10 positions, 60 sessions', options: { ...BASE, slots: 10 } },
+  { key: 'results-jump-big-stop10', rules: ['results-jump-big'], note: '20 positions, 60 sessions, 10% stop', options: { ...BASE, stopPct: 10 } },
+  { key: 'results-jump-big-stop15', rules: ['results-jump-big'], note: '20 positions, 60 sessions, 15% stop', options: { ...BASE, stopPct: 15 } },
+  { key: 'results-jump-big-stop20', rules: ['results-jump-big'], note: '20 positions, 60 sessions, 20% stop', options: { ...BASE, stopPct: 20 } },
+  { key: 'results-jump-big-10-stop15', rules: ['results-jump-big'], note: '10 positions, 60 sessions, 15% stop', options: { ...BASE, slots: 10, stopPct: 15 } },
+  { key: 'results-jump-big-40d', rules: ['results-jump-big'], note: '20 positions, 40 sessions', options: { ...BASE, maxSessions: 40 } },
+  { key: 'results-jump-big-90d', rules: ['results-jump-big'], note: '20 positions, 90 sessions', options: { ...BASE, maxSessions: 90 } },
   { key: 'results-jump-40d', rules: ['results-jump'], note: '20 positions, 40 sessions', options: { ...BASE, maxSessions: 40 } },
   { key: 'results-jump-stop15', rules: ['results-jump'], note: '20 positions, 60 sessions, 15% stop', options: { ...BASE, stopPct: 15 } },
   { key: 'new-leader', rules: ['new-leader'], note: '20 positions, 60 sessions', options: BASE },
@@ -200,10 +211,12 @@ const stats = (curve: Curve) => Object.fromEntries(BOOK_PERIODS.map(p => {
   const st = periodStats(slice(curve, p.from, p.to))
   return [p.key, { cagrPct: round1(st.cagrPct), maxDrawdownPct: round1(st.maxDrawdownPct), sharpe: Math.round(st.sharpe * 100) / 100 }]
 }))
+const curves = new Map<string, Curve>()
 const books = BOOKS.map(b => {
   const list = merged(b.rules)
   const before = simulateSwingBook(market, list, { ...b.options, payTax: false })
   const after = simulateSwingBook(market, list, { ...b.options, payTax: true })
+  curves.set(b.key, after.curve)
   return {
     key: b.key, note: b.note, beforeTax: stats(before.curve), afterTax: stats(after.curve),
     yearsAfterTax: Object.fromEntries(Object.entries(calendarYearReturns(after.curve)).map(([y, r]) => [y, round1(r)])),
@@ -228,3 +241,51 @@ console.log(`${'NIFTY 500 index'.padEnd(28)}  ${cell(stats(indexCurve))}`)
 for (const b of books) console.log(`${b.key.padEnd(28)}  ${cell(b.afterTax)}  ${String((b.afterTax as any).full.sharpe).padStart(6)}  ${String(b.tradesPerYear).padStart(9)}  ${String(b.winRatePct).padStart(4)}  ${String(b.signalsSkippedPct).padStart(8)}  ${String(b.avgInvestedPct).padStart(9)}`)
 console.log('\nBy calendar year, after tax:')
 for (const b of books.filter(x => ['results-jump', 'results-jump-big', 'new-leader', 'results-and-leaders'].includes(x.key))) console.log(`${b.key.padEnd(22)} ${Object.entries(b.yearsAfterTax).map(([y, r]) => `${String(y).slice(2)}:${r}`).join(' ')}`)
+
+// ---- How much the results rule moves with the Monthly Plan's Growth mode ----
+const growthRun = simulate(market, factorPortfolio({
+  factors: ['momentum'], exitRank: PORTFOLIO_RULES.exitRank, maxPerSector: PORTFOLIO_RULES.maxPerSector, sectorOf: symbol => SECTOR_BY_SYMBOL[symbol],
+}), { start: 20110131, end: market.sessions[market.sessions.length - 1] })
+const growth = monthly({ dates: growthRun.dates, equity: growthRun.equity })
+function overlapWith(key: string) {
+  const book = monthly(curves.get(key)!)
+  const at = new Map(book.dates.map((d, i) => [d, i]))
+  const a: number[] = [], b: number[] = []
+  for (let i = 1; i < growth.dates.length; i++) {
+    const j = at.get(growth.dates[i]), k = at.get(growth.dates[i - 1])
+    if (j == null || k == null) continue
+    a.push(growth.equity[i] / growth.equity[i - 1] - 1)
+    b.push(book.equity[j] / book.equity[k] - 1)
+  }
+  const mean = (xs: number[]) => xs.reduce((x, y) => x + y, 0) / xs.length
+  const ma = mean(a), mb = mean(b)
+  const cov = mean(a.map((x, i) => (x - ma) * (b[i] - mb)))
+  const sd = (xs: number[], m: number) => Math.sqrt(mean(xs.map(x => (x - m) ** 2)))
+  // Half the money in each, put back to half and half every month
+  const blend: Curve = { dates: [0], equity: [1] }
+  const only = (xs: number[]): Curve => ({ dates: [0, ...xs.map((_, i) => i + 1)], equity: xs.reduce((acc, r) => [...acc, acc[acc.length - 1] * (1 + r)], [1]) })
+  a.forEach((r, i) => { blend.dates.push(i + 1); blend.equity.push(blend.equity[i] * (1 + (r + b[i]) / 2)) })
+  const describe = (c: Curve) => {
+    let peak = 0, fall = 0
+    for (const e of c.equity) { peak = Math.max(peak, e); fall = Math.min(fall, e / peak - 1) }
+    return { cagrPct: round1((Math.pow(c.equity[c.equity.length - 1], 12 / (c.equity.length - 1)) - 1) * 100), maxMonthlyDrawdownPct: round1(fall * 100) }
+  }
+  const bothDown = a.filter((x, i) => x < 0 && b[i] < 0).length, growthDown = a.filter(x => x < 0).length
+  return {
+    months: a.length, correlation: Math.round(cov / (sd(a, ma) * sd(b, mb)) * 100) / 100,
+    whenGrowthFellBookFellPct: round1(bothDown / growthDown * 100),
+    growth: describe(only(a)), book: describe(only(b)), halfAndHalf: describe(blend),
+  }
+}
+const overlap = { 'results-jump-big': overlapWith('results-jump-big'), 'results-jump-big-stop15': overlapWith('results-jump-big-stop15') }
+const withBooks = JSON.parse(readFileSync('research/results/positional.json', 'utf8'))
+writeFileSync('research/results/positional.json', JSON.stringify({
+  ...withBooks,
+  overlapNote: 'Monthly returns of the results book against the Monthly Plan\'s Growth mode, both after tax. Drawdowns here are on month-end values, so they are shallower than the daily figures above.',
+  overlapWithGrowth: overlap,
+}, null, 1))
+console.log('\nAgainst Growth mode, month by month:')
+for (const [key, o] of Object.entries(overlap)) {
+  console.log(`${key.padEnd(26)} correlation ${o.correlation}, in months Growth fell the book also fell ${o.whenGrowthFellBookFellPct}% of the time. ` +
+    `Growth ${o.growth.cagrPct}% (${o.growth.maxMonthlyDrawdownPct}), book ${o.book.cagrPct}% (${o.book.maxMonthlyDrawdownPct}), half and half ${o.halfAndHalf.cagrPct}% (${o.halfAndHalf.maxMonthlyDrawdownPct})`)
+}
