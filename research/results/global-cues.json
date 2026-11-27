@@ -1,0 +1,1175 @@
+{
+ "generatedAt": "2026-11-27T05:33:06.615Z",
+ "from": 20110101,
+ "to": 20261111,
+ "note": "Before costs. A round trip in NIFTY futures costs about 0.05%; an intraday trade in a stock about 0.2% to 0.3%. The cue is the foreign move after the previous Indian close and before this open.",
+ "nifty": {
+  "overnightVsDay": {
+   "2011-2019": {
+    "overnight": {
+     "n": 2226,
+     "meanPct": 0.11,
+     "t": 9.76
+    },
+    "openToClose": {
+     "n": 2226,
+     "meanPct": -0.07,
+     "t": -4.09
+    }
+   },
+   "2020-2022": {
+    "overnight": {
+     "n": 748,
+     "meanPct": 0.14,
+     "t": 4.13
+    },
+    "openToClose": {
+     "n": 748,
+     "meanPct": -0.07,
+     "t": -1.8
+    }
+   },
+   "2023-now": {
+    "overnight": {
+     "n": 957,
+     "meanPct": 0.07,
+     "t": 4.29
+    },
+    "openToClose": {
+     "n": 957,
+     "meanPct": -0.03,
+     "t": -1.64
+    }
+   }
+  },
+  "usToGap": {
+   "gapPerUsPercent": 0.3,
+   "correlationWithGap": 0.52,
+   "correlationWithOpenToClose": -0.04
+  },
+  "tables": [
+   {
+    "label": "S&P 500 overnight",
+    "rows": [
+     {
+      "bucket": "down 1.5% or more",
+      "gap": {
+       "n": 241,
+       "meanPct": -0.69,
+       "t": -8.87
+      },
+      "openToClose": {
+       "n": 241,
+       "meanPct": -0.03,
+       "t": -0.33
+      },
+      "from0920": {
+       "n": 182,
+       "meanPct": 0,
+       "t": 0.01
+      },
+      "recent": {
+       "n": 82,
+       "meanPct": -0.05,
+       "t": -0.59
+      }
+     },
+     {
+      "bucket": "down 0.5% to 1.5%",
+      "gap": {
+       "n": 574,
+       "meanPct": -0.16,
+       "t": -7.73
+      },
+      "openToClose": {
+       "n": 574,
+       "meanPct": -0.08,
+       "t": -2.25
+      },
+      "from0920": {
+       "n": 430,
+       "meanPct": -0.04,
+       "t": -1.24
+      },
+      "recent": {
+       "n": 208,
+       "meanPct": 0.04,
+       "t": 0.88
+      }
+     },
+     {
+      "bucket": "within 0.5%",
+      "gap": {
+       "n": 1915,
+       "meanPct": 0.1,
+       "t": 10.77
+      },
+      "openToClose": {
+       "n": 1915,
+       "meanPct": -0.05,
+       "t": -3.07
+      },
+      "from0920": {
+       "n": 1405,
+       "meanPct": -0.03,
+       "t": -1.69
+      },
+      "recent": {
+       "n": 508,
+       "meanPct": -0.01,
+       "t": -0.3
+      }
+     },
+     {
+      "bucket": "up 0.5% to 1.5%",
+      "gap": {
+       "n": 859,
+       "meanPct": 0.35,
+       "t": 22.28
+      },
+      "openToClose": {
+       "n": 859,
+       "meanPct": -0.09,
+       "t": -3.37
+      },
+      "from0920": {
+       "n": 644,
+       "meanPct": -0.04,
+       "t": -1.32
+      },
+      "recent": {
+       "n": 278,
+       "meanPct": -0.03,
+       "t": -0.87
+      }
+     },
+     {
+      "bucket": "up 1.5% or more",
+      "gap": {
+       "n": 213,
+       "meanPct": 0.78,
+       "t": 14.67
+      },
+      "openToClose": {
+       "n": 213,
+       "meanPct": -0.09,
+       "t": -1.14
+      },
+      "from0920": {
+       "n": 161,
+       "meanPct": 0,
+       "t": -0.04
+      },
+      "recent": {
+       "n": 81,
+       "meanPct": -0.07,
+       "t": -0.97
+      }
+     }
+    ]
+   },
+   {
+    "label": "Nasdaq overnight",
+    "rows": [
+     {
+      "bucket": "down 2% or more",
+      "gap": {
+       "n": 219,
+       "meanPct": -0.72,
+       "t": -8.86
+      },
+      "openToClose": {
+       "n": 219,
+       "meanPct": 0,
+       "t": 0.01
+      },
+      "from0920": {
+       "n": 180,
+       "meanPct": 0,
+       "t": -0.02
+      },
+      "recent": {
+       "n": 90,
+       "meanPct": -0.09,
+       "t": -1.1
+      }
+     },
+     {
+      "bucket": "down 0.75% to 2%",
+      "gap": {
+       "n": 537,
+       "meanPct": -0.16,
+       "t": -6.81
+      },
+      "openToClose": {
+       "n": 537,
+       "meanPct": -0.08,
+       "t": -2.1
+      },
+      "from0920": {
+       "n": 394,
+       "meanPct": -0.02,
+       "t": -0.58
+      },
+      "recent": {
+       "n": 202,
+       "meanPct": 0.05,
+       "t": 1.13
+      }
+     },
+     {
+      "bucket": "within 0.75%",
+      "gap": {
+       "n": 2108,
+       "meanPct": 0.11,
+       "t": 11.67
+      },
+      "openToClose": {
+       "n": 2108,
+       "meanPct": -0.06,
+       "t": -3.28
+      },
+      "from0920": {
+       "n": 1516,
+       "meanPct": -0.03,
+       "t": -1.98
+      },
+      "recent": {
+       "n": 528,
+       "meanPct": 0,
+       "t": 0.12
+      }
+     },
+     {
+      "bucket": "up 0.75% to 2%",
+      "gap": {
+       "n": 748,
+       "meanPct": 0.35,
+       "t": 21.87
+      },
+      "openToClose": {
+       "n": 748,
+       "meanPct": -0.1,
+       "t": -3.86
+      },
+      "from0920": {
+       "n": 576,
+       "meanPct": -0.05,
+       "t": -1.64
+      },
+      "recent": {
+       "n": 251,
+       "meanPct": -0.06,
+       "t": -1.47
+      }
+     },
+     {
+      "bucket": "up 2% or more",
+      "gap": {
+       "n": 190,
+       "meanPct": 0.77,
+       "t": 13.2
+      },
+      "openToClose": {
+       "n": 190,
+       "meanPct": -0.07,
+       "t": -0.77
+      },
+      "from0920": {
+       "n": 156,
+       "meanPct": 0.02,
+       "t": 0.22
+      },
+      "recent": {
+       "n": 86,
+       "meanPct": -0.05,
+       "t": -0.7
+      }
+     }
+    ]
+   },
+   {
+    "label": "NIFTY opening gap",
+    "rows": [
+     {
+      "bucket": "down 0.75% or more",
+      "gap": {
+       "n": 216,
+       "meanPct": -1.38,
+       "t": -20.8
+      },
+      "openToClose": {
+       "n": 216,
+       "meanPct": 0.11,
+       "t": 1.08
+      },
+      "from0920": {
+       "n": 157,
+       "meanPct": 0.07,
+       "t": 0.49
+      },
+      "recent": {
+       "n": 69,
+       "meanPct": 0.04,
+       "t": 0.4
+      }
+     },
+     {
+      "bucket": "down 0.3% to 0.75%",
+      "gap": {
+       "n": 370,
+       "meanPct": -0.47,
+       "t": -74.54
+      },
+      "openToClose": {
+       "n": 370,
+       "meanPct": -0.06,
+       "t": -1.38
+      },
+      "from0920": {
+       "n": 242,
+       "meanPct": -0.02,
+       "t": -0.45
+      },
+      "recent": {
+       "n": 140,
+       "meanPct": -0.01,
+       "t": -0.18
+      }
+     },
+     {
+      "bucket": "within 0.3%",
+      "gap": {
+       "n": 2121,
+       "meanPct": 0.04,
+       "t": 12.86
+      },
+      "openToClose": {
+       "n": 2121,
+       "meanPct": -0.08,
+       "t": -5.22
+      },
+      "from0920": {
+       "n": 1594,
+       "meanPct": -0.05,
+       "t": -3.06
+      },
+      "recent": {
+       "n": 668,
+       "meanPct": -0.02,
+       "t": -0.65
+      }
+     },
+     {
+      "bucket": "up 0.3% to 0.75%",
+      "gap": {
+       "n": 945,
+       "meanPct": 0.47,
+       "t": 118.19
+      },
+      "openToClose": {
+       "n": 945,
+       "meanPct": -0.05,
+       "t": -1.81
+      },
+      "from0920": {
+       "n": 726,
+       "meanPct": 0,
+       "t": -0.15
+      },
+      "recent": {
+       "n": 258,
+       "meanPct": -0.03,
+       "t": -0.88
+      }
+     },
+     {
+      "bucket": "up 0.75% or more",
+      "gap": {
+       "n": 279,
+       "meanPct": 1.24,
+       "t": 32.58
+      },
+      "openToClose": {
+       "n": 279,
+       "meanPct": -0.1,
+       "t": -1.39
+      },
+      "from0920": {
+       "n": 195,
+       "meanPct": -0.04,
+       "t": -0.47
+      },
+      "recent": {
+       "n": 67,
+       "meanPct": 0.11,
+       "t": 1.1
+      }
+     }
+    ]
+   },
+   {
+    "label": "Gap against what the US move implies",
+    "rows": [
+     {
+      "bucket": "down 0.6% or more",
+      "gap": {
+       "n": 230,
+       "meanPct": -1.15,
+       "t": -16.28
+      },
+      "openToClose": {
+       "n": 230,
+       "meanPct": 0,
+       "t": 0.01
+      },
+      "from0920": {
+       "n": 164,
+       "meanPct": 0.06,
+       "t": 0.43
+      },
+      "recent": {
+       "n": 73,
+       "meanPct": 0.06,
+       "t": 0.62
+      }
+     },
+     {
+      "bucket": "down 0.25% to 0.6%",
+      "gap": {
+       "n": 554,
+       "meanPct": -0.28,
+       "t": -17.75
+      },
+      "openToClose": {
+       "n": 554,
+       "meanPct": -0.11,
+       "t": -2.96
+      },
+      "from0920": {
+       "n": 380,
+       "meanPct": -0.12,
+       "t": -3.13
+      },
+      "recent": {
+       "n": 194,
+       "meanPct": -0.1,
+       "t": -1.97
+      }
+     },
+     {
+      "bucket": "within 0.25%",
+      "gap": {
+       "n": 2185,
+       "meanPct": 0.13,
+       "t": 22.18
+      },
+      "openToClose": {
+       "n": 2185,
+       "meanPct": -0.07,
+       "t": -4.84
+      },
+      "from0920": {
+       "n": 1637,
+       "meanPct": -0.03,
+       "t": -1.95
+      },
+      "recent": {
+       "n": 674,
+       "meanPct": -0.02,
+       "t": -0.67
+      }
+     },
+     {
+      "bucket": "up 0.25% to 0.6%",
+      "gap": {
+       "n": 600,
+       "meanPct": 0.47,
+       "t": 37.38
+      },
+      "openToClose": {
+       "n": 600,
+       "meanPct": -0.02,
+       "t": -0.68
+      },
+      "from0920": {
+       "n": 471,
+       "meanPct": -0.01,
+       "t": -0.32
+      },
+      "recent": {
+       "n": 163,
+       "meanPct": 0.01,
+       "t": 0.1
+      }
+     },
+     {
+      "bucket": "up 0.6% or more",
+      "gap": {
+       "n": 233,
+       "meanPct": 1.14,
+       "t": 22.13
+      },
+      "openToClose": {
+       "n": 233,
+       "meanPct": -0.05,
+       "t": -0.65
+      },
+      "from0920": {
+       "n": 170,
+       "meanPct": 0.04,
+       "t": 0.52
+      },
+      "recent": {
+       "n": 53,
+       "meanPct": 0.17,
+       "t": 1.52
+      }
+     }
+    ]
+   },
+   {
+    "label": "Brent crude overnight",
+    "rows": [
+     {
+      "bucket": "down 3% or more",
+      "gap": {
+       "n": 272,
+       "meanPct": 0.08,
+       "t": 1.2
+      },
+      "openToClose": {
+       "n": 272,
+       "meanPct": -0.25,
+       "t": -3.58
+      },
+      "from0920": {
+       "n": 238,
+       "meanPct": -0.16,
+       "t": -2.26
+      },
+      "recent": {
+       "n": 97,
+       "meanPct": -0.06,
+       "t": -0.99
+      }
+     },
+     {
+      "bucket": "down 1% to 3%",
+      "gap": {
+       "n": 692,
+       "meanPct": 0.04,
+       "t": 1.91
+      },
+      "openToClose": {
+       "n": 692,
+       "meanPct": -0.08,
+       "t": -2.78
+      },
+      "from0920": {
+       "n": 534,
+       "meanPct": -0.03,
+       "t": -0.9
+      },
+      "recent": {
+       "n": 239,
+       "meanPct": 0.01,
+       "t": 0.23
+      }
+     },
+     {
+      "bucket": "within 1%",
+      "gap": {
+       "n": 1756,
+       "meanPct": 0.11,
+       "t": 8.17
+      },
+      "openToClose": {
+       "n": 1756,
+       "meanPct": -0.04,
+       "t": -2.2
+      },
+      "from0920": {
+       "n": 1178,
+       "meanPct": -0.03,
+       "t": -1.28
+      },
+      "recent": {
+       "n": 437,
+       "meanPct": 0,
+       "t": 0.01
+      }
+     },
+     {
+      "bucket": "up 1% to 3%",
+      "gap": {
+       "n": 777,
+       "meanPct": 0.15,
+       "t": 8.05
+      },
+      "openToClose": {
+       "n": 777,
+       "meanPct": -0.03,
+       "t": -1.18
+      },
+      "from0920": {
+       "n": 621,
+       "meanPct": 0.02,
+       "t": 0.55
+      },
+      "recent": {
+       "n": 273,
+       "meanPct": -0.04,
+       "t": -0.97
+      }
+     },
+     {
+      "bucket": "up 3% or more",
+      "gap": {
+       "n": 261,
+       "meanPct": 0.1,
+       "t": 1.85
+      },
+      "openToClose": {
+       "n": 261,
+       "meanPct": -0.09,
+       "t": -1.44
+      },
+      "from0920": {
+       "n": 239,
+       "meanPct": -0.06,
+       "t": -1
+      },
+      "recent": {
+       "n": 108,
+       "meanPct": -0.01,
+       "t": -0.19
+      }
+     }
+    ]
+   },
+   {
+    "label": "VIX overnight",
+    "rows": [
+     {
+      "bucket": "down 8% or more",
+      "gap": {
+       "n": 392,
+       "meanPct": 0.5,
+       "t": 12.11
+      },
+      "openToClose": {
+       "n": 392,
+       "meanPct": -0.16,
+       "t": -3.41
+      },
+      "from0920": {
+       "n": 293,
+       "meanPct": -0.12,
+       "t": -2.03
+      },
+      "recent": {
+       "n": 103,
+       "meanPct": -0.1,
+       "t": -1.41
+      }
+     },
+     {
+      "bucket": "between",
+      "gap": {
+       "n": 3159,
+       "meanPct": 0.11,
+       "t": 12.19
+      },
+      "openToClose": {
+       "n": 3159,
+       "meanPct": -0.06,
+       "t": -3.99
+      },
+      "from0920": {
+       "n": 2335,
+       "meanPct": -0.02,
+       "t": -1.68
+      },
+      "recent": {
+       "n": 977,
+       "meanPct": 0,
+       "t": -0.13
+      }
+     },
+     {
+      "bucket": "up 12% or more",
+      "gap": {
+       "n": 253,
+       "meanPct": -0.55,
+       "t": -9.11
+      },
+      "openToClose": {
+       "n": 253,
+       "meanPct": -0.02,
+       "t": -0.26
+      },
+      "from0920": {
+       "n": 196,
+       "meanPct": 0.03,
+       "t": 0.37
+      },
+      "recent": {
+       "n": 79,
+       "meanPct": -0.03,
+       "t": -0.4
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "adrs": [
+  {
+   "symbol": "INFY",
+   "adrUp2": {
+    "gap": {
+     "n": 324,
+     "meanPct": 1.08,
+     "t": 12.92
+    },
+    "openToClose": {
+     "n": 324,
+     "meanPct": 0.22,
+     "t": 1.97
+    }
+   },
+   "adrUp1to2": {
+    "gap": {
+     "n": 541,
+     "meanPct": 0.43,
+     "t": 13.52
+    },
+    "openToClose": {
+     "n": 541,
+     "meanPct": 0.06,
+     "t": 1.03
+    }
+   },
+   "adrDown1to2": {
+    "gap": {
+     "n": 536,
+     "meanPct": -0.35,
+     "t": -8.88
+    },
+    "openToClose": {
+     "n": 536,
+     "meanPct": -0.18,
+     "t": -2.91
+    }
+   },
+   "adrDown2": {
+    "gap": {
+     "n": 331,
+     "meanPct": -1.06,
+     "t": -10.93
+    },
+    "openToClose": {
+     "n": 331,
+     "meanPct": -0.11,
+     "t": -1.11
+    }
+   }
+  },
+  {
+   "symbol": "HDFCBANK",
+   "adrUp2": {
+    "gap": {
+     "n": 270,
+     "meanPct": 0.89,
+     "t": 13.09
+    },
+    "openToClose": {
+     "n": 270,
+     "meanPct": -0.23,
+     "t": -2.05
+    }
+   },
+   "adrUp1to2": {
+    "gap": {
+     "n": 546,
+     "meanPct": 0.33,
+     "t": 12.53
+    },
+    "openToClose": {
+     "n": 546,
+     "meanPct": 0.04,
+     "t": 0.75
+    }
+   },
+   "adrDown1to2": {
+    "gap": {
+     "n": 521,
+     "meanPct": -0.25,
+     "t": -7.17
+    },
+    "openToClose": {
+     "n": 521,
+     "meanPct": 0.01,
+     "t": 0.19
+    }
+   },
+   "adrDown2": {
+    "gap": {
+     "n": 298,
+     "meanPct": -0.63,
+     "t": -9.3
+    },
+    "openToClose": {
+     "n": 298,
+     "meanPct": -0.09,
+     "t": -1
+    }
+   }
+  },
+  {
+   "symbol": "ICICIBANK",
+   "adrUp2": {
+    "gap": {
+     "n": 280,
+     "meanPct": 1.24,
+     "t": 12.89
+    },
+    "openToClose": {
+     "n": 280,
+     "meanPct": 0.19,
+     "t": 1.49
+    }
+   },
+   "adrUp1to2": {
+    "gap": {
+     "n": 527,
+     "meanPct": 0.54,
+     "t": 14.6
+    },
+    "openToClose": {
+     "n": 527,
+     "meanPct": 0.02,
+     "t": 0.21
+    }
+   },
+   "adrDown1to2": {
+    "gap": {
+     "n": 502,
+     "meanPct": -0.31,
+     "t": -7.23
+    },
+    "openToClose": {
+     "n": 502,
+     "meanPct": -0.22,
+     "t": -3.12
+    }
+   },
+   "adrDown2": {
+    "gap": {
+     "n": 296,
+     "meanPct": -0.93,
+     "t": -11.59
+    },
+    "openToClose": {
+     "n": 296,
+     "meanPct": -0.05,
+     "t": -0.39
+    }
+   }
+  },
+  {
+   "symbol": "WIPRO",
+   "adrUp2": {
+    "gap": {
+     "n": 358,
+     "meanPct": 0.66,
+     "t": 9.76
+    },
+    "openToClose": {
+     "n": 358,
+     "meanPct": -0.02,
+     "t": -0.24
+    }
+   },
+   "adrUp1to2": {
+    "gap": {
+     "n": 507,
+     "meanPct": 0.33,
+     "t": 12.04
+    },
+    "openToClose": {
+     "n": 507,
+     "meanPct": 0.04,
+     "t": 0.65
+    }
+   },
+   "adrDown1to2": {
+    "gap": {
+     "n": 513,
+     "meanPct": -0.15,
+     "t": -3.47
+    },
+    "openToClose": {
+     "n": 513,
+     "meanPct": -0.12,
+     "t": -1.8
+    }
+   },
+   "adrDown2": {
+    "gap": {
+     "n": 364,
+     "meanPct": -0.71,
+     "t": -9.66
+    },
+    "openToClose": {
+     "n": 364,
+     "meanPct": -0.14,
+     "t": -1.65
+    }
+   }
+  },
+  {
+   "symbol": "DRREDDY",
+   "adrUp2": {
+    "gap": {
+     "n": 178,
+     "meanPct": 0.74,
+     "t": 9.57
+    },
+    "openToClose": {
+     "n": 178,
+     "meanPct": 0.02,
+     "t": 0.09
+    }
+   },
+   "adrUp1to2": {
+    "gap": {
+     "n": 477,
+     "meanPct": 0.41,
+     "t": 12.82
+    },
+    "openToClose": {
+     "n": 477,
+     "meanPct": 0.06,
+     "t": 0.99
+    }
+   },
+   "adrDown1to2": {
+    "gap": {
+     "n": 502,
+     "meanPct": -0.12,
+     "t": -3.67
+    },
+    "openToClose": {
+     "n": 502,
+     "meanPct": -0.14,
+     "t": -2.14
+    }
+   },
+   "adrDown2": {
+    "gap": {
+     "n": 172,
+     "meanPct": -0.94,
+     "t": -7.78
+    },
+    "openToClose": {
+     "n": 172,
+     "meanPct": -0.11,
+     "t": -0.75
+    }
+   }
+  }
+ ],
+ "crude": [
+  {
+   "symbol": "BPCL",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": -0.1,
+     "t": -1.4
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": -0.22,
+     "t": -2.05
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": 0.47,
+     "t": 5.26
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": -0.22,
+     "t": -1.62
+    }
+   }
+  },
+  {
+   "symbol": "HINDPETRO",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": -0.13,
+     "t": -1.5
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": -0.4,
+     "t": -3.18
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": 0.63,
+     "t": 7.2
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": 0.02,
+     "t": 0.12
+    }
+   }
+  },
+  {
+   "symbol": "IOC",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": 0.01,
+     "t": 0.15
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": -0.25,
+     "t": -2.18
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": 0.44,
+     "t": 5.82
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": -0.22,
+     "t": -2
+    }
+   }
+  },
+  {
+   "symbol": "ONGC",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": 0.6,
+     "t": 7.27
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": -0.02,
+     "t": -0.18
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": -0.17,
+     "t": -2.1
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": -0.41,
+     "t": -2.96
+    }
+   }
+  },
+  {
+   "symbol": "OIL",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": 0.51,
+     "t": 6.53
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": 0,
+     "t": -0.03
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": -0.03,
+     "t": -0.33
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": -0.4,
+     "t": -2.81
+    }
+   }
+  },
+  {
+   "symbol": "INDIGO",
+   "crudeUp3": {
+    "gap": {
+     "n": 212,
+     "meanPct": -0.29,
+     "t": -2.52
+    },
+    "openToClose": {
+     "n": 212,
+     "meanPct": -0.55,
+     "t": -3.33
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 217,
+     "meanPct": 0.19,
+     "t": 1.48
+    },
+    "openToClose": {
+     "n": 217,
+     "meanPct": 0.28,
+     "t": 1.84
+    }
+   }
+  },
+  {
+   "symbol": "ASIANPAINT",
+   "crudeUp3": {
+    "gap": {
+     "n": 261,
+     "meanPct": -0.08,
+     "t": -1.4
+    },
+    "openToClose": {
+     "n": 261,
+     "meanPct": -0.18,
+     "t": -1.75
+    }
+   },
+   "crudeDown3": {
+    "gap": {
+     "n": 272,
+     "meanPct": 0.31,
+     "t": 4.81
+    },
+    "openToClose": {
+     "n": 272,
+     "meanPct": -0.02,
+     "t": -0.22
+    }
+   }
+  }
+ ]
+}

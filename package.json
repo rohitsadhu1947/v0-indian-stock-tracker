@@ -23,6 +23,7 @@
     "research:fo-daytrade": "tsx scripts/research/fo-daytrade.ts",
     "research:intraday": "tsx scripts/research/intraday-rules.ts",
     "research:positional": "tsx scripts/research/positional.ts",
+    "research:global": "tsx scripts/research/global-cues.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
