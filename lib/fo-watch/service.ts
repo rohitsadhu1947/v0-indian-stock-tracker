@@ -13,8 +13,10 @@ import { liveQuotes } from '@/lib/portfolio/live'
 import { extractSingleCsv, fetchArchiveFile, foBanListUrl, foBhavcopyUrl } from '@/lib/market-data/nse-archive'
 import { parseBanList, parseFoFile, summariseOptions } from '@/lib/research/fo-parse'
 import type { MinuteBar } from '@/lib/research/day-trade'
+import { ENTRY_MINUTE } from '@/lib/signals/core'
+import { minuteBars } from '@/lib/signals/service'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
-import { BACKTEST, banListDate, findSignals, paperOutcome, SIGNAL_LABEL, STOP_PCT, tally, type OptionVolume, type SignalTally, type WatchSignal } from './core'
+import { BACKTEST, banListDate, entryMessage, findSignals, paperOutcome, SIGNAL_LABEL, STOP_PCT, tally, type OptionVolume, type SignalTally, type WatchSignal } from './core'
 
 const CURRENT_BAN_LIST = 'https://nsearchives.nseindia.com/content/fo/fo_secban.csv'
 const IST_MS = 5.5 * 3600 * 1000
@@ -148,10 +150,6 @@ async function resolvePending(): Promise<{ resolved: number; waiting: number }> 
 }
 
 async function notifyAdmins(tradeDate: string, added: NewPaperTrade[]): Promise<void> {
-  const admins = await db
-    .select({ token: userPreferences.telegramBotToken, chat: userPreferences.telegramChatId })
-    .from(userPreferences).innerJoin(users, eq(users.id, userPreferences.userId))
-    .where(and(eq(users.role, 'admin'), eq(userPreferences.telegramEnabled, true), isNotNull(userPreferences.telegramBotToken), isNotNull(userPreferences.telegramChatId)))
   const closes = (await liveQuotes(added.map(a => a.symbol), null).catch(() => null))?.quotes ?? {}
   const rupees = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
   const lines = [`<b>Day-trade signals for ${tradeDate}</b>`, '']
@@ -164,7 +162,53 @@ async function notifyAdmins(tradeDate: string, added: NewPaperTrade[]): Promise<
       'Exit: buy back at 15:15.', '')
   }
   lines.push('Evidence is modest and has been weak since 2025. The app places no orders.')
-  for (const a of admins) await sendTelegramMessage(a.token!, a.chat!, lines.join('\n'))
+  for (const a of await adminTelegram()) await sendTelegramMessage(a.token, a.chat, lines.join('\n'))
+}
+
+async function adminTelegram(): Promise<Array<{ token: string; chat: string }>> {
+  const rows = await db
+    .select({ token: userPreferences.telegramBotToken, chat: userPreferences.telegramChatId })
+    .from(userPreferences).innerJoin(users, eq(users.id, userPreferences.userId))
+    .where(and(eq(users.role, 'admin'), eq(userPreferences.telegramEnabled, true), isNotNull(userPreferences.telegramBotToken), isNotNull(userPreferences.telegramChatId)))
+  return rows.map(r => ({ token: r.token!, chat: r.chat! }))
+}
+
+/**
+ * The 09:20 message: for each of today's shorts not yet announced, the entry
+ * price, the stop price in rupees and the exit time. Does nothing before
+ * 09:20 or after 15:00 IST, and sends each trade once.
+ */
+export async function sendEntryAlerts(): Promise<number> {
+  const now = istNow()
+  const today = now.toISOString().slice(0, 10), minute = now.getUTCHours() * 60 + now.getUTCMinutes()
+  if (minute < 9 * 60 + 20 || minute > 15 * 60) return 0
+  const due = (await db.select().from(paperDayTrades).where(and(eq(paperDayTrades.tradeDate, today), eq(paperDayTrades.status, 'pending'))))
+    .filter(t => !(t.detail as Record<string, unknown>)?.entryAlertAt)
+  if (!due.length) return 0
+
+  const manager = await getBrokerManager()
+  const client = manager.hasConnection() ? manager.getClient() : null
+  const messages: string[] = []
+  for (const t of due) {
+    let entryPrice: number | null = null, lastPrice: number | null = null
+    if (client) {
+      try {
+        const bars = await minuteBars(client, t.symbol, today)
+        const first = bars.find(b => b[0] >= ENTRY_MINUTE)
+        entryPrice = first && first[0] <= ENTRY_MINUTE + 10 ? first[1] : null
+        lastPrice = bars.length ? bars[bars.length - 1][4] : null
+      } catch (error: any) {
+        logger.warn('Entry price could not be read', { symbol: t.symbol, error: error.message })
+      }
+    }
+    messages.push(entryMessage({ symbol: t.symbol, signal: t.signal as WatchSignal, entryPrice, lastPrice, exampleAmount: 50000 }))
+    await db.update(paperDayTrades)
+      .set({ detail: { ...(t.detail as object), entryAlertAt: new Date().toISOString(), entryAlertPrice: entryPrice } })
+      .where(eq(paperDayTrades.id, t.id))
+  }
+  const text = [...messages, 'Evidence is modest and has been weak since 2025. The app places no orders.'].join('\n\n')
+  for (const a of await adminTelegram()) await sendTelegramMessage(a.token, a.chat, text)
+  return due.length
 }
 
 export interface FoWatchRun { date: string | null; tradeDate: string | null; added: number; resolved: number; waiting: number; problem?: string }

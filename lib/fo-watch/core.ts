@@ -104,3 +104,25 @@ export function banListDate(csv: string): string | null {
   const month = m && ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].indexOf(m[2].toUpperCase()) + 1
   return m && month ? `${m[3]}-${String(month).padStart(2, '0')}-${m[1].padStart(2, '0')}` : null
 }
+
+/** The 09:20 message for one short. `entryPrice` is the 09:20 price; `lastPrice` is the latest, when it differs. */
+export function entryMessage(input: { symbol: string; signal: WatchSignal; entryPrice: number | null; lastPrice: number | null; exampleAmount: number }): string {
+  const rupees = (n: number) => `Rs ${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const name = input.symbol.replace(/[<>&]/g, ' ')
+  const lines = [`<b>SELL SHORT ${name} now</b> (${SIGNAL_LABEL[input.signal].toLowerCase()})`]
+  if (input.entryPrice) {
+    const stop = Math.round(input.entryPrice * (1 + STOP_PCT / 100) * 100) / 100
+    const moved = input.lastPrice && Math.abs(input.lastPrice / input.entryPrice - 1) >= 0.001 ? ` Now ${rupees(input.lastPrice)}.` : ''
+    lines.push(
+      `Entry: the 09:20 price was ${rupees(input.entryPrice)}.${moved}`,
+      `Stop: place a stop-loss buy order at ${rupees(stop)} (${STOP_PCT}% above the 09:20 price).`,
+      'Exit: buy back at 15:15 if the stop has not been hit.',
+      `Shares: ${Math.floor(input.exampleAmount / input.entryPrice)} for Rs ${input.exampleAmount.toLocaleString('en-IN')}.`)
+  } else {
+    lines.push(
+      'Entry: at the market price. Zerodha is not connected, so the app cannot read the price.',
+      `Stop: place a stop-loss buy order ${STOP_PCT}% above your sell price.`,
+      'Exit: buy back at 15:15 if the stop has not been hit.')
+  }
+  return lines.join('\n')
+}
