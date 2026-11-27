@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { FundamentalData, FundamentalScore } from '@/lib/fundamentals-utils'
 
 export type ActiveTab =
-  | 'plan'
+  | 'plan' | 'signals'
   | 'screen' | 'fowatch'
   | 'brief'
   | 'stockcheck'

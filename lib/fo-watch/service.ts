@@ -9,11 +9,12 @@ import { foStockDays, paperDayTrades, userPreferences, users } from '@/db/schema
 import { and, asc, desc, eq, gte, isNotNull, lt, lte, sql } from 'drizzle-orm'
 import { getBrokerManager } from '@/lib/broker'
 import logger from '@/lib/logger'
+import { liveQuotes } from '@/lib/portfolio/live'
 import { extractSingleCsv, fetchArchiveFile, foBanListUrl, foBhavcopyUrl } from '@/lib/market-data/nse-archive'
 import { parseBanList, parseFoFile, summariseOptions } from '@/lib/research/fo-parse'
 import type { MinuteBar } from '@/lib/research/day-trade'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
-import { BACKTEST, banListDate, findSignals, paperOutcome, SIGNAL_LABEL, tally, type OptionVolume, type SignalTally, type WatchSignal } from './core'
+import { BACKTEST, banListDate, findSignals, paperOutcome, SIGNAL_LABEL, STOP_PCT, tally, type OptionVolume, type SignalTally, type WatchSignal } from './core'
 
 const CURRENT_BAN_LIST = 'https://nsearchives.nseindia.com/content/fo/fo_secban.csv'
 const IST_MS = 5.5 * 3600 * 1000
@@ -151,11 +152,18 @@ async function notifyAdmins(tradeDate: string, added: NewPaperTrade[]): Promise<
     .select({ token: userPreferences.telegramBotToken, chat: userPreferences.telegramChatId })
     .from(userPreferences).innerJoin(users, eq(users.id, userPreferences.userId))
     .where(and(eq(users.role, 'admin'), eq(userPreferences.telegramEnabled, true), isNotNull(userPreferences.telegramBotToken), isNotNull(userPreferences.telegramChatId)))
-  const lines = [`<b>Paper day trades for ${tradeDate}</b>`, 'Short at 09:20, buy back at 15:15 or at a 3% stop. Paper only: no orders are placed.', '']
-  for (const signal of Object.keys(SIGNAL_LABEL) as WatchSignal[]) {
-    const list = added.filter(a => a.signal === signal)
-    if (list.length) lines.push(`${SIGNAL_LABEL[signal]}: ${list.map(a => a.symbol.replace(/[<>&]/g, ' ')).join(', ')}`)
+  const closes = (await liveQuotes(added.map(a => a.symbol), null).catch(() => null))?.quotes ?? {}
+  const rupees = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+  const lines = [`<b>Day-trade signals for ${tradeDate}</b>`, '']
+  for (const a of added) {
+    const close = closes[a.symbol]?.price
+    lines.push(
+      `<b>SELL SHORT ${a.symbol.replace(/[<>&]/g, ' ')}</b> (${SIGNAL_LABEL[a.signal].toLowerCase()})`,
+      `Entry: 09:20, at the market price.${close ? ` Last close ${rupees(close)}.` : ''}`,
+      `Stop: ${STOP_PCT}% above your sell price${close ? `, about ${rupees(close * (1 + STOP_PCT / 100))} at the last close` : ''}.`,
+      'Exit: buy back at 15:15.', '')
   }
+  lines.push('Evidence is modest and has been weak since 2025. The app places no orders.')
   for (const a of admins) await sendTelegramMessage(a.token!, a.chat!, lines.join('\n'))
 }
 
