@@ -24,7 +24,7 @@ async function main() {
     const weekday = new Date(day + 'T00:00:00Z').getUTCDay()
     if (weekday === 0 || weekday === 6) continue
     const recordSignals = !!from && day >= from
-    const run = await runFoWatch({ date: day, notify: false })
+    const run = await runFoWatch({ date: day, notify: false, signals: recordSignals })
     console.log(`${day}: ${run.date ? `loaded${recordSignals || run.added ? `, ${run.added} signals for ${run.tradeDate}` : ''}` : 'no F&O file'}${run.problem ? ` (${run.problem})` : ''}`)
   }
   const run = await runFoWatch({ notify: !history })

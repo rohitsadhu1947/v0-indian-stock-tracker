@@ -165,7 +165,7 @@ export interface FoWatchRun { date: string | null; tradeDate: string | null; add
  * One run of the tracker. With no date it takes the latest session NSE has
  * an F&O file for, looking back up to five days. Safe to run more than once.
  */
-export async function runFoWatch(opts: { date?: string; notify?: boolean } = {}): Promise<FoWatchRun> {
+export async function runFoWatch(opts: { date?: string; notify?: boolean; signals?: boolean } = {}): Promise<FoWatchRun> {
   const run: FoWatchRun = { date: null, tradeDate: null, added: 0, resolved: 0, waiting: 0 }
   try {
     const start = opts.date ?? istNow().toISOString().slice(0, 10)
@@ -173,7 +173,7 @@ export async function runFoWatch(opts: { date?: string; notify?: boolean } = {})
       const day = addDays(start, -n)
       if (await loadDay(day)) run.date = day
     }
-    if (run.date) {
+    if (run.date && opts.signals !== false) {
       const signals = await recordSignals(run.date)
       run.tradeDate = signals.tradeDate
       run.added = signals.added.length
