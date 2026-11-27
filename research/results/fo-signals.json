@@ -1,0 +1,2118 @@
+{
+ "generatedAt": "2026-11-26T13:29:27.880Z",
+ "from": 20110701,
+ "to": 20261111,
+ "note": "Gross returns, before costs. Excess is against the average of all F&O stocks over the same sessions, tested on daily averages.",
+ "stockDays": 684064,
+ "stocksNotInStore": 0,
+ "baselinePct": {
+  "gap": 0.16,
+  "day": -0.11,
+  "hold3": -0.02,
+  "hold5": 0.07
+ },
+ "stocks": [
+  {
+   "key": "price-up-only",
+   "label": "Control: price up, any open interest",
+   "basis": "Price up 1.5% or more. No F&O condition.",
+   "expect": "up",
+   "trades": 135312,
+   "days": 3779,
+   "tradesPerMonth": 746.4,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.28,
+     "excessPct": 0.1,
+     "t": 17.73
+    },
+    "day": {
+     "rawPct": -0.16,
+     "excessPct": -0.14,
+     "t": -10.36
+    },
+    "hold3": {
+     "rawPct": -0.07,
+     "excessPct": -0.19,
+     "t": -9.31
+    },
+    "hold5": {
+     "rawPct": 0.02,
+     "excessPct": -0.21,
+     "t": -8.35
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 76417,
+     "day": {
+      "rawPct": -0.17,
+      "excessPct": -0.16,
+      "t": -8.29
+     },
+     "hold5": {
+      "rawPct": -0.15,
+      "excessPct": -0.26,
+      "t": -7.47
+     }
+    },
+    "2020-2022": {
+     "trades": 26332,
+     "day": {
+      "rawPct": -0.12,
+      "excessPct": -0.16,
+      "t": -4.83
+     },
+     "hold5": {
+      "rawPct": 0.29,
+      "excessPct": -0.19,
+      "t": -3.15
+     }
+    },
+    "2023-now": {
+     "trades": 32563,
+     "day": {
+      "rawPct": -0.15,
+      "excessPct": -0.08,
+      "t": -3.92
+     },
+     "hold5": {
+      "rawPct": 0.22,
+      "excessPct": -0.11,
+      "t": -2.6
+     }
+    }
+   }
+  },
+  {
+   "key": "price-down-only",
+   "label": "Control: price down, any open interest",
+   "basis": "Price down 1.5% or more. No F&O condition.",
+   "expect": "down",
+   "trades": 129505,
+   "days": 3768,
+   "tradesPerMonth": 714.4,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.09,
+     "excessPct": 0,
+     "t": -1.01
+    },
+    "day": {
+     "rawPct": -0.1,
+     "excessPct": -0.04,
+     "t": -3.35
+    },
+    "hold3": {
+     "rawPct": 0.03,
+     "excessPct": -0.01,
+     "t": -0.3
+    },
+    "hold5": {
+     "rawPct": 0.14,
+     "excessPct": -0.03,
+     "t": -0.96
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 75806,
+     "day": {
+      "rawPct": -0.15,
+      "excessPct": -0.01,
+      "t": -0.5
+     },
+     "hold5": {
+      "rawPct": 0.04,
+      "excessPct": -0.01,
+      "t": -0.26
+     }
+    },
+    "2020-2022": {
+     "trades": 24145,
+     "day": {
+      "rawPct": -0.13,
+      "excessPct": -0.11,
+      "t": -3.52
+     },
+     "hold5": {
+      "rawPct": -0.01,
+      "excessPct": -0.13,
+      "t": -2.17
+     }
+    },
+    "2023-now": {
+     "trades": 29554,
+     "day": {
+      "rawPct": 0.02,
+      "excessPct": -0.07,
+      "t": -3.21
+     },
+     "hold5": {
+      "rawPct": 0.51,
+      "excessPct": 0.02,
+      "t": 0.42
+     }
+    }
+   }
+  },
+  {
+   "key": "long-buildup",
+   "label": "New longs",
+   "basis": "Price up 1.5% or more with futures open interest up 5% or more.",
+   "expect": "up",
+   "trades": 24091,
+   "days": 3497,
+   "tradesPerMonth": 132.9,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.4,
+     "excessPct": 0.19,
+     "t": 15.99
+    },
+    "day": {
+     "rawPct": -0.31,
+     "excessPct": -0.25,
+     "t": -9.54
+    },
+    "hold3": {
+     "rawPct": -0.24,
+     "excessPct": -0.38,
+     "t": -9.2
+    },
+    "hold5": {
+     "rawPct": -0.11,
+     "excessPct": -0.42,
+     "t": -8.07
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 14986,
+     "day": {
+      "rawPct": -0.34,
+      "excessPct": -0.25,
+      "t": -6.64
+     },
+     "hold5": {
+      "rawPct": -0.26,
+      "excessPct": -0.43,
+      "t": -6.04
+     }
+    },
+    "2020-2022": {
+     "trades": 4789,
+     "day": {
+      "rawPct": -0.34,
+      "excessPct": -0.36,
+      "t": -6.46
+     },
+     "hold5": {
+      "rawPct": 0.19,
+      "excessPct": -0.54,
+      "t": -4.28
+     }
+    },
+    "2023-now": {
+     "trades": 4316,
+     "day": {
+      "rawPct": -0.19,
+      "excessPct": -0.16,
+      "t": -3.55
+     },
+     "hold5": {
+      "rawPct": 0.1,
+      "excessPct": -0.3,
+      "t": -3.26
+     }
+    }
+   }
+  },
+  {
+   "key": "short-buildup",
+   "label": "New shorts",
+   "basis": "Price down 1.5% or more with open interest up 5% or more.",
+   "expect": "down",
+   "trades": 23682,
+   "days": 3579,
+   "tradesPerMonth": 130.6,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.11,
+     "excessPct": -0.03,
+     "t": -3.46
+    },
+    "day": {
+     "rawPct": -0.21,
+     "excessPct": -0.1,
+     "t": -4.73
+    },
+    "hold3": {
+     "rawPct": -0.12,
+     "excessPct": -0.12,
+     "t": -3.52
+    },
+    "hold5": {
+     "rawPct": -0.08,
+     "excessPct": -0.13,
+     "t": -3.07
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 15166,
+     "day": {
+      "rawPct": -0.21,
+      "excessPct": -0.05,
+      "t": -1.55
+     },
+     "hold5": {
+      "rawPct": -0.11,
+      "excessPct": -0.07,
+      "t": -1.16
+     }
+    },
+    "2020-2022": {
+     "trades": 3886,
+     "day": {
+      "rawPct": -0.25,
+      "excessPct": -0.12,
+      "t": -2.25
+     },
+     "hold5": {
+      "rawPct": -0.03,
+      "excessPct": -0.2,
+      "t": -1.86
+     }
+    },
+    "2023-now": {
+     "trades": 4630,
+     "day": {
+      "rawPct": -0.18,
+      "excessPct": -0.22,
+      "t": -5.62
+     },
+     "hold5": {
+      "rawPct": -0.01,
+      "excessPct": -0.23,
+      "t": -2.82
+     }
+    }
+   }
+  },
+  {
+   "key": "short-covering",
+   "label": "Short covering",
+   "basis": "Price up 1.5% or more with open interest down 5% or more.",
+   "expect": "up",
+   "trades": 12420,
+   "days": 3151,
+   "tradesPerMonth": 68.5,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.21,
+     "excessPct": 0.06,
+     "t": 4.95
+    },
+    "day": {
+     "rawPct": -0.07,
+     "excessPct": -0.04,
+     "t": -1.36
+    },
+    "hold3": {
+     "rawPct": -0.01,
+     "excessPct": -0.07,
+     "t": -1.43
+    },
+    "hold5": {
+     "rawPct": 0.13,
+     "excessPct": -0.06,
+     "t": -1.05
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 7098,
+     "day": {
+      "rawPct": -0.09,
+      "excessPct": -0.06,
+      "t": -1.42
+     },
+     "hold5": {
+      "rawPct": -0.01,
+      "excessPct": -0.02,
+      "t": -0.29
+     }
+    },
+    "2020-2022": {
+     "trades": 2854,
+     "day": {
+      "rawPct": 0.04,
+      "excessPct": 0.05,
+      "t": 0.64
+     },
+     "hold5": {
+      "rawPct": 0.28,
+      "excessPct": -0.15,
+      "t": -1.09
+     }
+    },
+    "2023-now": {
+     "trades": 2468,
+     "day": {
+      "rawPct": -0.16,
+      "excessPct": -0.08,
+      "t": -1.48
+     },
+     "hold5": {
+      "rawPct": 0.38,
+      "excessPct": -0.08,
+      "t": -0.74
+     }
+    }
+   }
+  },
+  {
+   "key": "long-unwinding",
+   "label": "Long unwinding",
+   "basis": "Price down 1.5% or more with open interest down 5% or more.",
+   "expect": "down",
+   "trades": 9163,
+   "days": 2225,
+   "tradesPerMonth": 50.5,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.11,
+     "excessPct": -0.04,
+     "t": -2.04
+    },
+    "day": {
+     "rawPct": 0.16,
+     "excessPct": 0.06,
+     "t": 1.37
+    },
+    "hold3": {
+     "rawPct": 0.48,
+     "excessPct": 0.16,
+     "t": 2.29
+    },
+    "hold5": {
+     "rawPct": 0.72,
+     "excessPct": 0.23,
+     "t": 2.73
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 5380,
+     "day": {
+      "rawPct": 0.09,
+      "excessPct": 0.1,
+      "t": 1.61
+     },
+     "hold5": {
+      "rawPct": 0.75,
+      "excessPct": 0.34,
+      "t": 3.03
+     }
+    },
+    "2020-2022": {
+     "trades": 2261,
+     "day": {
+      "rawPct": 0.36,
+      "excessPct": -0.07,
+      "t": -0.81
+     },
+     "hold5": {
+      "rawPct": 0.39,
+      "excessPct": -0.05,
+      "t": -0.26
+     }
+    },
+    "2023-now": {
+     "trades": 1522,
+     "day": {
+      "rawPct": 0.14,
+      "excessPct": 0.08,
+      "t": 0.96
+     },
+     "hold5": {
+      "rawPct": 1.1,
+      "excessPct": 0.2,
+      "t": 1.2
+     }
+    }
+   }
+  },
+  {
+   "key": "long-buildup-strong",
+   "label": "Strong new longs",
+   "basis": "Price up 3% or more with open interest up 10% or more.",
+   "expect": "up",
+   "trades": 6256,
+   "days": 2469,
+   "tradesPerMonth": 34.5,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.5,
+     "excessPct": 0.25,
+     "t": 12.75
+    },
+    "day": {
+     "rawPct": -0.45,
+     "excessPct": -0.35,
+     "t": -7.73
+    },
+    "hold3": {
+     "rawPct": -0.37,
+     "excessPct": -0.47,
+     "t": -6.43
+    },
+    "hold5": {
+     "rawPct": -0.2,
+     "excessPct": -0.47,
+     "t": -5.23
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 3986,
+     "day": {
+      "rawPct": -0.48,
+      "excessPct": -0.4,
+      "t": -6.62
+     },
+     "hold5": {
+      "rawPct": -0.32,
+      "excessPct": -0.51,
+      "t": -4.47
+     }
+    },
+    "2020-2022": {
+     "trades": 1343,
+     "day": {
+      "rawPct": -0.56,
+      "excessPct": -0.47,
+      "t": -4.57
+     },
+     "hold5": {
+      "rawPct": -0.04,
+      "excessPct": -0.64,
+      "t": -2.91
+     }
+    },
+    "2023-now": {
+     "trades": 927,
+     "day": {
+      "rawPct": -0.18,
+      "excessPct": -0.11,
+      "t": -1.17
+     },
+     "hold5": {
+      "rawPct": 0.1,
+      "excessPct": -0.16,
+      "t": -0.91
+     }
+    }
+   }
+  },
+  {
+   "key": "short-buildup-strong",
+   "label": "Strong new shorts",
+   "basis": "Price down 3% or more with open interest up 10% or more.",
+   "expect": "down",
+   "trades": 4747,
+   "days": 2187,
+   "tradesPerMonth": 26.2,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.05,
+     "excessPct": -0.08,
+     "t": -3.33
+    },
+    "day": {
+     "rawPct": -0.31,
+     "excessPct": -0.23,
+     "t": -4.2
+    },
+    "hold3": {
+     "rawPct": -0.29,
+     "excessPct": -0.35,
+     "t": -4.36
+    },
+    "hold5": {
+     "rawPct": -0.29,
+     "excessPct": -0.41,
+     "t": -4.09
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 2965,
+     "day": {
+      "rawPct": -0.28,
+      "excessPct": -0.18,
+      "t": -2.25
+     },
+     "hold5": {
+      "rawPct": -0.26,
+      "excessPct": -0.29,
+      "t": -2.23
+     }
+    },
+    "2020-2022": {
+     "trades": 819,
+     "day": {
+      "rawPct": -0.37,
+      "excessPct": -0.13,
+      "t": -1.08
+     },
+     "hold5": {
+      "rawPct": -0.36,
+      "excessPct": -0.39,
+      "t": -1.6
+     }
+    },
+    "2023-now": {
+     "trades": 963,
+     "day": {
+      "rawPct": -0.35,
+      "excessPct": -0.44,
+      "t": -5.06
+     },
+     "hold5": {
+      "rawPct": -0.32,
+      "excessPct": -0.69,
+      "t": -3.68
+     }
+    }
+   }
+  },
+  {
+   "key": "oi-jump-flat",
+   "label": "Open interest jump, price flat",
+   "basis": "Open interest up 10% or more while the price moved under 0.5%.",
+   "expect": "up",
+   "trades": 3353,
+   "days": 1905,
+   "tradesPerMonth": 18.5,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.23,
+     "excessPct": 0.04,
+     "t": 2.29
+    },
+    "day": {
+     "rawPct": -0.08,
+     "excessPct": -0.03,
+     "t": -0.78
+    },
+    "hold3": {
+     "rawPct": 0.11,
+     "excessPct": 0.02,
+     "t": 0.22
+    },
+    "hold5": {
+     "rawPct": 0.25,
+     "excessPct": 0.05,
+     "t": 0.51
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 2238,
+     "day": {
+      "rawPct": -0.1,
+      "excessPct": -0.04,
+      "t": -0.68
+     },
+     "hold5": {
+      "rawPct": 0.1,
+      "excessPct": 0.03,
+      "t": 0.25
+     }
+    },
+    "2020-2022": {
+     "trades": 514,
+     "day": {
+      "rawPct": -0.07,
+      "excessPct": -0.1,
+      "t": -0.95
+     },
+     "hold5": {
+      "rawPct": 0.85,
+      "excessPct": 0.23,
+      "t": 0.92
+     }
+    },
+    "2023-now": {
+     "trades": 601,
+     "day": {
+      "rawPct": -0.02,
+      "excessPct": 0.03,
+      "t": 0.37
+     },
+     "hold5": {
+      "rawPct": 0.29,
+      "excessPct": -0.06,
+      "t": -0.33
+     }
+    }
+   }
+  },
+  {
+   "key": "premium-high",
+   "label": "Futures at a high premium",
+   "basis": "Futures premium in the top tenth of F&O stocks, five or more days before expiry.",
+   "expect": "up",
+   "trades": 57571,
+   "days": 3117,
+   "tradesPerMonth": 317.6,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.3,
+     "excessPct": 0.14,
+     "t": 36.47
+    },
+    "day": {
+     "rawPct": -0.12,
+     "excessPct": 0.01,
+     "t": 1.04
+    },
+    "hold3": {
+     "rawPct": -0.15,
+     "excessPct": -0.03,
+     "t": -1.81
+    },
+    "hold5": {
+     "rawPct": -0.17,
+     "excessPct": -0.06,
+     "t": -2.59
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 31007,
+     "day": {
+      "rawPct": -0.16,
+      "excessPct": -0.02,
+      "t": -1.22
+     },
+     "hold5": {
+      "rawPct": -0.34,
+      "excessPct": -0.15,
+      "t": -4.75
+     }
+    },
+    "2020-2022": {
+     "trades": 10341,
+     "day": {
+      "rawPct": -0.15,
+      "excessPct": -0.01,
+      "t": -0.41
+     },
+     "hold5": {
+      "rawPct": -0.12,
+      "excessPct": 0,
+      "t": -0.08
+     }
+    },
+    "2023-now": {
+     "trades": 16223,
+     "day": {
+      "rawPct": -0.01,
+      "excessPct": 0.09,
+      "t": 6.42
+     },
+     "hold5": {
+      "rawPct": 0.14,
+      "excessPct": 0.11,
+      "t": 3.37
+     }
+    }
+   }
+  },
+  {
+   "key": "discount",
+   "label": "Futures at a discount",
+   "basis": "Futures premium in the bottom tenth of F&O stocks, five or more days before expiry.",
+   "expect": "down",
+   "trades": 57571,
+   "days": 3117,
+   "tradesPerMonth": 317.6,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.04,
+     "excessPct": -0.11,
+     "t": -29.54
+    },
+    "day": {
+     "rawPct": -0.13,
+     "excessPct": 0,
+     "t": -0.04
+    },
+    "hold3": {
+     "rawPct": -0.14,
+     "excessPct": -0.02,
+     "t": -1.22
+    },
+    "hold5": {
+     "rawPct": -0.18,
+     "excessPct": -0.07,
+     "t": -3.14
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 31007,
+     "day": {
+      "rawPct": -0.1,
+      "excessPct": 0.05,
+      "t": 3.7
+     },
+     "hold5": {
+      "rawPct": -0.12,
+      "excessPct": 0.06,
+      "t": 2.21
+     }
+    },
+    "2020-2022": {
+     "trades": 10341,
+     "day": {
+      "rawPct": -0.2,
+      "excessPct": -0.06,
+      "t": -2.63
+     },
+     "hold5": {
+      "rawPct": -0.3,
+      "excessPct": -0.18,
+      "t": -3.26
+     }
+    },
+    "2023-now": {
+     "trades": 16223,
+     "day": {
+      "rawPct": -0.16,
+      "excessPct": -0.06,
+      "t": -4.52
+     },
+     "hold5": {
+      "rawPct": -0.23,
+      "excessPct": -0.26,
+      "t": -8.43
+     }
+    }
+   }
+  },
+  {
+   "key": "futures-volume-up",
+   "label": "Heavy futures volume, price up",
+   "basis": "Futures volume three times the usual with the price up 1% or more.",
+   "expect": "up",
+   "trades": 10585,
+   "days": 2543,
+   "tradesPerMonth": 58.4,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.33,
+     "excessPct": 0.17,
+     "t": 9.2
+    },
+    "day": {
+     "rawPct": -0.22,
+     "excessPct": -0.24,
+     "t": -5.38
+    },
+    "hold3": {
+     "rawPct": -0.02,
+     "excessPct": -0.25,
+     "t": -3.83
+    },
+    "hold5": {
+     "rawPct": 0.28,
+     "excessPct": -0.2,
+     "t": -2.57
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 5693,
+     "day": {
+      "rawPct": -0.23,
+      "excessPct": -0.28,
+      "t": -4.44
+     },
+     "hold5": {
+      "rawPct": 0.1,
+      "excessPct": -0.28,
+      "t": -2.58
+     }
+    },
+    "2020-2022": {
+     "trades": 1746,
+     "day": {
+      "rawPct": -0.3,
+      "excessPct": -0.37,
+      "t": -3.82
+     },
+     "hold5": {
+      "rawPct": 0.71,
+      "excessPct": -0.26,
+      "t": -1.37
+     }
+    },
+    "2023-now": {
+     "trades": 3146,
+     "day": {
+      "rawPct": -0.14,
+      "excessPct": -0.04,
+      "t": -0.49
+     },
+     "hold5": {
+      "rawPct": 0.36,
+      "excessPct": 0.03,
+      "t": 0.25
+     }
+    }
+   }
+  },
+  {
+   "key": "futures-volume-down",
+   "label": "Heavy futures volume, price down",
+   "basis": "Futures volume three times the usual with the price down 1% or more.",
+   "expect": "down",
+   "trades": 7779,
+   "days": 1916,
+   "tradesPerMonth": 42.9,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.12,
+     "excessPct": -0.05,
+     "t": -2.14
+    },
+    "day": {
+     "rawPct": -0.12,
+     "excessPct": -0.13,
+     "t": -2.31
+    },
+    "hold3": {
+     "rawPct": 0.16,
+     "excessPct": -0.2,
+     "t": -2.54
+    },
+    "hold5": {
+     "rawPct": 0.39,
+     "excessPct": -0.25,
+     "t": -2.54
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 4003,
+     "day": {
+      "rawPct": -0.04,
+      "excessPct": -0.02,
+      "t": -0.23
+     },
+     "hold5": {
+      "rawPct": 0.18,
+      "excessPct": -0.19,
+      "t": -1.37
+     }
+    },
+    "2020-2022": {
+     "trades": 1005,
+     "day": {
+      "rawPct": -0.14,
+      "excessPct": -0.23,
+      "t": -2.04
+     },
+     "hold5": {
+      "rawPct": 0.68,
+      "excessPct": -0.41,
+      "t": -1.68
+     }
+    },
+    "2023-now": {
+     "trades": 2771,
+     "day": {
+      "rawPct": -0.21,
+      "excessPct": -0.28,
+      "t": -3.61
+     },
+     "hold5": {
+      "rawPct": 0.59,
+      "excessPct": -0.26,
+      "t": -1.67
+     }
+    }
+   }
+  },
+  {
+   "key": "pcr-high",
+   "label": "Put-call ratio unusually high",
+   "basis": "Put-call ratio two standard deviations above the stock's own 60-day average.",
+   "expect": "up",
+   "trades": 42683,
+   "days": 3581,
+   "tradesPerMonth": 235.4,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.13,
+     "excessPct": -0.04,
+     "t": -6.22
+    },
+    "day": {
+     "rawPct": 0.05,
+     "excessPct": 0.09,
+     "t": 6.08
+    },
+    "hold3": {
+     "rawPct": 0.26,
+     "excessPct": 0.13,
+     "t": 5.19
+    },
+    "hold5": {
+     "rawPct": 0.39,
+     "excessPct": 0.14,
+     "t": 4.43
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 23222,
+     "day": {
+      "rawPct": 0.04,
+      "excessPct": 0.11,
+      "t": 5.02
+     },
+     "hold5": {
+      "rawPct": 0.3,
+      "excessPct": 0.24,
+      "t": 5.34
+     }
+    },
+    "2020-2022": {
+     "trades": 7223,
+     "day": {
+      "rawPct": 0.04,
+      "excessPct": 0.08,
+      "t": 1.72
+     },
+     "hold5": {
+      "rawPct": 0.34,
+      "excessPct": -0.21,
+      "t": -2.51
+     }
+    },
+    "2023-now": {
+     "trades": 12238,
+     "day": {
+      "rawPct": 0.07,
+      "excessPct": 0.08,
+      "t": 3.72
+     },
+     "hold5": {
+      "rawPct": 0.6,
+      "excessPct": 0.19,
+      "t": 4.05
+     }
+    }
+   }
+  },
+  {
+   "key": "pcr-low",
+   "label": "Put-call ratio unusually low",
+   "basis": "Put-call ratio two standard deviations below the stock's own 60-day average.",
+   "expect": "down",
+   "trades": 7873,
+   "days": 2674,
+   "tradesPerMonth": 43.4,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.17,
+     "excessPct": 0.03,
+     "t": 2.49
+    },
+    "day": {
+     "rawPct": -0.19,
+     "excessPct": -0.08,
+     "t": -3
+    },
+    "hold3": {
+     "rawPct": -0.2,
+     "excessPct": -0.19,
+     "t": -4.22
+    },
+    "hold5": {
+     "rawPct": -0.14,
+     "excessPct": -0.27,
+     "t": -4.64
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 3501,
+     "day": {
+      "rawPct": -0.26,
+      "excessPct": -0.06,
+      "t": -1.33
+     },
+     "hold5": {
+      "rawPct": -0.49,
+      "excessPct": -0.36,
+      "t": -3.9
+     }
+    },
+    "2020-2022": {
+     "trades": 1526,
+     "day": {
+      "rawPct": -0.15,
+      "excessPct": -0.2,
+      "t": -3.34
+     },
+     "hold5": {
+      "rawPct": 0.35,
+      "excessPct": -0.22,
+      "t": -1.78
+     }
+    },
+    "2023-now": {
+     "trades": 2846,
+     "day": {
+      "rawPct": -0.13,
+      "excessPct": -0.05,
+      "t": -1.28
+     },
+     "hold5": {
+      "rawPct": 0.04,
+      "excessPct": -0.14,
+      "t": -1.79
+     }
+    }
+   }
+  },
+  {
+   "key": "call-volume-spike",
+   "label": "Call volume spike",
+   "basis": "Call volume five times the usual and at least twice the day's put spike.",
+   "expect": "up",
+   "trades": 3776,
+   "days": 1755,
+   "tradesPerMonth": 20.8,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.32,
+     "excessPct": 0.14,
+     "t": 7.5
+    },
+    "day": {
+     "rawPct": -0.44,
+     "excessPct": -0.33,
+     "t": -7.19
+    },
+    "hold3": {
+     "rawPct": -0.5,
+     "excessPct": -0.46,
+     "t": -6.18
+    },
+    "hold5": {
+     "rawPct": -0.47,
+     "excessPct": -0.58,
+     "t": -6.46
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 2894,
+     "day": {
+      "rawPct": -0.4,
+      "excessPct": -0.31,
+      "t": -5.49
+     },
+     "hold5": {
+      "rawPct": -0.36,
+      "excessPct": -0.48,
+      "t": -4.37
+     }
+    },
+    "2020-2022": {
+     "trades": 608,
+     "day": {
+      "rawPct": -0.65,
+      "excessPct": -0.46,
+      "t": -4.67
+     },
+     "hold5": {
+      "rawPct": -0.75,
+      "excessPct": -0.92,
+      "t": -4.65
+     }
+    },
+    "2023-now": {
+     "trades": 274,
+     "day": {
+      "rawPct": -0.46,
+      "excessPct": -0.2,
+      "t": -1.87
+     },
+     "hold5": {
+      "rawPct": -0.99,
+      "excessPct": -0.65,
+      "t": -2.56
+     }
+    }
+   }
+  },
+  {
+   "key": "put-volume-spike",
+   "label": "Put volume spike",
+   "basis": "Put volume five times the usual and at least twice the day's call spike.",
+   "expect": "down",
+   "trades": 5611,
+   "days": 2182,
+   "tradesPerMonth": 31,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.1,
+     "excessPct": -0.11,
+     "t": -4.68
+    },
+    "day": {
+     "rawPct": -0.04,
+     "excessPct": 0.05,
+     "t": 1.11
+    },
+    "hold3": {
+     "rawPct": -0.03,
+     "excessPct": -0.1,
+     "t": -1.52
+    },
+    "hold5": {
+     "rawPct": 0,
+     "excessPct": -0.14,
+     "t": -1.61
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 4235,
+     "day": {
+      "rawPct": -0.01,
+      "excessPct": 0.11,
+      "t": 2.11
+     },
+     "hold5": {
+      "rawPct": -0.07,
+      "excessPct": -0.11,
+      "t": -1.11
+     }
+    },
+    "2020-2022": {
+     "trades": 764,
+     "day": {
+      "rawPct": -0.14,
+      "excessPct": -0.12,
+      "t": -1.2
+     },
+     "hold5": {
+      "rawPct": 0.29,
+      "excessPct": -0.14,
+      "t": -0.65
+     }
+    },
+    "2023-now": {
+     "trades": 612,
+     "day": {
+      "rawPct": -0.11,
+      "excessPct": -0.02,
+      "t": -0.21
+     },
+     "hold5": {
+      "rawPct": 0.09,
+      "excessPct": -0.22,
+      "t": -1.03
+     }
+    }
+   }
+  },
+  {
+   "key": "options-dearer-flat",
+   "label": "Options dearer, price flat",
+   "basis": "Option prices imply a move 25% bigger than their 10-day average while the price moved under 1%.",
+   "expect": "up",
+   "trades": 8481,
+   "days": 1134,
+   "tradesPerMonth": 46.8,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.13,
+     "excessPct": -0.04,
+     "t": -2.04
+    },
+    "day": {
+     "rawPct": -0.23,
+     "excessPct": 0.03,
+     "t": 0.93
+    },
+    "hold3": {
+     "rawPct": -0.4,
+     "excessPct": 0.2,
+     "t": 3.42
+    },
+    "hold5": {
+     "rawPct": -0.46,
+     "excessPct": 0.25,
+     "t": 3.41
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 6463,
+     "day": {
+      "rawPct": -0.18,
+      "excessPct": 0.06,
+      "t": 1.73
+     },
+     "hold5": {
+      "rawPct": -0.47,
+      "excessPct": 0.11,
+      "t": 1.48
+     }
+    },
+    "2020-2022": {
+     "trades": 1135,
+     "day": {
+      "rawPct": -0.4,
+      "excessPct": 0.03,
+      "t": 0.25
+     },
+     "hold5": {
+      "rawPct": -0.71,
+      "excessPct": 0.5,
+      "t": 2.39
+     }
+    },
+    "2023-now": {
+     "trades": 883,
+     "day": {
+      "rawPct": -0.32,
+      "excessPct": -0.04,
+      "t": -0.42
+     },
+     "hold5": {
+      "rawPct": -0.05,
+      "excessPct": 0.41,
+      "t": 2.07
+     }
+    }
+   }
+  },
+  {
+   "key": "above-max-pain",
+   "label": "Well above max pain near expiry",
+   "basis": "Within four days of expiry, price 4% or more above the max pain strike.",
+   "expect": "down",
+   "trades": 14475,
+   "days": 493,
+   "tradesPerMonth": 79.8,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.21,
+     "excessPct": 0.02,
+     "t": 0.95
+    },
+    "day": {
+     "rawPct": -0.11,
+     "excessPct": 0,
+     "t": -0.02
+    },
+    "hold3": {
+     "rawPct": 0.22,
+     "excessPct": -0.1,
+     "t": -1.06
+    },
+    "hold5": {
+     "rawPct": 0.66,
+     "excessPct": -0.2,
+     "t": -2
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 9521,
+     "day": {
+      "rawPct": -0.18,
+      "excessPct": 0.07,
+      "t": 1.73
+     },
+     "hold5": {
+      "rawPct": 0.6,
+      "excessPct": -0.08,
+      "t": -0.99
+     }
+    },
+    "2020-2022": {
+     "trades": 2490,
+     "day": {
+      "rawPct": -0.07,
+      "excessPct": -0.36,
+      "t": -1.51
+     },
+     "hold5": {
+      "rawPct": 0.91,
+      "excessPct": -0.88,
+      "t": -2.2
+     }
+    },
+    "2023-now": {
+     "trades": 2464,
+     "day": {
+      "rawPct": 0.09,
+      "excessPct": 0.15,
+      "t": 1.98
+     },
+     "hold5": {
+      "rawPct": 0.64,
+      "excessPct": 0.11,
+      "t": 0.72
+     }
+    }
+   }
+  },
+  {
+   "key": "below-max-pain",
+   "label": "Well below max pain near expiry",
+   "basis": "Within four days of expiry, price 4% or more below the max pain strike.",
+   "expect": "up",
+   "trades": 14017,
+   "days": 484,
+   "tradesPerMonth": 77.3,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.14,
+     "excessPct": 0.05,
+     "t": 3.94
+    },
+    "day": {
+     "rawPct": -0.19,
+     "excessPct": -0.08,
+     "t": -2.1
+    },
+    "hold3": {
+     "rawPct": 0.27,
+     "excessPct": 0.05,
+     "t": 0.59
+    },
+    "hold5": {
+     "rawPct": 0.81,
+     "excessPct": 0.04,
+     "t": 0.46
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 8442,
+     "day": {
+      "rawPct": -0.33,
+      "excessPct": -0.1,
+      "t": -1.83
+     },
+     "hold5": {
+      "rawPct": 0.35,
+      "excessPct": -0.08,
+      "t": -0.63
+     }
+    },
+    "2020-2022": {
+     "trades": 2835,
+     "day": {
+      "rawPct": 0.16,
+      "excessPct": -0.01,
+      "t": -0.08
+     },
+     "hold5": {
+      "rawPct": 1.93,
+      "excessPct": 0.26,
+      "t": 1.32
+     }
+    },
+    "2023-now": {
+     "trades": 2740,
+     "day": {
+      "rawPct": -0.15,
+      "excessPct": -0.1,
+      "t": -1.35
+     },
+     "hold5": {
+      "rawPct": 1.07,
+      "excessPct": 0.17,
+      "t": 0.9
+     }
+    }
+   }
+  },
+  {
+   "key": "ban-entry",
+   "label": "Enters the ban list",
+   "basis": "Not in the ban list today, in it for the next session.",
+   "expect": "down",
+   "trades": 2057,
+   "days": 1415,
+   "tradesPerMonth": 11.3,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.16,
+     "excessPct": -0.03,
+     "t": -0.88
+    },
+    "day": {
+     "rawPct": -0.83,
+     "excessPct": -0.58,
+     "t": -6.63
+    },
+    "hold3": {
+     "rawPct": -0.76,
+     "excessPct": -0.48,
+     "t": -3.67
+    },
+    "hold5": {
+     "rawPct": -0.49,
+     "excessPct": -0.3,
+     "t": -1.8
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 1008,
+     "day": {
+      "rawPct": -0.83,
+      "excessPct": -0.54,
+      "t": -3.68
+     },
+     "hold5": {
+      "rawPct": -0.65,
+      "excessPct": -0.36,
+      "t": -1.38
+     }
+    },
+    "2020-2022": {
+     "trades": 439,
+     "day": {
+      "rawPct": -1.04,
+      "excessPct": -0.76,
+      "t": -4.41
+     },
+     "hold5": {
+      "rawPct": -0.8,
+      "excessPct": -0.52,
+      "t": -1.47
+     }
+    },
+    "2023-now": {
+     "trades": 610,
+     "day": {
+      "rawPct": -0.68,
+      "excessPct": -0.53,
+      "t": -4.85
+     },
+     "hold5": {
+      "rawPct": 0.01,
+      "excessPct": -0.02,
+      "t": -0.07
+     }
+    }
+   }
+  },
+  {
+   "key": "ban-inside",
+   "label": "Stays in the ban list",
+   "basis": "In the ban list today and for the next session.",
+   "expect": "down",
+   "trades": 9059,
+   "days": 2692,
+   "tradesPerMonth": 50,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.2,
+     "excessPct": 0.02,
+     "t": 1.27
+    },
+    "day": {
+     "rawPct": -0.17,
+     "excessPct": 0.02,
+     "t": 0.47
+    },
+    "hold3": {
+     "rawPct": 0.21,
+     "excessPct": 0.39,
+     "t": 5.11
+    },
+    "hold5": {
+     "rawPct": 0.4,
+     "excessPct": 0.49,
+     "t": 4.99
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 4558,
+     "day": {
+      "rawPct": -0.21,
+      "excessPct": 0.06,
+      "t": 0.91
+     },
+     "hold5": {
+      "rawPct": 0.21,
+      "excessPct": 0.36,
+      "t": 2.52
+     }
+    },
+    "2020-2022": {
+     "trades": 1570,
+     "day": {
+      "rawPct": -0.29,
+      "excessPct": -0.19,
+      "t": -1.66
+     },
+     "hold5": {
+      "rawPct": 0.1,
+      "excessPct": 0.25,
+      "t": 0.93
+     }
+    },
+    "2023-now": {
+     "trades": 2931,
+     "day": {
+      "rawPct": -0.04,
+      "excessPct": 0.09,
+      "t": 1.44
+     },
+     "hold5": {
+      "rawPct": 0.87,
+      "excessPct": 0.9,
+      "t": 7.28
+     }
+    }
+   }
+  },
+  {
+   "key": "ban-exit",
+   "label": "Leaves the ban list",
+   "basis": "In the ban list today, out of it for the next session.",
+   "expect": "up",
+   "trades": 2057,
+   "days": 1132,
+   "tradesPerMonth": 11.3,
+   "horizons": {
+    "gap": {
+     "rawPct": 0.44,
+     "excessPct": 0.2,
+     "t": 4.46
+    },
+    "day": {
+     "rawPct": 0.31,
+     "excessPct": 0.38,
+     "t": 3.47
+    },
+    "hold3": {
+     "rawPct": 0.2,
+     "excessPct": 0.13,
+     "t": 0.81
+    },
+    "hold5": {
+     "rawPct": 0.35,
+     "excessPct": -0.04,
+     "t": -0.21
+    }
+   },
+   "periods": {
+    "2011-2019": {
+     "trades": 1009,
+     "day": {
+      "rawPct": 0.54,
+      "excessPct": 0.5,
+      "t": 2.86
+     },
+     "hold5": {
+      "rawPct": 0.2,
+      "excessPct": 0.01,
+      "t": 0.05
+     }
+    },
+    "2020-2022": {
+     "trades": 440,
+     "day": {
+      "rawPct": 0.18,
+      "excessPct": 0.37,
+      "t": 1.58
+     },
+     "hold5": {
+      "rawPct": 0.65,
+      "excessPct": 0.03,
+      "t": 0.08
+     }
+    },
+    "2023-now": {
+     "trades": 608,
+     "day": {
+      "rawPct": 0.02,
+      "excessPct": 0.17,
+      "t": 1.19
+     },
+     "hold5": {
+      "rawPct": 0.37,
+      "excessPct": -0.19,
+      "t": -0.87
+     }
+    }
+   }
+  }
+ ],
+ "nifty": {
+  "fii-futures-long-share": {
+   "label": "FII share of index futures held long",
+   "day": {
+    "high": {
+     "days": 709,
+     "meanPct": -0.05,
+     "t": -2.05
+    },
+    "low": {
+     "days": 983,
+     "meanPct": -0.07,
+     "t": -2.36
+    },
+    "all": {
+     "days": 3548,
+     "meanPct": -0.06,
+     "t": -4.29
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 709,
+     "meanPct": 0.04,
+     "t": 0.66
+    },
+    "low": {
+     "days": 983,
+     "meanPct": 0.09,
+     "t": 1.2
+    },
+    "all": {
+     "days": 3548,
+     "meanPct": 0.13,
+     "t": 3.71
+    }
+   }
+  },
+  "fii-futures-long-share-change": {
+   "label": "FII share of index futures held long: change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 678,
+     "meanPct": -0.06,
+     "t": -1.72
+    },
+    "low": {
+     "days": 678,
+     "meanPct": -0.09,
+     "t": -2.58
+    },
+    "all": {
+     "days": 3537,
+     "meanPct": -0.06,
+     "t": -4.37
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 678,
+     "meanPct": 0.15,
+     "t": 1.79
+    },
+    "low": {
+     "days": 678,
+     "meanPct": 0.21,
+     "t": 2.4
+    },
+    "all": {
+     "days": 3537,
+     "meanPct": 0.14,
+     "t": 3.76
+    }
+   }
+  },
+  "client-futures-long-share": {
+   "label": "Client share of index futures held long",
+   "day": {
+    "high": {
+     "days": 1072,
+     "meanPct": -0.07,
+     "t": -2.48
+    },
+    "low": {
+     "days": 689,
+     "meanPct": -0.04,
+     "t": -1.38
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": -0.06,
+     "t": -4.28
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 1072,
+     "meanPct": 0.11,
+     "t": 1.44
+    },
+    "low": {
+     "days": 689,
+     "meanPct": 0.11,
+     "t": 1.65
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": 0.14,
+     "t": 3.73
+    }
+   }
+  },
+  "client-futures-long-share-change": {
+   "label": "Client share of index futures held long: change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 700,
+     "meanPct": -0.08,
+     "t": -2.46
+    },
+    "low": {
+     "days": 690,
+     "meanPct": -0.05,
+     "t": -1.44
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": -0.06,
+     "t": -4.36
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 700,
+     "meanPct": 0.28,
+     "t": 3.17
+    },
+    "low": {
+     "days": 690,
+     "meanPct": 0.07,
+     "t": 0.81
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": 0.14,
+     "t": 3.77
+    }
+   }
+  },
+  "pro-futures-long-share": {
+   "label": "Proprietary desks' share of index futures held long",
+   "day": {
+    "high": {
+     "days": 840,
+     "meanPct": -0.1,
+     "t": -3.31
+    },
+    "low": {
+     "days": 701,
+     "meanPct": -0.06,
+     "t": -1.99
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": -0.06,
+     "t": -4.28
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 840,
+     "meanPct": 0.07,
+     "t": 0.93
+    },
+    "low": {
+     "days": 701,
+     "meanPct": 0.22,
+     "t": 3
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": 0.14,
+     "t": 3.73
+    }
+   }
+  },
+  "pro-futures-long-share-change": {
+   "label": "Proprietary desks' share of index futures held long: change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 728,
+     "meanPct": -0.11,
+     "t": -3.26
+    },
+    "low": {
+     "days": 732,
+     "meanPct": -0.03,
+     "t": -0.89
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": -0.06,
+     "t": -4.36
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 728,
+     "meanPct": 0,
+     "t": 0.02
+    },
+    "low": {
+     "days": 732,
+     "meanPct": 0.3,
+     "t": 3.31
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": 0.14,
+     "t": 3.77
+    }
+   }
+  },
+  "fii-options-bullish-share": {
+   "label": "FII index options: bullish share (calls bought and puts sold)",
+   "day": {
+    "high": {
+     "days": 765,
+     "meanPct": 0.01,
+     "t": 0.54
+    },
+    "low": {
+     "days": 732,
+     "meanPct": -0.08,
+     "t": -2.42
+    },
+    "all": {
+     "days": 3548,
+     "meanPct": -0.06,
+     "t": -4.29
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 765,
+     "meanPct": 0.28,
+     "t": 4.58
+    },
+    "low": {
+     "days": 732,
+     "meanPct": -0.13,
+     "t": -1.54
+    },
+    "all": {
+     "days": 3548,
+     "meanPct": 0.13,
+     "t": 3.71
+    }
+   }
+  },
+  "fii-options-bullish-share-change": {
+   "label": "FII index options: bullish share (calls bought and puts sold): change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 700,
+     "meanPct": -0.05,
+     "t": -1.67
+    },
+    "low": {
+     "days": 705,
+     "meanPct": -0.08,
+     "t": -2.72
+    },
+    "all": {
+     "days": 3537,
+     "meanPct": -0.06,
+     "t": -4.37
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 700,
+     "meanPct": 0.18,
+     "t": 2.3
+    },
+    "low": {
+     "days": 705,
+     "meanPct": 0.04,
+     "t": 0.51
+    },
+    "all": {
+     "days": 3537,
+     "meanPct": 0.14,
+     "t": 3.76
+    }
+   }
+  },
+  "client-options-bullish-share": {
+   "label": "Client index options: bullish share",
+   "day": {
+    "high": {
+     "days": 764,
+     "meanPct": -0.08,
+     "t": -2.17
+    },
+    "low": {
+     "days": 740,
+     "meanPct": 0.02,
+     "t": 0.78
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": -0.06,
+     "t": -4.28
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 764,
+     "meanPct": 0.04,
+     "t": 0.43
+    },
+    "low": {
+     "days": 740,
+     "meanPct": 0.26,
+     "t": 4
+    },
+    "all": {
+     "days": 3549,
+     "meanPct": 0.14,
+     "t": 3.73
+    }
+   }
+  },
+  "client-options-bullish-share-change": {
+   "label": "Client index options: bullish share: change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 682,
+     "meanPct": -0.09,
+     "t": -2.6
+    },
+    "low": {
+     "days": 688,
+     "meanPct": 0.01,
+     "t": 0.54
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": -0.06,
+     "t": -4.36
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 682,
+     "meanPct": 0.09,
+     "t": 1.13
+    },
+    "low": {
+     "days": 688,
+     "meanPct": 0.39,
+     "t": 5.25
+    },
+    "all": {
+     "days": 3539,
+     "meanPct": 0.14,
+     "t": 3.77
+    }
+   }
+  },
+  "nifty-pcr": {
+   "label": "NIFTY put-call ratio (open interest)",
+   "day": {
+    "high": {
+     "days": 842,
+     "meanPct": -0.01,
+     "t": -0.5
+    },
+    "low": {
+     "days": 846,
+     "meanPct": -0.03,
+     "t": -0.84
+    },
+    "all": {
+     "days": 3798,
+     "meanPct": -0.06,
+     "t": -4.48
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 842,
+     "meanPct": 0.22,
+     "t": 3.37
+    },
+    "low": {
+     "days": 846,
+     "meanPct": 0.21,
+     "t": 2.52
+    },
+    "all": {
+     "days": 3798,
+     "meanPct": 0.12,
+     "t": 3.24
+    }
+   }
+  },
+  "nifty-pcr-change": {
+   "label": "NIFTY put-call ratio (open interest): change over 5 sessions",
+   "day": {
+    "high": {
+     "days": 777,
+     "meanPct": -0.01,
+     "t": -0.52
+    },
+    "low": {
+     "days": 760,
+     "meanPct": -0.07,
+     "t": -1.96
+    },
+    "all": {
+     "days": 3790,
+     "meanPct": -0.06,
+     "t": -4.48
+    }
+   },
+   "hold5": {
+    "high": {
+     "days": 777,
+     "meanPct": 0.24,
+     "t": 3.23
+    },
+    "low": {
+     "days": 760,
+     "meanPct": 0.08,
+     "t": 0.93
+    },
+    "all": {
+     "days": 3790,
+     "meanPct": 0.12,
+     "t": 3.29
+    }
+   }
+  }
+ }
+}

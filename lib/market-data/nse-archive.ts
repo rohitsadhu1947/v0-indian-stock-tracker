@@ -39,6 +39,26 @@ export function indexCloseUrl(date: string): string {
   return `${BASE}/content/indices/ind_close_all_${d}${m}${y}.csv`
 }
 
+/** Every future and option contract for the day. The older layout runs to 5 July 2024. */
+export function foBhavcopyUrl(date: string): string {
+  const [y, m, d] = date.split('-')
+  if (date > '2024-07-05') return `${BASE}/content/fo/BhavCopy_NSE_FO_0_0_0_${y}${m}${d}_F_0000.csv.zip`
+  const mon = MONTHS[Number(m) - 1]
+  return `${BASE}/content/historical/DERIVATIVES/${y}/${mon}/fo${d}${mon}${y}bhav.csv.zip`
+}
+
+/** Open interest by participant type (FII, DII, proprietary, client). */
+export function participantOiUrl(date: string): string {
+  const [y, m, d] = date.split('-')
+  return `${BASE}/content/nsccl/fao_participant_oi_${d}${m}${y}.csv`
+}
+
+/** Stocks barred from new F&O positions. */
+export function foBanListUrl(date: string): string {
+  const [y, m, d] = date.split('-')
+  return `${BASE}/archives/fo/sec_ban/fo_secban_${d}${m}${y}.csv`
+}
+
 /** The single CSV inside a zip. */
 export function extractSingleCsv(zip: Uint8Array): string | null {
   const files = unzipSync(zip, { filter: f => /\.csv$/i.test(f.name) })

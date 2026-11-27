@@ -871,6 +871,41 @@ export const quarterlyResults = pgTable('quarterly_results', {
   filedIdx: index('quarterly_results_filed_idx').on(table.symbol, table.filedAt),
 }))
 
+/** Option volume for each F&O stock each day: the history the call volume signal needs (lib/fo-watch). */
+export const foStockDays = pgTable('fo_stock_days', {
+  symbol: text('symbol').notNull(),
+  date: date('date').notNull(),
+  callContracts: doublePrecision('call_contracts').notNull(),
+  putContracts: doublePrecision('put_contracts').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.symbol, table.date] }),
+  dateIdx: index('fo_stock_days_date_idx').on(table.date),
+}))
+
+/**
+ * Paper day trades from F&O signals. status is pending until the trade
+ * date's minute prices are read, then done, or no-data when there are none.
+ */
+export const paperDayTrades = pgTable('paper_day_trades', {
+  id: serial('id').primaryKey(),
+  signal: text('signal').notNull(),
+  symbol: text('symbol').notNull(),
+  signalDate: date('signal_date').notNull(),
+  tradeDate: date('trade_date').notNull(),
+  status: text('status').notNull().default('pending'),
+  entryPrice: doublePrecision('entry_price'),
+  exitPrice: doublePrecision('exit_price'),
+  stopped: boolean('stopped'),
+  grossPct: doublePrecision('gross_pct'),
+  netPct: doublePrecision('net_pct'),
+  detail: jsonb('detail').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+}, (table) => ({
+  unique: uniqueIndex('paper_day_trades_signal_symbol_trade_date_key').on(table.signal, table.symbol, table.tradeDate),
+  tradeDateIdx: index('paper_day_trades_trade_date_idx').on(table.tradeDate),
+}))
+
 /** One row per run of the market-data update, so a failure is visible instead of silent. */
 export const marketDataRuns = pgTable('market_data_runs', {
   id: serial('id').primaryKey(),
