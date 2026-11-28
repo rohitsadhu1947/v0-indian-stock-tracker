@@ -30,6 +30,7 @@
     "research:funds": "tsx scripts/research/funds.ts",
     "research:more-signals": "tsx scripts/research/more-signals.ts",
     "research:splits": "tsx scripts/research/splits.ts",
+    "research:nifty-options": "tsx scripts/research/nifty-options.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
