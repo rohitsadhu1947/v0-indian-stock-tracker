@@ -85,6 +85,12 @@ for (const a of store.prepare('select symbol, ex_date, purpose, first_seen from 
   dividends.set(key, { symbol: a.symbol, exDate: a.ex_date, firstSeen: Math.min(a.first_seen, old?.firstSeen ?? Infinity), amount: (old?.amount ?? 0) + parsed.dividend.amount })
 }
 const rawClose = store.prepare('select close from raw_bars where symbol = ? and date = ?')
+// A dividend of 2% or more of the price is already taken out of the earlier prices in this history, the way
+// exchanges adjust for it. For those, a holder's gain is already in the price change and only the tax is left
+// to take off. Smaller dividends are not in the prices and are added after tax.
+const TAX = 0.312
+const inPrices = new Set((store.prepare("select symbol, ex_date from adjustment_events where price_factor < 1").all() as Array<{ symbol: string; ex_date: number }>).map(r => `${r.symbol}|${r.ex_date}`))
+const dividendCash = (symbol: string, exDate: number, y: number): number => (inPrices.has(`${symbol}|${exDate}`) ? -TAX * y : (1 - TAX) * y)
 const YIELD: Array<[string, number, number]> = [['under 0.5% of the price', 0, 0.005], ['0.5% to 1%', 0.005, 0.01], ['1% to 2%', 0.01, 0.02], ['2% to 4%', 0.02, 0.04], ['4% or more', 0.04, 1]]
 const runUp: Record<string, Trade[]> = Object.fromEntries(YIELD.map(y => [y[0], []]))
 const through: Record<string, Trade[]> = Object.fromEntries(YIELD.map(y => [y[0], []]))
@@ -109,21 +115,21 @@ for (const d of dividends.values()) {
   const t = trade(s, seenAt + 1, x, cost)
   if (t) { runUp[bucket[0]].push(t); allRunUp.push(t) }
   // Held through the ex-date and 5 sessions on, keeping the dividend after 31.2% tax
-  const t2 = trade(s, seenAt + 1, x + 6, cost, y * (1 - 0.312))
+  const t2 = trade(s, seenAt + 1, x + 6, cost, dividendCash(d.symbol, d.exDate, y))
   if (t2) through[bucket[0]].push(t2)
-  if (y >= 0.02 && x + 6 < s.dates.length) bigDividends.push({ symbol: d.symbol, entryIndex: seenAt + 1, ret5: 0, turnover: s.turnover[seenAt], yieldPct: y * 100, before: x - seenAt, through: x + 6 - seenAt, cash: d.amount * (1 - 0.312) * s.close[seenAt] / raw })
+  if (y >= 0.02 && x + 6 < s.dates.length) bigDividends.push({ symbol: d.symbol, entryIndex: seenAt + 1, ret5: 0, turnover: s.turnover[seenAt], yieldPct: y * 100, before: x - seenAt, through: x + 6 - seenAt, cash: dividendCash(d.symbol, d.exDate, y) * s.close[seenAt] })
 }
 const dividendOut: Record<string, unknown> = { 'all dividends: listed to the day before': withPeriods(allRunUp) }
 head(`1. Dividends, top 750: bought the session after the ex-date is listed (${dividends.size} listings)`)
 show('all: sold the day before the ex-date', dividendOut['all dividends: listed to the day before'])
 for (const [k, rows] of Object.entries(runUp)) { const r = withPeriods(rows); dividendOut[`${k}: sold the day before`] = r; show(`${k}: sold the day before`, r) }
 for (const [k, rows] of Object.entries(through)) { const r = withPeriods(rows); dividendOut[`${k}: held 5 sessions past, dividend kept`] = r; show(`${k}: held 5 past, dividend kept`, r) }
-out.dividends = { note: 'Dividend size is rupees a share against the price on the day it was listed. Held-through trades add the dividend after 31.2% tax.', ...dividendOut }
+out.dividends = { note: 'Dividend size is rupees a share against the price on the day it was listed. Held-through trades keep the dividend after 31.2% tax. Dividends of 2% or more are already in the adjusted prices, so for those only the tax is taken off.', ...dividendOut }
 
 // ---- 1a. How much notice the listing gives ----
 // Sessions from the listing to the last session before the ex-date. The tests above need 3 or more.
 const NOTICE: Array<[string, number, number]> = [['1 session', 1, 1], ['2 sessions', 2, 2], ['3 to 5 sessions', 3, 5], ['6 to 10 sessions', 6, 10], ['more than 10 sessions', 11, 999]]
-const byNotice: Record<string, Trade[]> = Object.fromEntries(NOTICE.map(n => [n[0], []]))
+const byNotice: Record<string, Trade[]> = Object.fromEntries(NOTICE.flatMap(n => [[`${n[0]}: sold the day before`, []], [`${n[0]}: held 5 past, dividend kept`, []]]))
 const noticeByPeriod: Record<string, number[]> = Object.fromEntries(PERIODS.map(p => [p.key, []]))
 for (const d of dividends.values()) {
   const s = market.stocks.get(d.symbol)
@@ -135,17 +141,20 @@ for (const d of dividends.values()) {
   if (r > 750 || !raw || d.amount / raw < 0.02) continue
   const gap = x - seenAt
   // With one session of notice the buy is at the last close before the ex-date
-  const t = trade(s, seenAt + 1, x + 6, r > 500 ? 0.0085 : 0.0045, (d.amount / raw) * (1 - 0.312))
+  const t = trade(s, seenAt + 1, x + 6, r > 500 ? 0.0085 : 0.0045, dividendCash(d.symbol, d.exDate, d.amount / raw))
   if (!t) continue
-  byNotice[NOTICE.find(n => gap >= n[1] && gap <= n[2])![0]].push(t)
+  const label = NOTICE.find(n => gap >= n[1] && gap <= n[2])![0]
+  byNotice[`${label}: held 5 past, dividend kept`].push(t)
+  const before = trade(s, seenAt + 1, x, r > 500 ? 0.0085 : 0.0045)
+  if (before) byNotice[`${label}: sold the day before`].push(before)
   noticeByPeriod[PERIODS.find(p => t.date >= p.from && t.date <= p.to)!.key].push(gap)
 }
 const noticeOut = Object.fromEntries(Object.entries(byNotice).map(([k, rows]) => [k, withPeriods(rows)]))
-head('1a. Dividends of 2% or more, held 5 sessions past with the dividend kept, by the notice the listing gave')
+head('1a. Dividends of 2% or more, by the notice the listing gave')
 for (const [k, r] of Object.entries(noticeOut)) show(k, r)
 const median = (xs: number[]) => xs.length ? [...xs].sort((a, b) => a - b)[xs.length >> 1] : null
 console.log('Median notice in sessions by period:', PERIODS.map(p => `${p.key}: ${median(noticeByPeriod[p.key])} (${noticeByPeriod[p.key].length})`).join(', '))
-out.dividendsByNotice = { note: 'Notice is the sessions from the listing to the last session before the ex-date. Dividends of 2% or more, top 750, held 5 sessions past the ex-date with the dividend kept after tax.', ...noticeOut, medianNoticeByPeriod: Object.fromEntries(PERIODS.map(p => [p.key, median(noticeByPeriod[p.key])])) }
+out.dividendsByNotice = { note: 'Notice is the sessions from the listing to the last session before the ex-date. Dividends of 2% or more, top 750. With one session of notice the buy is at the last close before the ex-date, so there is no sold-the-day-before trade.', ...noticeOut, medianNoticeByPeriod: Object.fromEntries(PERIODS.map(p => [p.key, median(noticeByPeriod[p.key])])) }
 
 // ---- 1b. Big dividends as a real book ----
 const bookOf = (test: (c: DividendCandidate) => boolean, keep: boolean) => {
@@ -177,7 +186,7 @@ for (const [key, test, keep, extra, slippage] of [
   books[key] = { cagrPct: round2(all.cagrPct), maxDrawdownPct: round2(all.maxDrawdownPct), trades: rets.length, winRatePct: round2(rets.filter(x => x > 0).length / Math.max(1, rets.length) * 100), avgTradePct: round2(mean(rets)), avgInvestedPct: round2(r.avgInvested * 100), skipped: r.skipped, periods: Object.fromEntries(PERIODS.map((p, i) => [p.key, periods[i]])) }
   console.log(`${key.padEnd(56)}${String(round2(all.cagrPct)).padStart(7)}${String(round2(all.maxDrawdownPct)).padStart(8)}${String(rets.length).padStart(7)}${String(round2(rets.filter(x => x > 0).length / Math.max(1, rets.length) * 100)).padStart(7)}${String(round2(mean(rets))).padStart(7)}${String(round2(r.avgInvested * 100)).padStart(6)}${String(r.skipped).padStart(8)}   ${periods.join(' | ')}`)
 }
-out.dividendBook = { note: 'Dividends of 2% or more of the price. Bought at the close after the ex-date is listed. Idle cash earns 6% unless stated. The dividend is added after 31.2% tax.', ...books }
+out.dividendBook = { note: 'Dividends of 2% or more of the price. Bought at the close after the ex-date is listed. Idle cash earns 6% unless stated. The dividend is kept after 31.2% tax.', ...books }
 
 // ---- 2. Waiting for a dip on results buys ----
 const HOLD = 60
