@@ -1,0 +1,144 @@
+{
+  "note": "Window: a split or bonus ex-date already listed by NSE that is up to 30 days ahead, or up to 20 sessions past.",
+  "monthlyPlan": {
+    "growth": {
+      "as now": {
+        "cagrPct": 21.45,
+        "maxDrawdownPct": -44.39,
+        "periods": {
+          "2011-2019": 14.53,
+          "2020-2022": 33.29,
+          "2023-now": 29.33
+        }
+      },
+      "no buying in the window": {
+        "cagrPct": 21.81,
+        "maxDrawdownPct": -44.82,
+        "periods": {
+          "2011-2019": 14.44,
+          "2020-2022": 33.98,
+          "2023-now": 30.68
+        }
+      },
+      "no buying only after the ex-date": {
+        "cagrPct": 21.58,
+        "maxDrawdownPct": -44.39,
+        "periods": {
+          "2011-2019": 14.53,
+          "2020-2022": 33.88,
+          "2023-now": 29.48
+        }
+      },
+      "no buying, and sell holdings in the window": {
+        "cagrPct": 21.65,
+        "maxDrawdownPct": -43.84,
+        "periods": {
+          "2011-2019": 14.05,
+          "2020-2022": 37.2,
+          "2023-now": 28.56
+        }
+      }
+    },
+    "balanced": {
+      "as now": {
+        "cagrPct": 17.62,
+        "maxDrawdownPct": -27.98,
+        "periods": {
+          "2011-2019": 18.32,
+          "2020-2022": 16.9,
+          "2023-now": 16.53
+        }
+      },
+      "no buying in the window": {
+        "cagrPct": 17.97,
+        "maxDrawdownPct": -29.02,
+        "periods": {
+          "2011-2019": 18.92,
+          "2020-2022": 16.43,
+          "2023-now": 16.98
+        }
+      },
+      "no buying only after the ex-date": {
+        "cagrPct": 17.87,
+        "maxDrawdownPct": -29.15,
+        "periods": {
+          "2011-2019": 18.67,
+          "2020-2022": 16.62,
+          "2023-now": 16.98
+        }
+      },
+      "no buying, and sell holdings in the window": {
+        "cagrPct": 17.23,
+        "maxDrawdownPct": -29.24,
+        "periods": {
+          "2011-2019": 17.85,
+          "2020-2022": 16.58,
+          "2023-now": 16.27
+        }
+      }
+    },
+    "defensive": {
+      "as now": {
+        "cagrPct": 13.61,
+        "maxDrawdownPct": -26.06,
+        "periods": {
+          "2011-2019": 15.22,
+          "2020-2022": 13.08,
+          "2023-now": 10.28
+        }
+      },
+      "no buying in the window": {
+        "cagrPct": 13.25,
+        "maxDrawdownPct": -26.29,
+        "periods": {
+          "2011-2019": 14.55,
+          "2020-2022": 13.08,
+          "2023-now": 10.35
+        }
+      },
+      "no buying only after the ex-date": {
+        "cagrPct": 13.51,
+        "maxDrawdownPct": -25.07,
+        "periods": {
+          "2011-2019": 15.22,
+          "2020-2022": 12.25,
+          "2023-now": 10.52
+        }
+      },
+      "no buying, and sell holdings in the window": {
+        "cagrPct": 13.04,
+        "maxDrawdownPct": -26.98,
+        "periods": {
+          "2011-2019": 13.96,
+          "2020-2022": 14.05,
+          "2023-now": 10.1
+        }
+      }
+    }
+  },
+  "resultsBuys": {
+    "all results buys": {
+      "trades": 2751,
+      "winRatePct": 58.67,
+      "avgReturnPct": 7.79,
+      "avgExcessPct": 4.46,
+      "tStat": 9.26
+    },
+    "not in the window": {
+      "trades": 2746,
+      "winRatePct": 58.67,
+      "avgReturnPct": 7.8,
+      "avgExcessPct": 4.46,
+      "tStat": 9.25
+    },
+    "in the window": {
+      "trades": 5
+    },
+    "in the window: ex-date ahead": {
+      "trades": 1
+    },
+    "in the window: ex-date just past": {
+      "trades": 4
+    }
+  }
+}
