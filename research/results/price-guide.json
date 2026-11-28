@@ -1,0 +1,190 @@
+{
+  "note": "Gain from the buy price to the exit, before costs. Bad: a quarter of past trades ended below this. Typical: the middle trade. Good: a quarter ended above this. Typical low: the middle trade fell this far at some close on the way.",
+  "from": 20110131,
+  "to": 20261111,
+  "resultsBuy": {
+    "note": "Bought at the close of the session after the signal, sold at the close of session 60.",
+    "all": {
+      "trades": 2237,
+      "badPct": -6.9,
+      "typicalPct": 5.8,
+      "goodPct": 22,
+      "wonPct": 61.5,
+      "avgPct": 9.5,
+      "typicalLowPct": -8.1
+    },
+    "byStrength": {
+      "top fifth": {
+        "trades": 686,
+        "badPct": -6,
+        "typicalPct": 8.2,
+        "goodPct": 27.1,
+        "wonPct": 63.4,
+        "avgPct": 12
+      },
+      "second fifth": {
+        "trades": 505,
+        "badPct": -5.9,
+        "typicalPct": 5.6,
+        "goodPct": 18.2,
+        "wonPct": 61.2,
+        "avgPct": 8.1
+      },
+      "middle fifth": {
+        "trades": 529,
+        "badPct": -7,
+        "typicalPct": 5.3,
+        "goodPct": 22.2,
+        "wonPct": 61.4,
+        "avgPct": 8.8
+      },
+      "fourth fifth": {
+        "trades": 517,
+        "badPct": -8.3,
+        "typicalPct": 4.4,
+        "goodPct": 18,
+        "wonPct": 59.4,
+        "avgPct": 8.2
+      }
+    }
+  },
+  "monthlyPlan": {
+    "note": "New picks only. The plan keeps a stock until it falls below the exit rank at a month end, so these fixed periods are a guide, not the rule's own exit.",
+    "growth": {
+      "oneMonth": {
+        "trades": 569,
+        "badPct": -6.3,
+        "typicalPct": 1.8,
+        "goodPct": 9.8,
+        "wonPct": 56.2,
+        "avgPct": 3.2,
+        "typicalLowPct": -5.9
+      },
+      "threeMonths": {
+        "trades": 564,
+        "badPct": -9.3,
+        "typicalPct": 2.7,
+        "goodPct": 21.9,
+        "wonPct": 55.1,
+        "avgPct": 9.3,
+        "typicalLowPct": -10.1
+      },
+      "sixMonths": {
+        "trades": 551,
+        "badPct": -10.7,
+        "typicalPct": 6.3,
+        "goodPct": 30,
+        "wonPct": 60.8,
+        "avgPct": 16,
+        "typicalLowPct": -13.6
+      },
+      "twelveMonths": {
+        "trades": 527,
+        "badPct": -15.1,
+        "typicalPct": 13.9,
+        "goodPct": 53.1,
+        "wonPct": 61.5,
+        "avgPct": 34,
+        "typicalLowPct": -18.2
+      }
+    },
+    "balanced": {
+      "oneMonth": {
+        "trades": 327,
+        "badPct": -3.4,
+        "typicalPct": 1.6,
+        "goodPct": 6.5,
+        "wonPct": 58.1,
+        "avgPct": 1.5,
+        "typicalLowPct": -3.4
+      },
+      "threeMonths": {
+        "trades": 324,
+        "badPct": -5.2,
+        "typicalPct": 3.5,
+        "goodPct": 14,
+        "wonPct": 59.3,
+        "avgPct": 5.2,
+        "typicalLowPct": -5.8
+      },
+      "sixMonths": {
+        "trades": 312,
+        "badPct": -3,
+        "typicalPct": 8.1,
+        "goodPct": 22.7,
+        "wonPct": 68.3,
+        "avgPct": 12.4,
+        "typicalLowPct": -7.9
+      },
+      "twelveMonths": {
+        "trades": 297,
+        "badPct": -6.2,
+        "typicalPct": 12,
+        "goodPct": 36.5,
+        "wonPct": 68.4,
+        "avgPct": 23,
+        "typicalLowPct": -10
+      }
+    },
+    "defensive": {
+      "oneMonth": {
+        "trades": 93,
+        "badPct": -1.9,
+        "typicalPct": 1.4,
+        "goodPct": 5.5,
+        "wonPct": 62.4,
+        "avgPct": 2.1,
+        "typicalLowPct": -2.5
+      },
+      "threeMonths": {
+        "trades": 91,
+        "badPct": -4.5,
+        "typicalPct": 2,
+        "goodPct": 9.8,
+        "wonPct": 56,
+        "avgPct": 3.7,
+        "typicalLowPct": -4.9
+      },
+      "sixMonths": {
+        "trades": 89,
+        "badPct": -6,
+        "typicalPct": 3.7,
+        "goodPct": 18.4,
+        "wonPct": 60.7,
+        "avgPct": 7.8,
+        "typicalLowPct": -7
+      },
+      "twelveMonths": {
+        "trades": 88,
+        "badPct": -2.1,
+        "typicalPct": 10.3,
+        "goodPct": 27.4,
+        "wonPct": 67,
+        "avgPct": 15.2,
+        "typicalLowPct": -10.8
+      }
+    }
+  },
+  "splitBuy": {
+    "note": "Bought at the close after the split date is listed, sold at the last close before the split.",
+    "all": {
+      "trades": 229,
+      "badPct": -1.6,
+      "typicalPct": 1.3,
+      "goodPct": 5.3,
+      "wonPct": 61.6,
+      "avgPct": 2.5
+    }
+  },
+  "dividendBuy": {
+    "note": "Dividends of 2% or more with 3 sessions of notice or more. Bought at the close after the listing, sold at the last close before the dividend date.",
+    "all": {
+      "trades": 1342,
+      "badPct": -1.6,
+      "typicalPct": 1.3,
+      "goodPct": 6.1,
+      "wonPct": 61.5,
+      "avgPct": 2.5
+    }
+  }
+}

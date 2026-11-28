@@ -16,6 +16,7 @@ import CautionNote from './CautionNote'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
 import { sharesFor, type DayTradeSignal, type DayTradeState } from '@/lib/signals/core'
 import { DEFAULT_CAPITAL, LOSS_LIMIT_PCT, nextActions, RESULTS_SLOTS, type Action } from '@/lib/signals/actions'
+import { dividendGuide, resultsGuide, splitGuide, typicalLow, type PriceGuide } from '@/lib/signals/price-guide'
 import { useUIStore } from '@/lib/stores/ui-store'
 
 const AMOUNT_KEY = 'signals.dayTradeAmount'
@@ -91,6 +92,17 @@ function DayTradeCard({ s, amount, today }: { s: DayTradeSignal; amount: number;
   )
 }
 
+/** Where past signals of the rule ended, as three prices. Not sell targets. */
+function GuidePrices({ g }: { g: PriceGuide | null }) {
+  if (!g) return <span style={muted}>n/a</span>
+  return (
+    <span>
+      Typical <b>{rupees(g.typical)}</b>, good case <b style={{ color: '#34d399' }}>{rupees(g.good)}</b>, bad case <b style={{ color: '#f87171' }}>{rupees(g.bad)}</b>
+      <span style={muted}> {g.when}</span>
+    </span>
+  )
+}
+
 function ResultsBuyCard({ r, amount, hold, caution }: { r: PositionalRow; amount: number; hold: number; caution?: Caution }) {
   const price = r.lastPrice ?? r.signalClose
   const shares = sharesFor(amount, price)
@@ -106,7 +118,9 @@ function ResultsBuyCard({ r, amount, hold, caution }: { r: PositionalRow; amount
       </div>
       <Line label="Strength">Over 12 months: <b>{strengthLabel(r.strengthRank)}</b> of the 750 most traded stocks</Line>
       <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
-      <Line label="Stop">None in the tested rule</Line>
+      <Line label="Stop">None in the tested rule. Optional loss limit <b>{rupees(price ? price * (1 - LOSS_LIMIT_PCT / 100) : null)}</b></Line>
+      <Line label="Guide"><GuidePrices g={resultsGuide(price, r.strengthRank)} /></Line>
+      <Line label="Dips">A normal trade fell to about <b>{rupees(typicalLow(price, 'results'))}</b> at some point and still worked</Line>
       <Line label="Exit">Sell through the day on session <b>{hold}</b>, about <b>{r.exitAbout && day(r.exitAbout)}</b></Line>
       <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
     </div>
@@ -127,6 +141,7 @@ function SplitBuyCard({ r, amount }: { r: SplitRow; amount: number }) {
       </div>
       <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
       <Line label="Stop">None in the tested rule</Line>
+      <Line label="Guide"><GuidePrices g={splitGuide(price)} /></Line>
       <Line label="Exit">Sell in the last half hour of <b>{day(r.sellOn)}</b>, the last session before the split</Line>
       <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
     </div>
@@ -147,6 +162,7 @@ function DividendBuyCard({ r, amount }: { r: DividendRow; amount: number }) {
       </div>
       <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
       <Line label="Stop">None in the tested rule</Line>
+      <Line label="Guide"><GuidePrices g={dividendGuide(price)} /></Line>
       <Line label="Exit">Sell in the last half hour of <b>{day(r.sellOn)}</b>, the last session before the dividend date</Line>
       <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
     </div>
@@ -246,7 +262,7 @@ export default function SignalsTab() {
             : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>{['Action', 'Stock', 'Shares', 'When', 'Price', 'Stop', 'Target', 'Get out', 'Why'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{['Action', 'Stock', 'Shares', 'When', 'Price', 'Stop', 'Price guide', 'Get out', 'Why'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {actions.map((a: Action) => (
                       <tr key={a.key} style={a.optional ? { opacity: 0.75 } : undefined}>
@@ -260,7 +276,11 @@ export default function SignalsTab() {
                         <td style={{ ...td, whiteSpace: 'normal', minWidth: 130 }}>{a.when}</td>
                         <td style={{ ...td, whiteSpace: 'normal', minWidth: 150 }}>Last {rupees(a.price)}<div style={{ ...muted, fontSize: '0.8em' }}>{a.priceNote}</div></td>
                         <td style={{ ...td, whiteSpace: 'normal', minWidth: 130 }}>{a.stop != null ? <b>{rupees(a.stop)}</b> : a.side === 'SELL' ? '' : 'None'}{a.stopNote && <div style={{ ...muted, fontSize: '0.8em' }}>{a.stopNote}</div>}</td>
-                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 110 }}>{a.target}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 190 }}>
+                          {a.guide
+                            ? <>Typical <b>{rupees(a.guide.typical)}</b><br />Good <b style={{ color: '#34d399' }}>{rupees(a.guide.good)}</b>, bad <b style={{ color: '#f87171' }}>{rupees(a.guide.bad)}</b><div style={{ ...muted, fontSize: '0.8em' }}>{a.guide.when}. {a.guide.wonPct}% of {a.guide.trades.toLocaleString('en-IN')} past trades made money</div></>
+                            : a.side === 'SELL' ? '' : a.target}
+                        </td>
                         <td style={{ ...td, whiteSpace: 'normal', minWidth: 150 }}>{a.exit}</td>
                         <td style={{ ...td, whiteSpace: 'normal', minWidth: 200 }}>{a.why}</td>
                       </tr>
@@ -272,7 +292,9 @@ export default function SignalsTab() {
           <p style={{ ...muted, marginBottom: 0 }}>
             About stops: the results-buy rule did best in testing with no stop and no target, about 30% a year after charges and tax with a
             fall of 52% on the way. A stop {LOSS_LIMIT_PCT}% below the buy price made about 24% a year with a fall of 38%. Every target tested
-            cut the return. So the stop shown is optional: use it if the smaller fall matters more to you than the return. Rows marked
+            cut the return. So the stop shown is optional: use it if the smaller fall matters more to you than the return. The price guide
+            is not a target to sell at. It shows where past signals of the same rule ended: the middle trade, the best quarter and the
+            worst quarter. Rows marked
             &quot;On paper&quot; are rules still being tracked before they are trusted. The app places no orders.
           </p>
         </div>

@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { MonthlyPlan, BrokerHoldingRow } from '@/lib/portfolio/service'
 import { holdingValue, isPlanFund } from '@/lib/portfolio/plan-core'
 import CautionNote from './CautionNote'
+import { planGuide } from '@/lib/signals/price-guide'
 import type { TrackRecord } from '@/lib/portfolio/signals'
 import { FUND_SHARES, MODES, DEFAULT_MODE, PLAN_FUNDS, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
@@ -650,7 +651,12 @@ function PicksCard({ plan }: { plan: MonthlyPlan }) {
         {plan.action.skippedUnaffordable.length > 0 &&
           ` Skipped because one share costs more than a position's budget: ${plan.action.skippedUnaffordable.join(', ')}.`}
       </p>
-      <RankingTable rows={plan.picks} />
+      <RankingTable rows={plan.picks} mode={plan.mode} />
+      <p style={{ ...muted, marginBottom: 0 }}>
+        The price guide shows where past {label} picks stood 6 and 12 months after they were first bought: the middle pick, with the
+        best quarter and the worst quarter in brackets. The prices are worked from the close shown in the table. It is not a target to sell at. The plan sells a stock only when it falls below
+        rank {PORTFOLIO_RULES.exitRank} at a month end.
+      </p>
       <details style={{ marginTop: 12 }}>
         <summary style={{ cursor: 'pointer' }}>Full ranking, top {plan.ranking.length}</summary>
         <RankingTable rows={plan.ranking} dim />
@@ -659,7 +665,11 @@ function PicksCard({ plan }: { plan: MonthlyPlan }) {
   )
 }
 
-function RankingTable({ rows, dim }: { rows: MonthlyPlan['ranking']; dim?: boolean }) {
+function RankingTable({ rows, dim, mode }: { rows: MonthlyPlan['ranking']; dim?: boolean; mode?: Mode }) {
+  const guide = (close: number, horizon: 'sixMonths' | 'twelveMonths') => {
+    const g = mode ? planGuide(close, mode, horizon) : null
+    return g ? <><b>{price(g.typical)}</b> <span style={{ ...muted, fontSize: '0.85em' }}>({price(g.good)} / {price(g.bad)})</span></> : ''
+  }
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -667,7 +677,9 @@ function RankingTable({ rows, dim }: { rows: MonthlyPlan['ranking']; dim?: boole
           <tr>
             <th style={th}>Rank</th><th style={th}>Stock</th><th style={th}>Industry</th>
             <th style={th}>12-1m return</th><th style={th}>Volatility</th><th style={th}>Score</th>
-            <th style={th}>Traded/day</th><th style={th}>Close</th><th style={th}>Pick</th><th style={th}>In your book</th>
+            <th style={th}>Traded/day</th><th style={th}>Close</th>
+            {mode && <><th style={th}>Guide in 6 months (good / bad)</th><th style={th}>Guide in 12 months (good / bad)</th></>}
+            <th style={th}>Pick</th><th style={th}>In your book</th>
           </tr>
         </thead>
         <tbody>
@@ -681,6 +693,7 @@ function RankingTable({ rows, dim }: { rows: MonthlyPlan['ranking']; dim?: boole
               <td style={td}>{r.scorePct.toFixed(0)}</td>
               <td style={td}>₹{r.tradedValueCr.toFixed(0)} Cr</td>
               <td style={td}>{price(r.lastClose)}</td>
+              {mode && <><td style={td}>{guide(r.lastClose, 'sixMonths')}</td><td style={td}>{guide(r.lastClose, 'twelveMonths')}</td></>}
               <td style={td}>{r.selected ? 'Yes' : ''}</td>
               <td style={td}>{r.held ? 'Held' : ''}</td>
             </tr>
