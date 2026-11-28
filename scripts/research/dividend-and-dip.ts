@@ -120,6 +120,33 @@ for (const [k, rows] of Object.entries(runUp)) { const r = withPeriods(rows); di
 for (const [k, rows] of Object.entries(through)) { const r = withPeriods(rows); dividendOut[`${k}: held 5 sessions past, dividend kept`] = r; show(`${k}: held 5 past, dividend kept`, r) }
 out.dividends = { note: 'Dividend size is rupees a share against the price on the day it was listed. Held-through trades add the dividend after 31.2% tax.', ...dividendOut }
 
+// ---- 1a. How much notice the listing gives ----
+// Sessions from the listing to the last session before the ex-date. The tests above need 3 or more.
+const NOTICE: Array<[string, number, number]> = [['1 session', 1, 1], ['2 sessions', 2, 2], ['3 to 5 sessions', 3, 5], ['6 to 10 sessions', 6, 10], ['more than 10 sessions', 11, 999]]
+const byNotice: Record<string, Trade[]> = Object.fromEntries(NOTICE.map(n => [n[0], []]))
+const noticeByPeriod: Record<string, number[]> = Object.fromEntries(PERIODS.map(p => [p.key, []]))
+for (const d of dividends.values()) {
+  const s = market.stocks.get(d.symbol)
+  if (!s) continue
+  const x = lastAtOrBefore(s.dates, d.exDate - 1), seenAt = lastAtOrBefore(s.dates, d.firstSeen)
+  if (x < 30 || seenAt < 0 || x - seenAt < 1) continue
+  const r = rank(d.symbol, s.dates[seenAt])
+  const raw = (rawClose.get(d.symbol, s.dates[seenAt]) as { close: number } | undefined)?.close
+  if (r > 750 || !raw || d.amount / raw < 0.02) continue
+  const gap = x - seenAt
+  // With one session of notice the buy is at the last close before the ex-date
+  const t = trade(s, seenAt + 1, x + 6, r > 500 ? 0.0085 : 0.0045, (d.amount / raw) * (1 - 0.312))
+  if (!t) continue
+  byNotice[NOTICE.find(n => gap >= n[1] && gap <= n[2])![0]].push(t)
+  noticeByPeriod[PERIODS.find(p => t.date >= p.from && t.date <= p.to)!.key].push(gap)
+}
+const noticeOut = Object.fromEntries(Object.entries(byNotice).map(([k, rows]) => [k, withPeriods(rows)]))
+head('1a. Dividends of 2% or more, held 5 sessions past with the dividend kept, by the notice the listing gave')
+for (const [k, r] of Object.entries(noticeOut)) show(k, r)
+const median = (xs: number[]) => xs.length ? [...xs].sort((a, b) => a - b)[xs.length >> 1] : null
+console.log('Median notice in sessions by period:', PERIODS.map(p => `${p.key}: ${median(noticeByPeriod[p.key])} (${noticeByPeriod[p.key].length})`).join(', '))
+out.dividendsByNotice = { note: 'Notice is the sessions from the listing to the last session before the ex-date. Dividends of 2% or more, top 750, held 5 sessions past the ex-date with the dividend kept after tax.', ...noticeOut, medianNoticeByPeriod: Object.fromEntries(PERIODS.map(p => [p.key, median(noticeByPeriod[p.key])])) }
+
 // ---- 1b. Big dividends as a real book ----
 const bookOf = (test: (c: DividendCandidate) => boolean, keep: boolean) => {
   const out = new Map<number, Candidate[]>()

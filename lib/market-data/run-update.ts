@@ -10,6 +10,7 @@ import { runFoWatch, sendEntryAlerts } from '@/lib/fo-watch/service'
 import logger from '@/lib/logger'
 import { runPositionalWatch } from '@/lib/positional/service'
 import { runSplitWatch } from '@/lib/positional/split-service'
+import { runDividendWatch } from '@/lib/positional/dividend-service'
 import { recordMonthlySignals } from '@/lib/portfolio/signals'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
 import { updateFromNseArchive, type UpdateSummary } from './daily-update'
@@ -35,6 +36,7 @@ export async function runMarketDataUpdate(): Promise<UpdateSummary> {
   // Positional signals read the prices and results dates just loaded. Failures are logged inside
   await runPositionalWatch()
   await runSplitWatch()
+  await runDividendWatch()
   return summary
 }
 
