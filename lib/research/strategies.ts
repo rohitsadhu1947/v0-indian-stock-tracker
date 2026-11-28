@@ -81,8 +81,12 @@ export function factorPortfolio(params: {
    * ranked by the median 12-month momentum of their stocks.
    */
   topSectorShare?: number
+  /** A stock this returns false for is not bought on that date. One already held is kept. */
+  canBuy?: (symbol: string, date: number) => boolean
+  /** A stock this returns true for is left out altogether on that date: not bought, and sold if held. */
+  leaveOut?: (symbol: string, date: number) => boolean
 }): Strategy {
-  const { factors, exitRank, sectorOf, maxPerSector, topSectorShare } = params
+  const { factors, exitRank, sectorOf, maxPerSector, topSectorShare, canBuy, leaveOut } = params
   const topN = params.topN ?? STOCK_MOMENTUM.topN
   const universeSize = params.universeSize ?? 500
   const needed = STOCK_MOMENTUM.lookbackDays + 2
@@ -98,7 +102,8 @@ export function factorPortfolio(params: {
         const strong = strongestSectors(ranked.map(r => r.symbol), bars, sectorOf, topSectorShare)
         ranked = ranked.filter(r => strong.has(sectorOf(r.symbol) ?? ''))
       }
-      const picks = selectWithBuffer(ranked, ctx.holdings.keys(), topN, exitRank, undefined, cap)
+      if (leaveOut) ranked = ranked.filter(r => !leaveOut(r.symbol, ctx.date))
+      const picks = selectWithBuffer(ranked, ctx.holdings.keys(), topN, exitRank, canBuy ? symbol => canBuy(symbol, ctx.date) : undefined, cap)
       return Object.fromEntries(picks.map(symbol => [symbol, 1 / topN]))
     },
   }
