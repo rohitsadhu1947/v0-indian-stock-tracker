@@ -97,10 +97,10 @@ function ResultsBuyCard({ r, amount, hold }: { r: PositionalRow; amount: number;
       <div style={{ ...muted, marginBottom: 8 }}>
         Up {r.jumpPct}% over two sessions around results, on {r.turnoverRatio} times its usual turnover. Signal on {day(r.signalDate)}.
       </div>
-      <Line label="Strength">Over 12 months: <b>{strengthLabel(r.strengthRank)}</b> of the 500</Line>
-      <Line label="Entry">Next session, spread through the day. Last price <b>{rupees(price)}</b></Line>
+      <Line label="Strength">Over 12 months: <b>{strengthLabel(r.strengthRank)}</b> of the 750 most traded stocks</Line>
+      <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
       <Line label="Stop">None in the tested rule</Line>
-      <Line label="Exit">Sell after <b>{hold} sessions</b>, about <b>{r.exitAbout && day(r.exitAbout)}</b></Line>
+      <Line label="Exit">Sell through the day on session <b>{hold}</b>, about <b>{r.exitAbout && day(r.exitAbout)}</b></Line>
       <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
     </div>
   )
@@ -206,10 +206,10 @@ export default function SignalsTab() {
           </div>
           <p style={{ ...muted, margin: '6px 0 12px' }}>
             Evidence: moderate. A stock that rises 8% or more around its results, on three times its usual turnover, went on to beat the
-            average stock by about 3.7% over the next {positional.holdSessions} sessions (2011 to 2026, after costs). Run as a book it made
-            11% to 23% a year depending on the settings, with falls of 35% to 50%. It moves with the Monthly Plan, so it is not a separate
-            source of return. The rule earned nothing on stocks in the bottom fifth of the 500 on 12-month strength, so those are not
-            bought. When there are more signals than money, take the strongest first. Signals are as of {positional.asOf}. {positional.prices === 'live' ? 'Prices are live.' : 'Prices are the last close.'}
+            average stock by about 3.7% over the next {positional.holdSessions} sessions (2011 to 2026, after costs). The rule runs on the
+            750 most traded stocks. Run as a book on those it made 24% to 29% a year depending on the settings, with falls of about 50%. On
+            the 500 most traded alone it made 11% to 23%. It moves with the Monthly Plan, so it is not a separate source of return. The rule
+            earned nothing on stocks in the bottom fifth on 12-month strength, so those are not bought. When there are more signals than money, take the strongest first. Signals are as of {positional.asOf}. {positional.prices === 'live' ? 'Prices are live.' : 'Prices are the last close.'}
           </p>
 
           <div style={{ fontWeight: 600, marginBottom: 6 }}>Buy next session</div>
@@ -250,7 +250,7 @@ export default function SignalsTab() {
                         <td style={td}>{r.sessionsHeld} of {positional.holdSessions}</td>
                         <td style={td}>
                           {r.sessionsHeld != null && r.sessionsHeld >= positional.holdSessions - 1
-                            ? <span style={badge(SELL)}>SELL at the next close</span>
+                            ? <span style={badge(SELL)}>SELL next session</span>
                             : r.exitAbout && day(r.exitAbout)}
                         </td>
                       </tr>
@@ -260,9 +260,9 @@ export default function SignalsTab() {
               </div>
             )}
           <p style={{ ...muted, marginBottom: 0 }}>
-            <b>Entry:</b> the session after the signal, spread through the day. The paper book uses that day&apos;s average price.{' '}
+            <b>Entry:</b> the session after the signal, in the last half hour. Shares tend to close below their average price for the day, and in testing this added about 0.7% a trade. The paper book uses the closing price.{' '}
             <b>Stop:</b> none. In testing a 15% stop cut the worst fall but also cut the return by about a quarter.{' '}
-            <b>Exit:</b> at the close of the {positional.holdSessions}th session.{' '}
+            <b>Exit:</b> spread through session {positional.holdSessions}. The paper book uses that day&apos;s average price.{' '}
             {positional.open.some(r => isWeak(r.strengthRank)) && 'Positions marked weak were opened before the strength check was added. The rule would not buy them now. '}
             {positional.tally.trades > 0 && ` Closed so far: ${positional.tally.trades}, ${positional.tally.wins} made money, average ${positional.tally.avgNetPct >= 0 ? '+' : ''}${positional.tally.avgNetPct.toFixed(1)}% after costs.`}
           </p>

@@ -54,6 +54,8 @@ export interface SimOptions {
   taxGroups?: TaxGroup[]
   /** Reinvest ordinary dividends (total return) rather than ignore them (price return). */
   dividends: boolean
+  /** Buy at the session's close instead of its average price. Sales stay at the average price. */
+  buyAtClose?: boolean
   /** Share of the last traded price lost when a holding is delisted. */
   delistingHaircut: number
 }
@@ -172,8 +174,10 @@ export function simulate(market: Market, strategy: Strategy, options: Partial<Si
       if (!(weight > 0) || open == null) continue
       const target = weight * equity
       const current = (units.get(symbol) ?? 0) * open
-      if (current === 0) buys.push({ symbol, open, spend: target })
-      else if (current < target * (1 - opt.band)) buys.push({ symbol, open, spend: target - current })
+      // The order is sized on the day's average price; with buyAtClose it is filled at the close
+      const buyPrice = opt.buyAtClose ? lastClose(symbol, date) : open
+      if (current === 0) buys.push({ symbol, open: buyPrice, spend: target })
+      else if (current < target * (1 - opt.band)) buys.push({ symbol, open: buyPrice, spend: target - current })
     }
     const cost = (b: { open: number; spend: number }) => {
       const fill = applySlippage(b.open, 'BUY', opt.costs)

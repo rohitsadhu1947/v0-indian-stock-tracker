@@ -1,6 +1,7 @@
 /**
  * The positional signal: buy a stock that jumps on its quarterly results and
- * hold it for 60 sessions. Pure functions.
+ * hold it for 60 sessions. Bought in the last half hour of the next session,
+ * sold through the day on the 60th. Pure functions.
  *
  * The rule and its settings are the ones tested in
  * research/results/positional.json (the "big jump on results" rule).
@@ -13,11 +14,17 @@ export const MIN_JUMP = 0.08
 export const MIN_TURNOVER_RATIO = 3
 /** Sessions held, counting the entry session as 1. */
 export const HOLD_SESSIONS = 60
+/**
+ * The rule runs on the 750 most traded stocks. Stocks ranked 501 to 750 beat
+ * the average stock by 4.8% a trade in testing; past 750 the edge has faded
+ * since 2023 (research/results/more-signals.json).
+ */
+export const UNIVERSE_SIZE = 750
 /** Delivery charges and slippage for buying and selling, as a fraction. */
 export const ROUND_TRIP_COST = 0.0045
 
 /**
- * A results jump on a stock in the bottom fifth of the 500 on 12-month
+ * A results jump on a stock in the bottom fifth of the universe on 12-month
  * strength earned nothing in testing, so it is skipped
  * (research/results/combine.json).
  */

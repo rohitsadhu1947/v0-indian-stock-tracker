@@ -18,6 +18,7 @@
  * leave out the small cost and tax of moving money between the two.
  */
 import { mkdirSync, writeFileSync } from 'fs'
+import { DEFAULT_COSTS } from '@/lib/backtest/costs'
 import { lastAtOrBefore } from '@/lib/research/dates'
 import { loadMarketCached } from '@/lib/research/load'
 import { calendarYearReturns, periodStats, slice, type Curve } from '@/lib/research/metrics'
@@ -31,7 +32,9 @@ import { SECTOR_BY_SYMBOL } from '@/lib/portfolio/sectors'
 import type { DailyBar } from '@/lib/portfolio/momentum'
 
 const START = 20110131
-const UNIVERSE = 500
+/** 500 unless set, to see what a wider universe does to the results book: UNIVERSE=750 npm run research:combine */
+const UNIVERSE = Number(process.env.UNIVERSE ?? 500)
+const OUT = UNIVERSE === 500 && !process.env.SLIPPAGE ? 'research/results/combine.json' : `research/results/combine-top${UNIVERSE}${process.env.SLIPPAGE ? '-slippage' + process.env.SLIPPAGE : ''}.json`
 const HOLD = 60
 const CASH_YIELD = 0.06
 const PERIODS = [
@@ -174,7 +177,7 @@ const mostTraded = (a: Candidate, b: Candidate) => b.turnover - a.turnover || a.
 const biggestJump = (a: Candidate, b: Candidate) => b.jump! - a.jump! || a.symbol.localeCompare(b.symbol)
 const strongestFirst = (a: Candidate, b: Candidate) => (b as Signal).momentumRank - (a as Signal).momentumRank || a.symbol.localeCompare(b.symbol)
 const notWeak = (c: Signal) => c.momentumRank >= 0.4
-const BASE: BookOptions = { start: START, capital: 1_000_000, slots: 20, maxSessions: HOLD, stopPct: null, entry: 'vwap', priority: mostTraded, payTax: true, cashYield: CASH_YIELD }
+const BASE: BookOptions = { start: START, capital: 1_000_000, slots: 20, maxSessions: HOLD, stopPct: null, entry: 'vwap', priority: mostTraded, payTax: true, cashYield: CASH_YIELD, costs: { ...DEFAULT_COSTS, slippagePercent: Number(process.env.SLIPPAGE ?? DEFAULT_COSTS.slippagePercent) } }
 const BOOKS: Array<{ key: string; note: string; test: (c: Signal) => boolean; options: BookOptions }> = [
   { key: 'base-no-interest', note: '20 positions, idle cash earns nothing (as tested before)', test: () => true, options: { ...BASE, cashYield: 0 } },
   { key: 'base', note: '20 positions, idle cash earns 6%', test: () => true, options: BASE },
@@ -285,7 +288,7 @@ line('Growth mode', stats(growth), `  ${String(growthRun.trades.length).padStart
 for (const a of avoiding) line(a.key, a, `  ${String(a.trades).padStart(6)}`)
 
 mkdirSync('research/results', { recursive: true })
-writeFileSync('research/results/combine.json', JSON.stringify({
+writeFileSync(OUT, JSON.stringify({
   generatedAt: new Date().toISOString(), from: START, to: END, universe: UNIVERSE,
   note: 'After tax, charges and 0.1% slippage a side. Growth reinvests dividends and earns 6% on idle cash. The results book is on prices without dividends; its idle cash earns 6% except where said. The split and the overlay are worked out from the two daily value curves and leave out the tax effect of moving money between them.',
   growth: stats(growth), perTrade, books, splits, overlays, growthAvoidingFalls: avoiding,
