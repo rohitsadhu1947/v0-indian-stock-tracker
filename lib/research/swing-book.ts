@@ -65,8 +65,17 @@ export interface BookOptions {
   maxSessions: number
   /** Sell when the price falls this far below the entry. Null: no stop. */
   stopPct: number | null
-  /** Buy at the open, or at the session's average price. */
-  entry: 'open' | 'vwap'
+  /** Sell when the price rises this far above the entry. Left out or null: no target. */
+  targetPct?: number | null
+  /**
+   * Trailing stop: sell when the price falls this far below the highest close since the entry.
+   * It works alongside `stopPct`; whichever level is higher applies.
+   */
+  trailPct?: number | null
+  /** Buy at the open, at the session's average price, or at its close. */
+  entry: 'open' | 'vwap' | 'close'
+  /** Called for every closed trade, for per-trade figures. */
+  onTrade?: (trade: { symbol: string; entryDate: number; exitDate: number; retPct: number; sessions: number; reason: 'stop' | 'target' | 'time' | 'delisted' }) => void
   /** Which candidates to take first when there are more than free slots. */
   priority: (a: Candidate, b: Candidate) => number
   payTax: boolean
@@ -75,7 +84,7 @@ export interface BookOptions {
   costs?: CostConfig
 }
 
-interface Position { symbol: string; qty: number; cost: number; entryIndex: number; stop: number; next: number }
+interface Position { symbol: string; qty: number; cost: number; entryIndex: number; stop: number; target: number; peak: number; next: number }
 
 export interface BookResult {
   curve: Curve
@@ -110,7 +119,7 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
     for (const c of today) {
       if (positions.size >= options.slots) { skipped++; continue }
       const s = market.stocks.get(c.symbol)!
-      const raw = options.entry === 'vwap' ? s.fill[c.entryIndex] : s.open[c.entryIndex]
+      const raw = options.entry === 'vwap' ? s.fill[c.entryIndex] : options.entry === 'close' ? s.close[c.entryIndex] : s.open[c.entryIndex]
       const buy = raw * (1 + costs.slippagePercent)
       const qty = Math.floor(Math.min(equity / options.slots, cash) / (buy * 1.002))
       if (!(raw > 0) || qty < 1) { skipped++; continue }
@@ -120,7 +129,8 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
       ledger.buy(c.symbol, qty, qty * buy + fee, date)
       positions.set(c.symbol, {
         symbol: c.symbol, qty, cost: qty * buy + fee, entryIndex: c.entryIndex,
-        stop: options.stopPct == null ? 0 : raw * (1 - options.stopPct / 100), next: c.entryIndex,
+        stop: options.stopPct == null ? 0 : raw * (1 - options.stopPct / 100),
+        target: options.targetPct == null ? Infinity : raw * (1 + options.targetPct / 100), peak: raw, next: c.entryIndex,
       })
     }
 
@@ -133,11 +143,20 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
       const tradedToday = j < s.dates.length && s.dates[j] === date
       const gone = j >= s.dates.length
       let exit: number | null = null
-      if (gone) exit = s.close[s.close.length - 1]
+      let reason: 'stop' | 'target' | 'time' | 'delisted' = 'time'
+      // A position bought at the close cannot be stopped or reach its target the same day
+      const live = j > p.entryIndex || options.entry !== 'close'
+      // The stop in force today: the fixed one, or the trailing one from the highest close so far
+      const stop = options.trailPct == null ? p.stop : Math.max(p.stop, p.peak * (1 - options.trailPct / 100))
+      if (gone) { exit = s.close[s.close.length - 1]; reason = 'delisted' }
       else if (tradedToday) {
-        if (j > p.entryIndex && s.open[j] <= p.stop) exit = s.open[j]
-        else if (s.low[j] <= p.stop) exit = p.stop
+        // When a day touches both levels the stop is taken to come first
+        if (live && j > p.entryIndex && s.open[j] <= stop) { exit = s.open[j]; reason = 'stop' }
+        else if (live && s.low[j] <= stop) { exit = stop; reason = 'stop' }
+        else if (live && j > p.entryIndex && s.open[j] >= p.target) { exit = s.open[j]; reason = 'target' }
+        else if (live && s.high[j] >= p.target) { exit = p.target; reason = 'target' }
         else if (j >= p.entryIndex + options.maxSessions - 1) exit = s.close[j]
+        if (exit == null && s.close[j] > p.peak) p.peak = s.close[j]
       }
       if (exit == null) {
         held += p.qty * s.close[tradedToday ? j : Math.max(0, j - 1)]
@@ -151,6 +170,7 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
       ledger.sell(p.symbol, p.qty, proceeds, date)
       trades++
       if (proceeds > p.cost) wins++
+      options.onTrade?.({ symbol: p.symbol, entryDate: s.dates[p.entryIndex], exitDate: date, retPct: (proceeds / p.cost - 1) * 100, sessions: Math.min(j, s.dates.length - 1) - p.entryIndex + 1, reason })
       positions.delete(p.symbol)
     }
 

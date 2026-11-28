@@ -14,10 +14,12 @@ import type { Caution } from '@/lib/positional/caution'
 import CautionNote from './CautionNote'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
 import { sharesFor, type DayTradeSignal, type DayTradeState } from '@/lib/signals/core'
+import { DEFAULT_CAPITAL, LOSS_LIMIT_PCT, nextActions, RESULTS_SLOTS, type Action } from '@/lib/signals/actions'
 import { useUIStore } from '@/lib/stores/ui-store'
 
 const AMOUNT_KEY = 'signals.dayTradeAmount'
 const POSITION_KEY = 'signals.positionAmount'
+const CAPITAL_KEY = 'signals.capital'
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 20, marginBottom: 16,
 }
@@ -139,17 +141,25 @@ export default function SignalsTab() {
   const [positional, setPositional] = useState<PositionalView | null | undefined>(undefined)
   const [splits, setSplits] = useState<SplitView | null | undefined>(undefined)
   const [cautions, setCautions] = useState<Record<string, Caution>>({})
-  const [positionAmount, setPositionAmount] = useState(25000)
+  const [positionAmount, setPositionAmount] = useState(DEFAULT_CAPITAL / RESULTS_SLOTS)
+  const [capital, setCapital] = useState(DEFAULT_CAPITAL)
 
   useEffect(() => {
     try { const saved = Number(localStorage.getItem(AMOUNT_KEY)); if (saved >= 1000) setAmount(saved) } catch { /* no storage */ }
     try { const saved = Number(localStorage.getItem(POSITION_KEY)); if (saved >= 1000) setPositionAmount(saved) } catch { /* no storage */ }
+    try { const saved = Number(localStorage.getItem(CAPITAL_KEY)); if (saved >= 20000) setCapital(saved) } catch { /* no storage */ }
   }, [])
   const changeAmount = (value: number) => {
     setAmount(value)
     try { localStorage.setItem(AMOUNT_KEY, String(value)) } catch { /* no storage */ }
   }
 
+  // The capital for results buys sets the amount per stock: one twentieth each, as the tested book holds 20
+  const changeCapital = (value: number) => {
+    setCapital(value)
+    try { localStorage.setItem(CAPITAL_KEY, String(value)) } catch { /* no storage */ }
+    if (value >= 20000) changePositionAmount(Math.round(value / RESULTS_SLOTS))
+  }
   const changePositionAmount = (value: number) => {
     setPositionAmount(value)
     try { localStorage.setItem(POSITION_KEY, String(value)) } catch { /* no storage */ }
@@ -178,6 +188,8 @@ export default function SignalsTab() {
   }, [active, load])
 
   const buys = monthly?.orders.filter(o => o.side === 'BUY') ?? [], sells = monthly?.orders.filter(o => o.side === 'SELL') ?? []
+  const actions = dayView ? nextActions({ today, dayTrades: dayView.signals, positional, splits, monthly, perStock: positionAmount, perDayTrade: amount }) : []
+  const loadingRest = positional === undefined || monthly === undefined
   return (
     <div>
       <div style={card}>
@@ -190,6 +202,59 @@ export default function SignalsTab() {
 
       {error && <div style={{ ...card, borderColor: '#ef4444', color: '#fca5a5' }}>⚠️ {error}</div>}
       {!dayView && !error && <div style={card}>Loading the signals…</div>}
+
+      {dayView && (
+        <div style={{ ...card, borderColor: 'rgba(52,211,153,0.45)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>Do this next</h3>
+            <label style={muted}>
+              Capital for results buys ₹{' '}
+              <input
+                type="number" min={20000} step={50000} value={capital} onChange={e => changeCapital(Number(e.target.value))} aria-label="Capital for results buys in rupees"
+                style={{ width: 130, padding: '5px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.25)', color: '#fff' }}
+              />
+            </label>
+          </div>
+          <p style={{ ...muted, margin: '6px 0 12px' }}>
+            Every action from every rule, in one list. {rupees(capital, 0)} across {RESULTS_SLOTS} positions is {rupees(positionAmount, 0)} a stock.
+            The share counts use that. Where a rule was tested without a stop or a target, the list says so.
+          </p>
+          {actions.length === 0
+            ? <p style={{ margin: 0 }}>{loadingRest ? 'Loading the rest of the signals…' : 'Nothing to buy or sell before the next session. New signals are worked out each evening after 8:30 pm.'}</p>
+            : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Action', 'Stock', 'Shares', 'When', 'Price', 'Stop', 'Target', 'Get out', 'Why'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {actions.map((a: Action) => (
+                      <tr key={a.key} style={a.optional ? { opacity: 0.75 } : undefined}>
+                        <td style={td}>
+                          <span style={badge(a.side === 'BUY' ? BUY : SELL)}>{a.side === 'SHORT' ? 'SELL SHORT' : a.side}</span>
+                          {a.paper && <div style={{ ...muted, fontSize: '0.8em' }}>On paper</div>}
+                          {a.optional && <div style={{ ...muted, fontSize: '0.8em' }}>Optional</div>}
+                        </td>
+                        <td style={td}><span style={{ fontWeight: 600 }}>{a.symbol}</span><div style={{ ...muted, fontSize: '0.8em' }}>{a.rule}</div><CautionNote caution={cautions[a.symbol]} /></td>
+                        <td style={td}>{a.shares == null ? 'All held' : a.shares > 0 ? a.shares : 'n/a'}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 130 }}>{a.when}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 150 }}>Last {rupees(a.price)}<div style={{ ...muted, fontSize: '0.8em' }}>{a.priceNote}</div></td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 130 }}>{a.stop != null ? <b>{rupees(a.stop)}</b> : a.side === 'SELL' ? '' : 'None'}{a.stopNote && <div style={{ ...muted, fontSize: '0.8em' }}>{a.stopNote}</div>}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 110 }}>{a.target}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 150 }}>{a.exit}</td>
+                        <td style={{ ...td, whiteSpace: 'normal', minWidth: 200 }}>{a.why}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          <p style={{ ...muted, marginBottom: 0 }}>
+            About stops: the results-buy rule did best in testing with no stop and no target, about 30% a year after charges and tax with a
+            fall of 52% on the way. A stop {LOSS_LIMIT_PCT}% below the buy price made about 24% a year with a fall of 38%. Every target tested
+            cut the return. So the stop shown is optional: use it if the smaller fall matters more to you than the return. Rows marked
+            &quot;On paper&quot; are rules still being tracked before they are trusted. The app places no orders.
+          </p>
+        </div>
+      )}
 
       {dayView && (
         <div style={card}>
@@ -259,7 +324,7 @@ export default function SignalsTab() {
             : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>{['Stock', '12-month strength', 'Bought', 'At', 'Now', 'Move', 'Sessions held', 'Sell about'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{['Stock', '12-month strength', 'Bought', 'At', 'Now', 'Move', 'Optional loss limit', 'Sessions held', 'Sell about'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {positional.open.map(r => (
                       <tr key={r.symbol + r.signalDate}>
@@ -272,6 +337,10 @@ export default function SignalsTab() {
                         <td style={td}>{rupees(r.lastPrice)}</td>
                         <td style={{ ...td, fontWeight: 600, color: r.movePct == null ? undefined : r.movePct > 0 ? '#34d399' : r.movePct < 0 ? '#f87171' : undefined }}>
                           {r.movePct == null ? '' : `${r.movePct >= 0 ? '+' : ''}${r.movePct.toFixed(1)}%`}
+                        </td>
+                        <td style={td}>
+                          {r.entryPrice ? rupees(r.entryPrice * (1 - LOSS_LIMIT_PCT / 100)) : ''}
+                          {r.movePct != null && r.movePct <= -LOSS_LIMIT_PCT && <> <span style={badge('#d97706')}>Below</span></>}
                         </td>
                         <td style={td}>{r.sessionsHeld} of {positional.holdSessions}</td>
                         <td style={td}>
@@ -287,7 +356,7 @@ export default function SignalsTab() {
             )}
           <p style={{ ...muted, marginBottom: 0 }}>
             <b>Entry:</b> the session after the signal, in the last half hour. Shares tend to close below their average price for the day, and in testing this added about 0.7% a trade. The paper book uses the closing price.{' '}
-            <b>Stop:</b> none. In testing a 15% stop cut the worst fall but also cut the return by about a quarter.{' '}
+            <b>Stop:</b> none in the tested rule. A 15% stop cut the worst fall from 52% to 38% and the return from about 30% a year to 24%. The loss limit column shows that price for anyone who wants it.{' '}
             <b>Exit:</b> spread through session {positional.holdSessions}. The paper book uses that day&apos;s average price.{' '}
             {positional.open.some(r => isWeak(r.strengthRank)) && 'Positions marked weak were opened before the strength check was added. The rule would not buy them now. '}
             {positional.tally.trades > 0 && ` Closed so far: ${positional.tally.trades}, ${positional.tally.wins} made money, average ${positional.tally.avgNetPct >= 0 ? '+' : ''}${positional.tally.avgNetPct.toFixed(1)}% after costs.`}
