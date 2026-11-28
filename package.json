@@ -33,6 +33,7 @@
     "research:nifty-options": "tsx scripts/research/nifty-options.ts",
     "research:avoid-after-split": "tsx scripts/research/avoid-after-split.ts",
     "research:stops-targets": "tsx scripts/research/stops-targets.ts",
+    "research:dividend-and-dip": "tsx scripts/research/dividend-and-dip.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
