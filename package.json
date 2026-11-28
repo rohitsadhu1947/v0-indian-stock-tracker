@@ -35,6 +35,7 @@
     "research:stops-targets": "tsx scripts/research/stops-targets.ts",
     "research:dividend-and-dip": "tsx scripts/research/dividend-and-dip.ts",
     "research:price-guide": "tsx scripts/research/price-guide.ts",
+    "research:three-ideas": "tsx scripts/research/three-ideas.ts",
     "filings:watch": "tsx --env-file=.env.local scripts/filings/watch.ts",
     "fundamentals:fetch": "tsx --env-file=.env.local scripts/fundamentals/fetch.ts",
     "fo-watch": "tsx --env-file=.env.local scripts/fo-watch/run.ts",
