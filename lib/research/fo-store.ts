@@ -49,6 +49,17 @@ export function openFoStore(path: string = FO_STORE_PATH): DatabaseSync {
       primary key (date, symbol)
     ) without rowid;
 
+    -- NIFTY options contract by contract: only those that traded or had open interest, expiring within 100 days.
+    -- Prices are rupees a share. Built by scripts/data/fo-nifty-options.ts
+    create table if not exists nifty_options (
+      date integer not null, expiry integer not null, strike real not null, type text not null,
+      open real, high real, low real, close real not null, settle real,
+      contracts real not null, oi real not null,
+      primary key (date, expiry, strike, type)
+    ) without rowid;
+    create index if not exists nifty_options_expiry on nifty_options (expiry, strike, type, date);
+    create table if not exists nifty_options_days (date integer primary key, rows integer not null);
+
     -- Days already fetched. contracts = 0 means NSE had no F&O file for the day
     create table if not exists fo_days (
       date integer primary key, contracts integer not null, participants integer not null, ban integer not null
