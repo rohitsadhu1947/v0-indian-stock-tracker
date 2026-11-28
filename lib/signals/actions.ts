@@ -10,6 +10,7 @@ import type { SplitView } from '@/lib/positional/split-service'
 import type { DividendView } from '@/lib/positional/dividend-service'
 import { sharesFor, type DayTradeSignal } from './core'
 import type { MonthlyView } from './service'
+import { dividendGuide, planGuide, resultsGuide, splitGuide, type PriceGuide } from './price-guide'
 
 /** Positions the results-buy book holds at once in testing. */
 export const RESULTS_SLOTS = 20
@@ -41,6 +42,8 @@ export interface Action {
   stop: number | null
   stopNote: string
   target: string
+  /** Where past signals of this rule ended, as prices. Buys only. */
+  guide: PriceGuide | null
   exit: string
   why: string
 }
@@ -74,7 +77,7 @@ export function nextActions(input: {
     out.push({
       key: `day-${s.symbol}-${s.tradeDate}`, side: 'SHORT', symbol: s.symbol, rule: 'Day trade', paper: true, optional: false,
       when: `${s.tradeDate === today ? 'Today' : shortDay(s.tradeDate)}, 09:20`, shares: sharesFor(input.perDayTrade, s.referencePrice), price: s.referencePrice,
-      priceNote: 'Sell at the market price at 09:20', stop: s.stopPrice, stopNote: '3% above your sell price', target: 'None',
+      priceNote: 'Sell at the market price at 09:20', stop: s.stopPrice, stopNote: '3% above your sell price', target: 'None', guide: null,
       exit: 'Buy back at 15:15 the same day', why: s.reason,
     })
   }
@@ -84,14 +87,14 @@ export function nextActions(input: {
       if (r.sessionsHeld != null && r.sessionsHeld >= positional.holdSessions - 1) {
         out.push({
           key: `results-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Results buy', paper: false, optional: false,
-          when: 'Next session, spread through the day', shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '',
+          when: 'Next session, spread through the day', shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', guide: null,
           exit: '', why: `Its ${positional.holdSessions} sessions are up`,
         })
       } else if (r.movePct != null && r.movePct <= -LOSS_LIMIT_PCT) {
         out.push({
           key: `results-limit-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Results buy', paper: false, optional: true,
           when: 'Next session', shares: null, price: r.lastPrice, priceNote: 'Any price', stop: r.entryPrice ? round2(r.entryPrice * (1 - LOSS_LIMIT_PCT / 100)) : null,
-          stopNote: `${LOSS_LIMIT_PCT}% below the buy price`, target: '', exit: '', why: `Down ${Math.abs(r.movePct).toFixed(1)}% from the buy price, past the optional loss limit`,
+          stopNote: `${LOSS_LIMIT_PCT}% below the buy price`, target: '', guide: null, exit: '', why: `Down ${Math.abs(r.movePct).toFixed(1)}% from the buy price, past the optional loss limit`,
         })
       }
     }
@@ -101,7 +104,7 @@ export function nextActions(input: {
         key: `results-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Results buy', paper: false, optional: false,
         when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price. In testing it did not matter how far the stock had moved that day',
         stop: price ? round2(price * (1 - LOSS_LIMIT_PCT / 100)) : null, stopNote: `Optional: ${LOSS_LIMIT_PCT}% below your buy price`,
-        target: 'None. Targets cut the return in testing', exit: r.exitAbout ? `Sell on session ${positional.holdSessions}, about ${shortDay(r.exitAbout)}` : `Sell on session ${positional.holdSessions}`,
+        target: 'None. Targets cut the return in testing', guide: resultsGuide(price, r.strengthRank), exit: r.exitAbout ? `Sell on session ${positional.holdSessions}, about ${shortDay(r.exitAbout)}` : `Sell on session ${positional.holdSessions}`,
         why: `Up ${r.jumpPct}% around results on ${r.turnoverRatio} times its usual turnover`,
       })
     }
@@ -113,7 +116,7 @@ export function nextActions(input: {
       if (eveOf(r.sellOn) > today) continue
       out.push({
         key: `split-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Split buy', paper: true, optional: false,
-        when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
+        when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', guide: null, exit: '',
         why: `The split is on ${shortDay(r.exDate)}. Stocks lagged after a split in testing`,
       })
     }
@@ -122,7 +125,7 @@ export function nextActions(input: {
       out.push({
         key: `split-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Split buy', paper: true, optional: false,
         when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price', stop: null, stopNote: 'None in the tested rule',
-        target: 'None', exit: `Sell ${shortDay(r.sellOn)}, after 3 pm`, why: `Share split on ${shortDay(r.exDate)}: ${r.split}`,
+        target: 'None', guide: splitGuide(price), exit: `Sell ${shortDay(r.sellOn)}, after 3 pm`, why: `Share split on ${shortDay(r.exDate)}: ${r.split}`,
       })
     }
   }
@@ -132,7 +135,7 @@ export function nextActions(input: {
       if (eveOf(r.sellOn) > today) continue
       out.push({
         key: `dividend-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
-        when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
+        when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', guide: null, exit: '',
         why: `The dividend date is ${shortDay(r.exDate)}. Holding past it lost money after tax in testing`,
       })
     }
@@ -141,7 +144,7 @@ export function nextActions(input: {
       out.push({
         key: `dividend-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
         when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price', stop: null, stopNote: 'None in the tested rule',
-        target: 'None', exit: `Sell ${shortDay(r.sellOn)}, after 3 pm, before the dividend date`,
+        target: 'None', guide: dividendGuide(price), exit: `Sell ${shortDay(r.sellOn)}, after 3 pm, before the dividend date`,
         why: `Dividend of Rs ${r.amount} a share, ${r.yieldPct}% of the price`,
       })
     }
@@ -152,7 +155,7 @@ export function nextActions(input: {
       out.push({
         key: `plan-${o.side}-${o.symbol}`, side: o.side, symbol: o.symbol, rule: `Monthly Plan (${monthly.modeLabel})`, paper: false, optional: false,
         when: 'Next session, any time', shares: o.qty, price: o.price, priceNote: 'Any price', stop: null, stopNote: 'None. The plan sells at the monthly review',
-        target: 'None', exit: o.side === 'BUY' ? `Held until it falls below rank ${monthly.exitRank} at a month end` : '', why: o.why,
+        target: 'None', guide: o.side === 'BUY' ? planGuide(o.price, monthly.modeLabel) : null, exit: o.side === 'BUY' ? `Held until it falls below rank ${monthly.exitRank} at a month end` : '', why: o.why,
       })
     }
   }
