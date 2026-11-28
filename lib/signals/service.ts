@@ -11,7 +11,7 @@ import type { WatchSignal } from '@/lib/fo-watch/core'
 import logger from '@/lib/logger'
 import { DEFAULT_MODE, MODES, PORTFOLIO_RULES } from '@/lib/portfolio/config'
 import { liveQuotes } from '@/lib/portfolio/live'
-import { buildMonthlyPlan } from '@/lib/portfolio/service'
+import { buildMonthlyPlan, type MonthlyPlan } from '@/lib/portfolio/service'
 import type { MinuteBar } from '@/lib/research/day-trade'
 import { dayTradeSignal, type DayTradeSignal } from './core'
 
@@ -39,6 +39,8 @@ export interface MonthlyView {
   blocked: string | null
   orders: MonthlyOrderView[]
   exitRank: number
+  /** Stocks in the orders with a split or bonus near. */
+  cautions: MonthlyPlan['cautions']
 }
 
 // The broker's instrument list is large and changes once a day
@@ -104,5 +106,6 @@ export async function monthlyView(userId: number, client: BrokerClient | null): 
     blocked: plan.action.blocked,
     orders: plan.action.orders.map(o => ({ symbol: o.symbol, side: o.side, qty: o.qty, price: o.price, value: o.value, why: o.why })),
     exitRank: PORTFOLIO_RULES.exitRank,
+    cautions: plan.cautions,
   }
 }

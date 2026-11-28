@@ -107,6 +107,34 @@ for (const v of VARIANTS) {
   out[v.key] = r
   console.log(`${v.key.padEnd(54)}${String(r.trades).padStart(6)}${String(r.winRatePct ?? '').padStart(7)}${String(r.avgReturnPct ?? '').padStart(8)}${String(r.medianReturnPct ?? '').padStart(9)}${String(r.worstPct ?? '').padStart(8)}${String(r.avgExcessPct ?? '').padStart(9)}${String(r.tStat ?? '').padStart(7)}${String(r.avgSessions ?? '').padStart(6)}   ${PERIODS.map(p => { const x = r.periods[p.key]; return x.avgExcessPct == null ? `n/a (${x.trades})` : `${x.avgExcessPct >= 0 ? '+' : ''}${x.avgExcessPct} (${x.trades})` }).join(' | ')}`)
 }
+// ---- After the ex-date: does the stock lag? ----
+// Bought through the ex-date session and held 20 sessions, against the average stock. No costs: this is
+// a check on what a holder sees, not a trade.
+const after: Record<string, unknown> = {}
+const exDates = new Map<string, { symbol: string; exDate: number; kind: 'split' | 'bonus' }>()
+for (const a of store.prepare('select symbol, ex_date, purpose from corporate_actions_raw where ex_date >= ?').all(START) as Array<{ symbol: string; ex_date: number; purpose: string }>) {
+  const parsed = parseCorporateAction(a.purpose)
+  const kind = parsed.split && parsed.split.to < parsed.split.from ? 'split' : parsed.bonus ? 'bonus' : null
+  if (kind) exDates.set(`${a.symbol}|${a.ex_date}|${kind}`, { symbol: a.symbol, exDate: a.ex_date, kind })
+}
+console.log(`\nAfter the ex-date, before costs, against the average stock\n${''.padEnd(54)}${'trades'.padStart(6)}${'win%'.padStart(7)}${'avg%'.padStart(8)}${'median%'.padStart(9)}${'worst%'.padStart(8)}${'excess%'.padStart(9)}${'t'.padStart(7)}${'days'.padStart(6)}   excess by period (trades)`)
+for (const kind of ['split', 'bonus'] as const) for (const top of [500, 750]) for (const hold of [10, 20, 40]) {
+  const rows: Trade[] = []
+  for (const a of exDates.values()) {
+    const s = market.stocks.get(a.symbol)
+    if (a.kind !== kind || !s) continue
+    const x = lastAtOrBefore(s.dates, a.exDate - 1)
+    if (x < 30 || rank(a.symbol, s.dates[x]) > top) continue
+    const t = trade(s, x + 1, x + hold, 0, false)
+    if (t) rows.push({ ...t, excess: t.excess - 0.0045 })   // trade() takes costs off the average stock; put them back
+  }
+  const key = `${kind}: ${hold} sessions from the ex-date, top ${top}`
+  const r: any = withPeriods(rows)
+  after[key] = r
+  console.log(`${key.padEnd(54)}${String(r.trades).padStart(6)}${String(r.winRatePct ?? '').padStart(7)}${String(r.avgReturnPct ?? '').padStart(8)}${String(r.medianReturnPct ?? '').padStart(9)}${String(r.worstPct ?? '').padStart(8)}${String(r.avgExcessPct ?? '').padStart(9)}${String(r.tStat ?? '').padStart(7)}${String(r.avgSessions ?? '').padStart(6)}   ${PERIODS.map(p => { const x = r.periods[p.key]; return x.avgExcessPct == null ? `n/a (${x.trades})` : `${x.avgExcessPct >= 0 ? '+' : ''}${x.avgExcessPct} (${x.trades})` }).join(' | ')}`)
+}
+out.afterExDate = { note: 'Bought through the ex-date session, held the number of sessions shown. Before costs. Excess is against the average top-500 stock.', ...after }
+
 mkdirSync('research/results', { recursive: true })
 writeFileSync('research/results/splits.json', JSON.stringify(out, null, 2))
 console.log('\nSaved research/results/splits.json')
