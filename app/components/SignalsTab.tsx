@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { isWeak, strengthLabel } from '@/lib/positional/core'
 import type { PositionalRow, PositionalView } from '@/lib/positional/service'
+import type { SplitRow, SplitView } from '@/lib/positional/split-service'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
 import { sharesFor, type DayTradeSignal, type DayTradeState } from '@/lib/signals/core'
 import { useUIStore } from '@/lib/stores/ui-store'
@@ -106,6 +107,26 @@ function ResultsBuyCard({ r, amount, hold }: { r: PositionalRow; amount: number;
   )
 }
 
+function SplitBuyCard({ r, amount }: { r: SplitRow; amount: number }) {
+  const price = r.lastPrice ?? r.signalClose
+  const shares = sharesFor(amount, price)
+  return (
+    <div style={{ ...card, marginBottom: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+        <span style={badge(BUY)}>PAPER BUY</span>
+        <span style={{ fontWeight: 700, fontSize: '1.2em' }}>{r.symbol}</span>
+      </div>
+      <div style={{ ...muted, marginBottom: 8 }}>
+        Share split on {day(r.exDate)}: {r.split}. Listed on {day(r.signalDate)}.
+      </div>
+      <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
+      <Line label="Stop">None in the tested rule</Line>
+      <Line label="Exit">Sell in the last half hour of <b>{day(r.sellOn)}</b>, the last session before the split</Line>
+      <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
+    </div>
+  )
+}
+
 export default function SignalsTab() {
   const setActiveTab = useUIStore(s => s.setActiveTab)
   const [dayView, setDayView] = useState<DayTradeView | null>(null)
@@ -113,6 +134,7 @@ export default function SignalsTab() {
   const [error, setError] = useState<string | null>(null)
   const [amount, setAmount] = useState(50000)
   const [positional, setPositional] = useState<PositionalView | null | undefined>(undefined)
+  const [splits, setSplits] = useState<SplitView | null | undefined>(undefined)
   const [positionAmount, setPositionAmount] = useState(25000)
 
   useEffect(() => {
@@ -136,7 +158,7 @@ export default function SignalsTab() {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Could not load the signals')
       setDayView(json.day)
-      if (!part) { setMonthly(json.monthly); setPositional(json.positional) }
+      if (!part) { setMonthly(json.monthly); setPositional(json.positional); setSplits(json.splits) }
       setError(null)
     } catch (e: any) { setError(e.message) }
   }, [])
@@ -265,6 +287,85 @@ export default function SignalsTab() {
             <b>Exit:</b> spread through session {positional.holdSessions}. The paper book uses that day&apos;s average price.{' '}
             {positional.open.some(r => isWeak(r.strengthRank)) && 'Positions marked weak were opened before the strength check was added. The rule would not buy them now. '}
             {positional.tally.trades > 0 && ` Closed so far: ${positional.tally.trades}, ${positional.tally.wins} made money, average ${positional.tally.avgNetPct >= 0 ? '+' : ''}${positional.tally.avgNetPct.toFixed(1)}% after costs.`}
+          </p>
+        </div>
+      )}
+
+      {splits && (
+        <div style={card}>
+          <h3 style={{ margin: 0 }}>Split buys: hold about two weeks (new, on paper)</h3>
+          <p style={{ ...muted, margin: '6px 0 12px' }}>
+            Evidence: early. When a company&apos;s share split date is listed, the stock has tended to rise until the split. Bought the next
+            session and sold the day before the split, it beat the average stock by about 2.1% in about 8 sessions, after costs (231 splits
+            among the 750 most traded stocks, 2011 to 2026, better in all three periods tested). Just over half the trades made money and the
+            worst lost 19%. That is about 15 trades a year, which is a small sample, so this is tracked on paper before it is trusted. After a
+            split the stock has tended to lag, so the rule sells before it. Signals are as of {splits.asOf}.
+          </p>
+
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Buy next session</div>
+          {splits.fresh.length === 0
+            ? <p style={{ marginTop: 0 }}>No new split listed at the last close. They come about once or twice a month.</p>
+            : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 12 }}>
+                {splits.fresh.map(r => <SplitBuyCard key={r.symbol + r.signalDate} r={r} amount={positionAmount} />)}
+              </div>
+            )}
+
+          <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Open paper positions</div>
+          {splits.open.length === 0
+            ? <p style={{ marginTop: 0 }}>None open.</p>
+            : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Stock', 'Split', 'Bought', 'At', 'Now', 'Move', 'Split date', 'Sell on'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {splits.open.map(r => (
+                      <tr key={r.symbol + r.signalDate}>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={td}>{r.split}</td>
+                        <td style={td}>{r.entryDate && day(r.entryDate)}</td>
+                        <td style={td}>{rupees(r.entryPrice)}</td>
+                        <td style={td}>{rupees(r.lastPrice)}</td>
+                        <td style={{ ...td, fontWeight: 600, color: r.movePct == null ? undefined : r.movePct > 0 ? '#34d399' : r.movePct < 0 ? '#f87171' : undefined }}>
+                          {r.movePct == null ? '' : `${r.movePct >= 0 ? '+' : ''}${r.movePct.toFixed(1)}%`}
+                        </td>
+                        <td style={td}>{day(r.exDate)}</td>
+                        <td style={td}>{r.sellOn <= today ? <span style={badge(SELL)}>SELL today, last half hour</span> : day(r.sellOn)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          {splits.closed.length > 0 && (
+            <>
+              <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Closed paper trades</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Stock', 'Bought', 'At', 'Sold', 'At', 'After costs'].map((h, i) => <th key={h + i} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {splits.closed.map(r => (
+                      <tr key={r.symbol + r.signalDate}>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={td}>{r.entryDate && day(r.entryDate)}</td>
+                        <td style={td}>{rupees(r.entryPrice)}</td>
+                        <td style={td}>{r.exitDate && day(r.exitDate)}</td>
+                        <td style={td}>{rupees(r.exitPrice)}</td>
+                        <td style={{ ...td, fontWeight: 600, color: r.netPct == null ? undefined : r.netPct > 0 ? '#34d399' : '#f87171' }}>
+                          {r.netPct == null ? '' : `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+          <p style={{ ...muted, marginBottom: 0 }}>
+            <b>Entry:</b> the session after the split date is listed, in the last half hour. <b>Stop:</b> none. <b>Exit:</b> the last half
+            hour of the last session before the split. The paper book uses closing prices and takes off 0.45% for costs. Uses the amount per stock set above.
+            {splits.tally.trades > 0 && ` Closed so far: ${splits.tally.trades}, ${splits.tally.wins} made money, average ${splits.tally.avgNetPct >= 0 ? '+' : ''}${splits.tally.avgNetPct.toFixed(1)}% after costs.`}
           </p>
         </div>
       )}

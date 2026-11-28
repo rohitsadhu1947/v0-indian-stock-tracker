@@ -15,8 +15,8 @@ import { liveQuotes } from '@/lib/portfolio/live'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
 import { averagePrice, HOLD_SESSIONS, UNIVERSE_SIZE, isWeak, netPct, resultsJump, roughDateAfter, sessionsHeld, SIGNAL, strengthLabel, strengthRank, yearReturn, type Bar } from './core'
 
-const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * 86400000).toISOString().slice(0, 10)
-const firstLine = (error: any) => String(error?.cause?.message ?? error?.message ?? error).split('\n')[0]
+export const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * 86400000).toISOString().slice(0, 10)
+export const firstLine = (error: any) => String(error?.cause?.message ?? error?.message ?? error).split('\n')[0]
 
 /** Store the results dates listed in a day's board-meeting file. A missing table is logged, never thrown. */
 export async function storeResultsDates(bm: string | null): Promise<number> {
@@ -35,14 +35,14 @@ export async function storeResultsDates(bm: string | null): Promise<number> {
 const exitPrice = (bar: { date: unknown; high: number; low: number; close: number; volume: number; turnover: number | null }, exitDate: string): number =>
   String(bar.date) === exitDate ? averagePrice(bar) : bar.close
 
-async function sessionsSince(from: string, to: string): Promise<string[]> {
+export async function sessionsSince(from: string, to: string): Promise<string[]> {
   const rows = await db.select({ date: dailyBars.date }).from(dailyBars)
     .where(and(eq(dailyBars.symbol, INDEX_INSTRUMENTS.NIFTY_50.barSymbol), gte(dailyBars.date, from), lte(dailyBars.date, to)))
     .orderBy(asc(dailyBars.date))
   return rows.map(r => String(r.date))
 }
 
-async function adminTelegram(): Promise<Array<{ token: string; chat: string }>> {
+export async function adminTelegram(): Promise<Array<{ token: string; chat: string }>> {
   const rows = await db
     .select({ token: userPreferences.telegramBotToken, chat: userPreferences.telegramChatId })
     .from(userPreferences).innerJoin(users, eq(users.id, userPreferences.userId))
@@ -73,7 +73,7 @@ export async function strengthRanks(asOf: string, universe: string[]): Promise<M
 
 /** Work out the strength of trades stored before the rule used it. Changes nothing else about them. */
 export async function backfillStrength(): Promise<Array<{ symbol: string; signalDate: string; status: string; rank: number | null }>> {
-  const rows = (await db.select().from(positionalTrades)).filter(r => (r.detail as Record<string, unknown>)?.strengthRank === undefined)
+  const rows = (await db.select().from(positionalTrades).where(eq(positionalTrades.signal, SIGNAL))).filter(r => (r.detail as Record<string, unknown>)?.strengthRank === undefined)
   const done: Array<{ symbol: string; signalDate: string; status: string; rank: number | null }> = []
   for (const date of [...new Set(rows.map(r => r.signalDate))].sort()) {
     const ranks = await strengthRanks(date, await liveUniverse(date, UNIVERSE_SIZE))
@@ -116,7 +116,7 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
       bars.set(r.symbol, [...(bars.get(r.symbol) ?? []), { date: String(r.date), close: r.close, turnover: r.turnover }])
     }
     // One trade per stock at a time: a second strong day in the same results week is not a second signal
-    const held = new Set((await db.select({ symbol: positionalTrades.symbol }).from(positionalTrades).where(inArray(positionalTrades.status, ['new', 'open']))).map(r => r.symbol))
+    const held = new Set((await db.select({ symbol: positionalTrades.symbol }).from(positionalTrades).where(and(eq(positionalTrades.signal, SIGNAL), inArray(positionalTrades.status, ['new', 'open'])))).map(r => r.symbol))
     const found: Array<{ symbol: string; detail: Record<string, unknown> }> = []
     for (const [symbol, list] of bars) {
       if (list[list.length - 1].date !== asOf || held.has(symbol)) continue
@@ -137,7 +137,7 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
     }
 
     // 2. Open yesterday's signals at the entry session's average price; close trades that have run 60 sessions
-    const live = await db.select().from(positionalTrades).where(inArray(positionalTrades.status, ['new', 'open']))
+    const live = await db.select().from(positionalTrades).where(and(eq(positionalTrades.signal, SIGNAL), inArray(positionalTrades.status, ['new', 'open'])))
     if (live.length) {
       const earliest = live.map(t => t.entryDate ?? t.signalDate).sort()[0]
       const sessions = await sessionsSince(earliest, asOf)
@@ -231,7 +231,7 @@ export interface PositionalView {
 export async function positionalView(client: BrokerClient | null): Promise<PositionalView | null> {
   try {
     const { latestDate } = await dataFreshness()
-    const rows = await db.select().from(positionalTrades).where(gt(positionalTrades.signalDate, addDays(latestDate ?? '2026-01-01', -400))).orderBy(desc(positionalTrades.signalDate), asc(positionalTrades.symbol))
+    const rows = await db.select().from(positionalTrades).where(and(eq(positionalTrades.signal, SIGNAL), gt(positionalTrades.signalDate, addDays(latestDate ?? '2026-01-01', -400)))).orderBy(desc(positionalTrades.signalDate), asc(positionalTrades.symbol))
     const live = rows.filter(r => r.status === 'new' || r.status === 'open')
     const quotes = live.length ? await liveQuotes([...new Set(live.map(r => r.symbol))], client) : null
     const earliest = live.filter(r => r.entryDate).map(r => r.entryDate!).sort()[0]
