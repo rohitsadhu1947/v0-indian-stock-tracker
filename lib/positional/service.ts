@@ -9,11 +9,11 @@ import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lte } from 'drizzle-or
 import type { BrokerClient } from '@/lib/broker'
 import logger from '@/lib/logger'
 import { parseBoardMeetings } from '@/lib/market-data/nse-parse'
-import { INDEX_INSTRUMENTS, PORTFOLIO_RULES } from '@/lib/portfolio/config'
+import { INDEX_INSTRUMENTS } from '@/lib/portfolio/config'
 import { dataFreshness, liveUniverse } from '@/lib/portfolio/data'
 import { liveQuotes } from '@/lib/portfolio/live'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
-import { averagePrice, HOLD_SESSIONS, isWeak, netPct, resultsJump, roughDateAfter, sessionsHeld, SIGNAL, strengthLabel, strengthRank, yearReturn, type Bar } from './core'
+import { averagePrice, HOLD_SESSIONS, UNIVERSE_SIZE, isWeak, netPct, resultsJump, roughDateAfter, sessionsHeld, SIGNAL, strengthLabel, strengthRank, yearReturn, type Bar } from './core'
 
 const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * 86400000).toISOString().slice(0, 10)
 const firstLine = (error: any) => String(error?.cause?.message ?? error?.message ?? error).split('\n')[0]
@@ -30,6 +30,10 @@ export async function storeResultsDates(bm: string | null): Promise<number> {
     return 0
   }
 }
+
+/** The day's average price when the bar is the exit session's own; otherwise its close. */
+const exitPrice = (bar: { date: unknown; high: number; low: number; close: number; volume: number; turnover: number | null }, exitDate: string): number =>
+  String(bar.date) === exitDate ? averagePrice(bar) : bar.close
 
 async function sessionsSince(from: string, to: string): Promise<string[]> {
   const rows = await db.select({ date: dailyBars.date }).from(dailyBars)
@@ -72,7 +76,7 @@ export async function backfillStrength(): Promise<Array<{ symbol: string; signal
   const rows = (await db.select().from(positionalTrades)).filter(r => (r.detail as Record<string, unknown>)?.strengthRank === undefined)
   const done: Array<{ symbol: string; signalDate: string; status: string; rank: number | null }> = []
   for (const date of [...new Set(rows.map(r => r.signalDate))].sort()) {
-    const ranks = await strengthRanks(date, await liveUniverse(date, PORTFOLIO_RULES.universeSize))
+    const ranks = await strengthRanks(date, await liveUniverse(date, UNIVERSE_SIZE))
     for (const r of rows.filter(x => x.signalDate === date)) {
       const rank = ranks.get(r.symbol) ?? null
       await db.update(positionalTrades).set({ detail: { ...(r.detail as Record<string, unknown>), strengthRank: rank } }).where(eq(positionalTrades.id, r.id))
@@ -97,7 +101,7 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
     run.asOf = asOf
 
     // 1. New signals at this close
-    const universe = await liveUniverse(asOf, PORTFOLIO_RULES.universeSize)
+    const universe = await liveUniverse(asOf, UNIVERSE_SIZE)
     const [barRows, resultRows] = await Promise.all([
       db.select({ symbol: dailyBars.symbol, date: dailyBars.date, close: dailyBars.close, turnover: dailyBars.turnover })
         .from(dailyBars).where(and(inArray(dailyBars.symbol, universe), gte(dailyBars.date, addDays(asOf, -50)), lte(dailyBars.date, asOf)))
@@ -146,19 +150,20 @@ export async function runPositionalWatch(opts: { asOf?: string; notify?: boolean
           if (!entryDate) continue
           const bar = priceOn.get(`${t.symbol}|${entryDate}`)
           await db.update(positionalTrades)
-            .set(bar ? { status: 'open', entryDate, entryPrice: averagePrice(bar) } : { status: 'skipped', entryDate })
+            // Bought in the last half hour: NSE's close is the average price of that half hour
+            .set(bar ? { status: 'open', entryDate, entryPrice: bar.close } : { status: 'skipped', entryDate })
             .where(eq(positionalTrades.id, t.id))
           if (bar) run.opened++
           continue
         }
         const held = sessionsHeld(sessions, t.entryDate!, asOf)
         if (held >= HOLD_SESSIONS) {
-          // The exit is the close of the 60th session; a stock with no bar that day leaves at its last close
+          // Sold through the 60th session at its average price; a stock with no bar that day leaves at its last close
           const exitDate = sessions.filter(d => d >= t.entryDate!)[HOLD_SESSIONS - 1]
           const bar = priceOn.get(`${t.symbol}|${exitDate}`) ?? prices.filter(p => p.symbol === t.symbol && String(p.date) <= exitDate).sort((a, b) => String(a.date).localeCompare(String(b.date))).pop()
           if (!bar) continue
           await db.update(positionalTrades)
-            .set({ status: 'closed', exitDate, exitPrice: bar.close, netPct: netPct(t.entryPrice!, bar.close) })
+            .set({ status: 'closed', exitDate, exitPrice: exitPrice(bar, exitDate), netPct: netPct(t.entryPrice!, exitPrice(bar, exitDate)) })
             .where(eq(positionalTrades.id, t.id))
           run.closed.push(t.symbol)
         } else if (held === HOLD_SESSIONS - 1) {
@@ -187,13 +192,13 @@ async function notify(run: PositionalRun, found: Array<{ symbol: string; detail:
     lines.push(
       `<b>BUY ${safe(symbol)}</b> (jumped on results)`,
       `Why: up ${d.jumpPct}% over two sessions around results, on ${d.turnoverRatio} times its usual turnover.`,
-      `12-month strength: ${strengthLabel(d.strengthRank)} of the 500.`,
-      `Entry: next session, spread through the day. Last close ${rupees(d.signalClose)}.`,
-      `Exit: sell after ${HOLD_SESSIONS} trading sessions, about ${roughDateAfter(run.asOf!, HOLD_SESSIONS)}.`,
+      `12-month strength: ${strengthLabel(d.strengthRank)} of the ${UNIVERSE_SIZE} most traded stocks.`,
+      `Entry: next session, in the last half hour (after 3 pm). Last close ${rupees(d.signalClose)}.`,
+      `Exit: sell through the day on session ${HOLD_SESSIONS}, about ${roughDateAfter(run.asOf!, HOLD_SESSIONS)}.`,
       'Stop: none in the tested rule. It can fall a long way before the exit date.', '')
   }
   if (run.skippedWeak.length) lines.push(`Not bought: ${run.skippedWeak.map(safe).join(', ')}. They jumped on results but are in the bottom fifth on 12-month strength, where the rule earned nothing in testing.`, '')
-  for (const symbol of run.dueTomorrow) lines.push(`<b>SELL ${safe(symbol)} at the next session's close</b>: its ${HOLD_SESSIONS} sessions are up.`, '')
+  for (const symbol of run.dueTomorrow) lines.push(`<b>SELL ${safe(symbol)} next session, spread through the day</b>: its ${HOLD_SESSIONS} sessions are up.`, '')
   lines.push('Evidence is moderate: the rule beat the index in backtests, with deep falls. The app places no orders.')
   for (const a of await adminTelegram()) await sendTelegramMessage(a.token, a.chat, lines.join('\n'))
 }
@@ -201,7 +206,7 @@ async function notify(run: PositionalRun, found: Array<{ symbol: string; detail:
 export interface PositionalRow {
   symbol: string; status: string; signalDate: string
   jumpPct: number | null; turnoverRatio: number | null; signalClose: number | null
-  /** 12-month strength among the 500 at the signal: 0 weakest, 1 strongest. Null when not known. */
+  /** 12-month strength among the universe at the signal: 0 weakest, 1 strongest. Null when not known. */
   strengthRank: number | null
   entryDate: string | null; entryPrice: number | null
   /** While open: the latest price, the move so far before costs, sessions held and the estimated exit date. */
