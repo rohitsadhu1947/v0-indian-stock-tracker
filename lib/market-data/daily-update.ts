@@ -14,6 +14,7 @@ import { securityKind } from './classify'
 import { parseCorporateAction } from './corporate-actions'
 import { indexBarSymbol } from './indices'
 import { storeResultsDates } from '@/lib/positional/service'
+import { storeSplitListings } from '@/lib/positional/split-service'
 import { deliveryUrl, extractPrBundle, fetchArchiveFile, prBundleUrl, SYMBOL_CHANGES_URL } from './nse-archive'
 import { continuity, parseCorporateActionsFile, parseDeliveryFile, parsePriceFile, parseSymbolChanges } from './nse-parse'
 
@@ -264,6 +265,8 @@ async function loadDay(
     }
   })
 
+  // Splits listed in the same bundle; used by the split paper signal. Never fails the price update
+  await storeSplitListings(bundle.bc, date)
   summary.checks = await qualityChecks(date)
   return summary
 }
