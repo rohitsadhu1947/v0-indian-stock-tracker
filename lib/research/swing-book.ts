@@ -22,6 +22,10 @@ export interface Candidate {
   turnover: number
   /** Rise over the two sessions before the signal, when the rule is about a jump. */
   jump?: number
+  /** Sessions to hold this trade, counting the entry session as 1. Left out: the book's `maxSessions`. */
+  holdSessions?: number
+  /** Cash received per share while held (a dividend after tax), in the series' own price terms. Added at the exit. */
+  cashPerShare?: number
 }
 
 /** Every time `signal` fires for a stock in the universe, keyed by the session to buy on. */
@@ -84,7 +88,7 @@ export interface BookOptions {
   costs?: CostConfig
 }
 
-interface Position { symbol: string; qty: number; cost: number; entryIndex: number; stop: number; target: number; peak: number; next: number }
+interface Position { symbol: string; qty: number; cost: number; entryIndex: number; stop: number; target: number; peak: number; next: number; hold: number; cash: number }
 
 export interface BookResult {
   curve: Curve
@@ -130,7 +134,7 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
       positions.set(c.symbol, {
         symbol: c.symbol, qty, cost: qty * buy + fee, entryIndex: c.entryIndex,
         stop: options.stopPct == null ? 0 : raw * (1 - options.stopPct / 100),
-        target: options.targetPct == null ? Infinity : raw * (1 + options.targetPct / 100), peak: raw, next: c.entryIndex,
+        target: options.targetPct == null ? Infinity : raw * (1 + options.targetPct / 100), peak: raw, next: c.entryIndex, hold: c.holdSessions ?? options.maxSessions, cash: c.cashPerShare ?? 0,
       })
     }
 
@@ -155,7 +159,7 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
         else if (live && s.low[j] <= stop) { exit = stop; reason = 'stop' }
         else if (live && j > p.entryIndex && s.open[j] >= p.target) { exit = s.open[j]; reason = 'target' }
         else if (live && s.high[j] >= p.target) { exit = p.target; reason = 'target' }
-        else if (j >= p.entryIndex + options.maxSessions - 1) exit = s.close[j]
+        else if (j >= p.entryIndex + p.hold - 1) exit = s.close[j]
         if (exit == null && s.close[j] > p.peak) p.peak = s.close[j]
       }
       if (exit == null) {
@@ -165,12 +169,13 @@ export function simulateSwingBook(market: Market, candidates: Map<number, Candid
       const sell = exit * (1 - costs.slippagePercent)
       const fee = calculateTradeCosts(sell, sell, p.qty, costs).exitCosts
       const proceeds = p.qty * sell - fee
-      cash += proceeds
+      // A dividend is cash already taxed, so it stays out of the gains ledger
+      cash += proceeds + p.qty * p.cash
       charges += fee
       ledger.sell(p.symbol, p.qty, proceeds, date)
       trades++
-      if (proceeds > p.cost) wins++
-      options.onTrade?.({ symbol: p.symbol, entryDate: s.dates[p.entryIndex], exitDate: date, retPct: (proceeds / p.cost - 1) * 100, sessions: Math.min(j, s.dates.length - 1) - p.entryIndex + 1, reason })
+      if (proceeds + p.qty * p.cash > p.cost) wins++
+      options.onTrade?.({ symbol: p.symbol, entryDate: s.dates[p.entryIndex], exitDate: date, retPct: ((proceeds + p.qty * p.cash) / p.cost - 1) * 100, sessions: Math.min(j, s.dates.length - 1) - p.entryIndex + 1, reason })
       positions.delete(p.symbol)
     }
 
