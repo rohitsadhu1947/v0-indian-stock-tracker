@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { isWeak, strengthLabel } from '@/lib/positional/core'
 import type { PositionalRow, PositionalView } from '@/lib/positional/service'
 import type { SplitRow, SplitView } from '@/lib/positional/split-service'
+import type { DividendRow, DividendView } from '@/lib/positional/dividend-service'
 import type { Caution } from '@/lib/positional/caution'
 import CautionNote from './CautionNote'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
@@ -132,6 +133,26 @@ function SplitBuyCard({ r, amount }: { r: SplitRow; amount: number }) {
   )
 }
 
+function DividendBuyCard({ r, amount }: { r: DividendRow; amount: number }) {
+  const price = r.lastPrice ?? r.signalClose
+  const shares = sharesFor(amount, price)
+  return (
+    <div style={{ ...card, marginBottom: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+        <span style={badge(BUY)}>PAPER BUY</span>
+        <span style={{ fontWeight: 700, fontSize: '1.2em' }}>{r.symbol}</span>
+      </div>
+      <div style={{ ...muted, marginBottom: 8 }}>
+        Dividend of {rupees(r.amount)} a share on {day(r.exDate)}, {r.yieldPct}% of the price. Listed on {day(r.signalDate)}.
+      </div>
+      <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
+      <Line label="Stop">None in the tested rule</Line>
+      <Line label="Exit">Hold through the dividend date. Sell in the last half hour about <b>{day(r.sellAbout)}</b>, five sessions after it</Line>
+      <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
+    </div>
+  )
+}
+
 export default function SignalsTab() {
   const setActiveTab = useUIStore(s => s.setActiveTab)
   const [dayView, setDayView] = useState<DayTradeView | null>(null)
@@ -140,6 +161,7 @@ export default function SignalsTab() {
   const [amount, setAmount] = useState(50000)
   const [positional, setPositional] = useState<PositionalView | null | undefined>(undefined)
   const [splits, setSplits] = useState<SplitView | null | undefined>(undefined)
+  const [dividends, setDividends] = useState<DividendView | null | undefined>(undefined)
   const [cautions, setCautions] = useState<Record<string, Caution>>({})
   const [positionAmount, setPositionAmount] = useState(DEFAULT_CAPITAL / RESULTS_SLOTS)
   const [capital, setCapital] = useState(DEFAULT_CAPITAL)
@@ -172,7 +194,7 @@ export default function SignalsTab() {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Could not load the signals')
       setDayView(json.day)
-      if (!part) { setMonthly(json.monthly); setPositional(json.positional); setSplits(json.splits); setCautions(json.cautions ?? {}) }
+      if (!part) { setMonthly(json.monthly); setPositional(json.positional); setSplits(json.splits); setDividends(json.dividends); setCautions(json.cautions ?? {}) }
       setError(null)
     } catch (e: any) { setError(e.message) }
   }, [])
@@ -188,7 +210,7 @@ export default function SignalsTab() {
   }, [active, load])
 
   const buys = monthly?.orders.filter(o => o.side === 'BUY') ?? [], sells = monthly?.orders.filter(o => o.side === 'SELL') ?? []
-  const actions = dayView ? nextActions({ today, dayTrades: dayView.signals, positional, splits, monthly, perStock: positionAmount, perDayTrade: amount }) : []
+  const actions = dayView ? nextActions({ today, dayTrades: dayView.signals, positional, splits, dividends, monthly, perStock: positionAmount, perDayTrade: amount }) : []
   const loadingRest = positional === undefined || monthly === undefined
   return (
     <div>
@@ -439,6 +461,89 @@ export default function SignalsTab() {
             <b>Entry:</b> the session after the split date is listed, in the last half hour. <b>Stop:</b> none. <b>Exit:</b> the last half
             hour of the last session before the split. The paper book uses closing prices and takes off 0.45% for costs. Uses the amount per stock set above.
             {splits.tally.trades > 0 && ` Closed so far: ${splits.tally.trades}, ${splits.tally.wins} made money, average ${splits.tally.avgNetPct >= 0 ? '+' : ''}${splits.tally.avgNetPct.toFixed(1)}% after costs.`}
+          </p>
+        </div>
+      )}
+
+      {dividends && (
+        <div style={card}>
+          <h3 style={{ margin: 0 }}>Dividend buys: hold about three weeks (new, on paper)</h3>
+          <p style={{ ...muted, margin: '6px 0 12px' }}>
+            Evidence: moderate, and new. When a dividend worth 2% or more of the share price is listed, the stock has tended to rise into
+            the dividend date. Bought the next session and sold five sessions after the date, with the dividend kept after 31.2% tax, it
+            beat the average stock by 3.7% for dividends of 2% to 4% and by 5.2% for bigger ones (1,341 trades among the 750 most traded
+            stocks, 2011 to 2026, after costs). The bigger the dividend, the bigger the gain. Run as a book it made 17% to 22% a year
+            with a fall of 33%. Expect less than that now: NSE used to list dividends about 12 sessions ahead and now lists them about 3
+            ahead, and with that little notice the gain in testing was 1.5% to 2.3%. So this is tracked on paper first. Most signals
+            come in July to September. Signals are as of {dividends.asOf}.
+          </p>
+
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Buy next session</div>
+          {dividends.fresh.length === 0
+            ? <p style={{ marginTop: 0 }}>No big dividend listed at the last close.</p>
+            : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 12 }}>
+                {dividends.fresh.map(r => <DividendBuyCard key={r.symbol + r.signalDate} r={r} amount={positionAmount} />)}
+              </div>
+            )}
+
+          <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Open paper positions</div>
+          {dividends.open.length === 0
+            ? <p style={{ marginTop: 0 }}>None open.</p>
+            : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Now', 'Move', 'Dividend date', 'Sell about'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {dividends.open.map(r => (
+                      <tr key={r.symbol + r.signalDate}>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={td}>{rupees(r.amount)} ({r.yieldPct}%)</td>
+                        <td style={td}>{r.entryDate && day(r.entryDate)}</td>
+                        <td style={td}>{rupees(r.entryPrice)}</td>
+                        <td style={td}>{rupees(r.lastPrice)}</td>
+                        <td style={{ ...td, fontWeight: 600, color: r.movePct == null ? undefined : r.movePct > 0 ? '#34d399' : r.movePct < 0 ? '#f87171' : undefined }}>
+                          {r.movePct == null ? '' : `${r.movePct >= 0 ? '+' : ''}${r.movePct.toFixed(1)}%`}
+                        </td>
+                        <td style={td}>{day(r.exDate)}</td>
+                        <td style={td}>{r.sellNext ? <span style={badge(SELL)}>SELL next session</span> : day(r.sellAbout)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          {dividends.closed.length > 0 && (
+            <>
+              <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Closed paper trades</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Sold', 'At', 'With the dividend, after costs'].map((h, i) => <th key={h + i} style={th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {dividends.closed.map(r => (
+                      <tr key={r.symbol + r.signalDate}>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={td}>{rupees(r.amount)} ({r.yieldPct}%)</td>
+                        <td style={td}>{r.entryDate && day(r.entryDate)}</td>
+                        <td style={td}>{rupees(r.entryPrice)}</td>
+                        <td style={td}>{r.exitDate && day(r.exitDate)}</td>
+                        <td style={td}>{rupees(r.exitPrice)}</td>
+                        <td style={{ ...td, fontWeight: 600, color: r.netPct == null ? undefined : r.netPct > 0 ? '#34d399' : '#f87171' }}>
+                          {r.netPct == null ? '' : `${r.netPct >= 0 ? '+' : ''}${r.netPct.toFixed(1)}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+          <p style={{ ...muted, marginBottom: 0 }}>
+            <b>Entry:</b> the session after the dividend is listed, in the last half hour. <b>Stop:</b> none. <b>Exit:</b> the last half hour
+            of the sixth session from the dividend date. The price falls by about the dividend on that date, so the &quot;Move&quot; column
+            looks worse than the trade is until the dividend is counted. The paper book adds the dividend after 31.2% tax and takes off 0.45% for costs.
+            {dividends.tally.trades > 0 && ` Closed so far: ${dividends.tally.trades}, ${dividends.tally.wins} made money, average ${dividends.tally.avgNetPct >= 0 ? '+' : ''}${dividends.tally.avgNetPct.toFixed(1)}% after costs.`}
           </p>
         </div>
       )}

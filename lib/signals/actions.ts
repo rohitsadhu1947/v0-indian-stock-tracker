@@ -7,6 +7,7 @@
  */
 import type { PositionalView } from '@/lib/positional/service'
 import type { SplitView } from '@/lib/positional/split-service'
+import type { DividendView } from '@/lib/positional/dividend-service'
 import { sharesFor, type DayTradeSignal } from './core'
 import type { MonthlyView } from './service'
 
@@ -52,6 +53,7 @@ export function nextActions(input: {
   dayTrades: readonly DayTradeSignal[]
   positional: PositionalView | null | undefined
   splits: SplitView | null | undefined
+  dividends?: DividendView | null
   monthly: MonthlyView | null | undefined
   /** Rupees for one results buy or split buy. */
   perStock: number
@@ -117,6 +119,26 @@ export function nextActions(input: {
         key: `split-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Split buy', paper: true, optional: false,
         when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price', stop: null, stopNote: 'None in the tested rule',
         target: 'None', exit: `Sell ${shortDay(r.sellOn)}, after 3 pm`, why: `Share split on ${shortDay(r.exDate)}: ${r.split}`,
+      })
+    }
+  }
+
+  if (input.dividends) {
+    for (const r of input.dividends.open) {
+      if (!r.sellNext) continue
+      out.push({
+        key: `dividend-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
+        when: 'Next session, after 3 pm', shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
+        why: `Five sessions have passed since its dividend date, ${shortDay(r.exDate)}`,
+      })
+    }
+    for (const r of input.dividends.fresh) {
+      const price = r.lastPrice ?? r.signalClose
+      out.push({
+        key: `dividend-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
+        when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price', stop: null, stopNote: 'None in the tested rule',
+        target: 'None', exit: `Hold through ${shortDay(r.exDate)} for the dividend. Sell about ${shortDay(r.sellAbout)}, after 3 pm`,
+        why: `Dividend of Rs ${r.amount} a share, ${r.yieldPct}% of the price`,
       })
     }
   }
