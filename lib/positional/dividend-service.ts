@@ -1,8 +1,8 @@
 /**
  * The big dividend paper tracker. Each evening it reads the dividends NSE
  * lists, opens a paper trade near the next session's close when the dividend
- * is 2% or more of the price, and closes it five sessions after the ex-date.
- * No orders are placed.
+ * is 2% or more of the price, and closes it near the close of the last
+ * session before the ex-date. No orders are placed.
  */
 import { db } from '@/db'
 import { dailyBars, positionalTrades } from '@/db/schema'
@@ -13,9 +13,10 @@ import { parseCorporateActionsFile } from '@/lib/market-data/nse-parse'
 import { dataFreshness, liveUniverse } from '@/lib/portfolio/data'
 import { liveQuotes } from '@/lib/portfolio/live'
 import { sendTelegramMessage } from '@/lib/telegram-alerts'
-import { roughDateAfter } from './core'
-import { DIVIDEND_SIGNAL, DIVIDEND_UNIVERSE, MIN_DIVIDEND_YIELD, SESSIONS_FROM_EX, enoughNotice, dividendExitDate, dividendListings, dividendNetPct, dividendYield, isBigDividend, sessionsFromEx } from './dividends'
+import { netPct } from './core'
+import { DIVIDEND_SIGNAL, DIVIDEND_UNIVERSE, MIN_DIVIDEND_YIELD, dividendListings, dividendYield, isBigDividend } from './dividends'
 import { addDays, adminTelegram, firstLine, sessionsSince } from './service'
+import { enoughTime, isSellDay, nextWeekday, weekdayBefore } from './splits'
 
 interface DividendDetail { exDate: string; amount: number; yieldPct: number | null; purposes: string[]; signalClose: number | null; reason?: string }
 const detailOf = (row: { detail: unknown }) => (row.detail ?? {}) as DividendDetail
@@ -48,7 +49,7 @@ export async function storeDividendListings(bc: string | null, date: string, opt
       const reason = opts.seed ? 'listed before tracking began'
         : y == null ? 'no price on the day it was listed'
         : !isBigDividend(y) ? `dividend under ${MIN_DIVIDEND_YIELD * 100}% of the price`
-        : !enoughNotice(date, l.exDate) ? 'ex-date too close to trade' : undefined
+        : !enoughTime(date, l.exDate) ? 'ex-date too close to trade' : undefined
       const detail: DividendDetail = { exDate: l.exDate, amount: l.amount, yieldPct: y == null ? null : round2(y * 100), purposes: l.purposes, signalClose: close, ...(reason ? { reason } : {}) }
       return { signal: DIVIDEND_SIGNAL, symbol: l.symbol, signalDate: date, status: reason ? 'skipped' : 'new', detail }
     })
@@ -88,24 +89,28 @@ export async function runDividendWatch(opts: { asOf?: string; notify?: boolean }
         const entryDate = sessions.find(s => s > t.signalDate)
         if (!entryDate) continue
         const close = closeOn.get(`${t.symbol}|${entryDate}`)
-        // The buy must come before the ex-date, or there is no dividend to collect
-        const tooLate = entryDate >= d.exDate
+        // A holiday can leave no session to sell on after the buy
+        const noTime = nextWeekday(entryDate) >= d.exDate
         await db.update(positionalTrades)
-          .set(close && !tooLate ? { status: 'open', entryDate, entryPrice: close } : { status: 'skipped', entryDate, detail: { ...d, reason: tooLate ? 'ex-date too close to trade' : 'no price on the entry day' } })
+          .set(close && !noTime ? { status: 'open', entryDate, entryPrice: close } : { status: 'skipped', entryDate, detail: { ...d, reason: noTime ? 'ex-date too close to trade' : 'no price on the entry day' } })
           .where(eq(positionalTrades.id, t.id))
-        if (close && !tooLate) run.opened++
-        continue
+        if (close && !noTime) run.opened++
+        if (!close || noTime || entryDate !== asOf) continue
+        t.status = 'open'; t.entryDate = entryDate; t.entryPrice = close
       }
-      const exitDate = dividendExitDate(sessions, d.exDate)
-      if (exitDate) {
-        // Both closes are read now, so a later price adjustment cannot distort the gain
-        const entryClose = closeOn.get(`${t.symbol}|${t.entryDate}`)
-        const exitClose = closeOn.get(`${t.symbol}|${exitDate}`) ?? prices.filter(p => p.symbol === t.symbol && String(p.date) <= exitDate).sort((a, b) => String(a.date).localeCompare(String(b.date))).pop()?.close
-        if (!entryClose || !exitClose || !t.entryPrice) continue
-        const exitPrice = t.entryPrice * exitClose / entryClose
-        await db.update(positionalTrades).set({ status: 'closed', exitDate, exitPrice, netPct: dividendNetPct(t.entryPrice, exitPrice, d.amount) }).where(eq(positionalTrades.id, t.id))
+      if (asOf >= d.exDate || isSellDay(asOf, d.exDate)) {
+        // Sold at the close of the last session before the ex-date. Both closes are read now: a dividend this
+        // large is taken out of the earlier prices on the ex-date, and reading both together keeps the gain right.
+        const exitDate = sessions.filter(s => s < d.exDate && s >= t.entryDate!).pop()
+        const entryClose = closeOn.get(`${t.symbol}|${t.entryDate}`), exitClose = exitDate ? closeOn.get(`${t.symbol}|${exitDate}`) : undefined
+        if (!exitDate || !entryClose || !exitClose || exitDate === t.entryDate) {
+          if (asOf >= d.exDate) await db.update(positionalTrades).set({ status: 'skipped', detail: { ...d, reason: 'no price to sell at before the ex-date' } }).where(eq(positionalTrades.id, t.id))
+          continue
+        }
+        const entryPrice = t.entryPrice ?? entryClose, exitPrice = entryPrice * exitClose / entryClose
+        await db.update(positionalTrades).set({ status: 'closed', exitDate, exitPrice, netPct: netPct(entryPrice, exitPrice) }).where(eq(positionalTrades.id, t.id))
         run.closed.push(t.symbol)
-      } else if (sessionsFromEx(sessions, d.exDate, asOf) === SESSIONS_FROM_EX - 1) {
+      } else if (isSellDay(nextWeekday(asOf), d.exDate)) {
         run.sellTomorrow.push(t.symbol)
       }
     }
@@ -129,11 +134,11 @@ async function notify(run: DividendRun, fresh: Array<{ symbol: string } & Divide
       `<b>PAPER BUY ${safe(f.symbol)}</b> (big dividend coming)`,
       `Why: a dividend of ${rupees(f.amount)} a share was listed today, ${f.yieldPct}% of the price. Ex-date ${f.exDate}.`,
       `Entry: next session, in the last half hour (after 3 pm).${f.signalClose ? ` Last close ${rupees(f.signalClose)}.` : ''}`,
-      `Exit: hold through the ex-date to get the dividend. Sell in the last half hour about ${roughDateAfter(f.exDate, SESSIONS_FROM_EX - 1)}, five sessions after it.`,
+      `Exit: sell in the last half hour of ${weekdayBefore(f.exDate)}, the last session before the dividend date. You do not collect the dividend.`,
       'Stop: none in the tested rule.', '')
   }
-  for (const symbol of run.sellTomorrow) lines.push(`<b>SELL ${safe(symbol)} next session, in the last half hour</b>: five sessions have passed since its dividend date.`, '')
-  lines.push('This rule is new and on paper only. In testing, dividends of 2% or more beat the average stock by about 4% a trade after costs and tax. The app places no orders.')
+  for (const symbol of run.sellTomorrow) lines.push(`<b>SELL ${safe(symbol)} next session, in the last half hour</b>: its dividend date is the day after.`, '')
+  lines.push('This rule is new and on paper only. In testing it beat the average stock by about 1% a trade at the notice NSE gives now, and by 2% to 3% with more notice. The app places no orders.')
   for (const a of await adminTelegram()) await sendTelegramMessage(a.token, a.chat, lines.join('\n'))
 }
 
@@ -142,10 +147,8 @@ export interface DividendRow {
   exDate: string
   /** Rupees a share, and that as a percent of the price when it was listed. */
   amount: number; yieldPct: number | null; signalClose: number | null
-  /** About when to sell: five sessions after the ex-date. */
-  sellAbout: string
-  /** True when the next session is the one to sell on. */
-  sellNext: boolean
+  /** The day to sell: the last weekday before the ex-date. */
+  sellOn: string
   entryDate: string | null; entryPrice: number | null
   lastPrice: number | null; movePct: number | null
   exitDate: string | null; exitPrice: number | null; netPct: number | null
@@ -169,15 +172,11 @@ export async function dividendView(client: BrokerClient | null): Promise<Dividen
       .orderBy(desc(positionalTrades.signalDate), asc(positionalTrades.symbol))
     const live = rows.filter(r => r.status !== 'closed')
     const quotes = live.length ? await liveQuotes([...new Set(live.map(r => r.symbol))], client) : null
-    const earliest = live.map(r => r.signalDate).sort()[0]
-    const sessions = earliest && latestDate ? await sessionsSince(earliest, latestDate) : []
     const row = (r: typeof rows[number]): DividendRow => {
       const d = detailOf(r), lastPrice = quotes?.quotes[r.symbol]?.price ?? null
       return {
         symbol: r.symbol, status: r.status, signalDate: r.signalDate, exDate: d.exDate, amount: d.amount, yieldPct: d.yieldPct, signalClose: d.signalClose ?? null,
-        sellAbout: roughDateAfter(d.exDate, SESSIONS_FROM_EX - 1),
-        sellNext: r.status === 'open' && !!latestDate && sessionsFromEx(sessions, d.exDate, latestDate) >= SESSIONS_FROM_EX - 1,
-        entryDate: r.entryDate, entryPrice: r.entryPrice, lastPrice,
+        sellOn: weekdayBefore(d.exDate), entryDate: r.entryDate, entryPrice: r.entryPrice, lastPrice,
         movePct: r.status === 'open' && r.entryPrice && lastPrice ? (lastPrice / r.entryPrice - 1) * 100 : null,
         exitDate: r.exitDate, exitPrice: r.exitPrice, netPct: r.netPct,
       }

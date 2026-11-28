@@ -147,7 +147,7 @@ function DividendBuyCard({ r, amount }: { r: DividendRow; amount: number }) {
       </div>
       <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
       <Line label="Stop">None in the tested rule</Line>
-      <Line label="Exit">Hold through the dividend date. Sell in the last half hour about <b>{day(r.sellAbout)}</b>, five sessions after it</Line>
+      <Line label="Exit">Sell in the last half hour of <b>{day(r.sellOn)}</b>, the last session before the dividend date</Line>
       <Line label="Shares">{shares > 0 ? <><b>{shares}</b> for {rupees(amount, 0)}</> : 'Set an amount above'}</Line>
     </div>
   )
@@ -467,15 +467,15 @@ export default function SignalsTab() {
 
       {dividends && (
         <div style={card}>
-          <h3 style={{ margin: 0 }}>Dividend buys: hold about three weeks (new, on paper)</h3>
+          <h3 style={{ margin: 0 }}>Dividend buys: hold a few days (new, on paper)</h3>
           <p style={{ ...muted, margin: '6px 0 12px' }}>
-            Evidence: moderate, and new. When a dividend worth 2% or more of the share price is listed, the stock has tended to rise into
-            the dividend date. Bought the next session and sold five sessions after the date, with the dividend kept after 31.2% tax, it
-            beat the average stock by 3.7% for dividends of 2% to 4% and by 5.2% for bigger ones (1,341 trades among the 750 most traded
-            stocks, 2011 to 2026, after costs). The bigger the dividend, the bigger the gain. Run as a book it made 17% to 22% a year
-            with a fall of 33%. Expect less than that now: NSE used to list dividends about 12 sessions ahead and now lists them about 3
-            ahead, and with that little notice the gain in testing was 1.5% to 2.3%. So this is tracked on paper first. Most signals
-            come in July to September. Signals are as of {dividends.asOf}.
+            Evidence: weak at today&apos;s notice. When a dividend worth 2% or more of the share price is listed, the stock has tended to
+            rise into the dividend date. Bought the next session and sold the day before the date, it beat the average stock by 2.0% for
+            dividends of 2% to 4% and by 3.3% for bigger ones (1,342 trades among the 750 most traded stocks, 2011 to 2026, after costs).
+            But the gain depends on the notice NSE gives. It used to list dividends about 12 sessions ahead and now lists them about 3
+            ahead. With 3 to 5 sessions of notice the gain was about 1%, and about 0.5% since 2023. Holding past the dividend date to
+            collect the dividend lost money after tax, so the rule sells before it. This is tracked on paper to see if it is worth acting on.
+            Most signals come in July to September. Signals are as of {dividends.asOf}.
           </p>
 
           <div style={{ fontWeight: 600, marginBottom: 6 }}>Buy next session</div>
@@ -493,7 +493,7 @@ export default function SignalsTab() {
             : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Now', 'Move', 'Dividend date', 'Sell about'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Now', 'Move', 'Dividend date', 'Sell on'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {dividends.open.map(r => (
                       <tr key={r.symbol + r.signalDate}>
@@ -506,7 +506,7 @@ export default function SignalsTab() {
                           {r.movePct == null ? '' : `${r.movePct >= 0 ? '+' : ''}${r.movePct.toFixed(1)}%`}
                         </td>
                         <td style={td}>{day(r.exDate)}</td>
-                        <td style={td}>{r.sellNext ? <span style={badge(SELL)}>SELL next session</span> : day(r.sellAbout)}</td>
+                        <td style={td}>{r.sellOn <= today ? <span style={badge(SELL)}>SELL today, last half hour</span> : day(r.sellOn)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -519,7 +519,7 @@ export default function SignalsTab() {
               <div style={{ fontWeight: 600, margin: '10px 0 6px' }}>Closed paper trades</div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Sold', 'At', 'With the dividend, after costs'].map((h, i) => <th key={h + i} style={th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{['Stock', 'Dividend', 'Bought', 'At', 'Sold', 'At', 'After costs'].map((h, i) => <th key={h + i} style={th}>{h}</th>)}</tr></thead>
                   <tbody>
                     {dividends.closed.map(r => (
                       <tr key={r.symbol + r.signalDate}>
@@ -541,8 +541,7 @@ export default function SignalsTab() {
           )}
           <p style={{ ...muted, marginBottom: 0 }}>
             <b>Entry:</b> the session after the dividend is listed, in the last half hour. <b>Stop:</b> none. <b>Exit:</b> the last half hour
-            of the sixth session from the dividend date. The price falls by about the dividend on that date, so the &quot;Move&quot; column
-            looks worse than the trade is until the dividend is counted. The paper book adds the dividend after 31.2% tax and takes off 0.45% for costs.
+            of the last session before the dividend date, so you do not collect the dividend. The paper book uses closing prices and takes off 0.45% for costs.
             {dividends.tally.trades > 0 && ` Closed so far: ${dividends.tally.trades}, ${dividends.tally.wins} made money, average ${dividends.tally.avgNetPct >= 0 ? '+' : ''}${dividends.tally.avgNetPct.toFixed(1)}% after costs.`}
           </p>
         </div>

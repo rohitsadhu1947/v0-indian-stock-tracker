@@ -7,13 +7,14 @@
  *
  *   npm run positional -- --split-days=60           first load split listings from the last 60 days of NSE files
  *   npm run positional -- --dividend-days=60        the same for dividend listings
+ *   npm run positional -- --dividend-reset          delete every dividend paper trade first (after a change to the rule)
  *
  *   npm run positional -- --strength                work out the 12-month strength of trades stored before the rule used it
  *
  * Replaying earlier sessions sends no Telegram messages.
  */
 import { db } from '@/db'
-import { dailyBars } from '@/db/schema'
+import { dailyBars, positionalTrades } from '@/db/schema'
 import { and, asc, eq, gte } from 'drizzle-orm'
 import { extractPrBundle, fetchArchiveFile, prBundleUrl } from '@/lib/market-data/nse-archive'
 import { INDEX_INSTRUMENTS } from '@/lib/portfolio/config'
@@ -21,6 +22,7 @@ import { strengthLabel, isWeak } from '@/lib/positional/core'
 import { backfillStrength, runPositionalWatch, storeResultsDates } from '@/lib/positional/service'
 import { runSplitWatch, storeSplitListings } from '@/lib/positional/split-service'
 import { runDividendWatch, storeDividendListings } from '@/lib/positional/dividend-service'
+import { DIVIDEND_SIGNAL } from '@/lib/positional/dividends'
 
 const arg = (name: string) => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=')[1]
 const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
@@ -59,6 +61,10 @@ async function main() {
     await new Promise(r => setTimeout(r, 250))
   }
 
+  if (process.argv.includes('--dividend-reset')) {
+    const gone = await db.delete(positionalTrades).where(eq(positionalTrades.signal, DIVIDEND_SIGNAL)).returning({ id: positionalTrades.id })
+    console.log(`Deleted ${gone.length} dividend paper rows.`)
+  }
   // Dividends: the same, file by file in date order
   const dividendDays = Number(arg('dividend-days') ?? 0)
   for (let n = dividendDays, first = true; n >= 0 && dividendDays > 0; n--) {

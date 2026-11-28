@@ -46,6 +46,12 @@ export interface Action {
 }
 
 const round2 = (x: number) => Math.round(x * 100) / 100
+/** The weekday before a date. */
+const eveOf = (iso: string): string => {
+  const eve = new Date(iso + 'T00:00:00Z')
+  eve.setUTCDate(eve.getUTCDate() - (eve.getUTCDay() === 1 ? 3 : 1))
+  return eve.toISOString().slice(0, 10)
+}
 const shortDay = (iso: string) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 export function nextActions(input: {
@@ -104,9 +110,7 @@ export function nextActions(input: {
   if (splits) {
     for (const r of splits.open) {
       // Listed from the weekday before the sell day, not earlier
-      const eve = new Date(r.sellOn + 'T00:00:00Z')
-      eve.setUTCDate(eve.getUTCDate() - (eve.getUTCDay() === 1 ? 3 : 1))
-      if (eve.toISOString().slice(0, 10) > today) continue
+      if (eveOf(r.sellOn) > today) continue
       out.push({
         key: `split-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Split buy', paper: true, optional: false,
         when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
@@ -125,11 +129,11 @@ export function nextActions(input: {
 
   if (input.dividends) {
     for (const r of input.dividends.open) {
-      if (!r.sellNext) continue
+      if (eveOf(r.sellOn) > today) continue
       out.push({
         key: `dividend-sell-${r.symbol}`, side: 'SELL', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
-        when: 'Next session, after 3 pm', shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
-        why: `Five sessions have passed since its dividend date, ${shortDay(r.exDate)}`,
+        when: `${shortDay(r.sellOn)}, after 3 pm`, shares: null, price: r.lastPrice, priceNote: 'Any price', stop: null, stopNote: '', target: '', exit: '',
+        why: `The dividend date is ${shortDay(r.exDate)}. Holding past it lost money after tax in testing`,
       })
     }
     for (const r of input.dividends.fresh) {
@@ -137,7 +141,7 @@ export function nextActions(input: {
       out.push({
         key: `dividend-buy-${r.symbol}`, side: 'BUY', symbol: r.symbol, rule: 'Dividend buy', paper: true, optional: false,
         when: 'Next session, after 3 pm', shares: sharesFor(perStock, price), price, priceNote: 'Any price', stop: null, stopNote: 'None in the tested rule',
-        target: 'None', exit: `Hold through ${shortDay(r.exDate)} for the dividend. Sell about ${shortDay(r.sellAbout)}, after 3 pm`,
+        target: 'None', exit: `Sell ${shortDay(r.sellOn)}, after 3 pm, before the dividend date`,
         why: `Dividend of Rs ${r.amount} a share, ${r.yieldPct}% of the price`,
       })
     }
