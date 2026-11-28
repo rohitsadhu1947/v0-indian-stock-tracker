@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { MonthlyPlan, BrokerHoldingRow } from '@/lib/portfolio/service'
 import { holdingValue, isPlanFund } from '@/lib/portfolio/plan-core'
+import CautionNote from './CautionNote'
 import type { TrackRecord } from '@/lib/portfolio/signals'
 import { FUND_SHARES, MODES, DEFAULT_MODE, PLAN_FUNDS, PORTFOLIO_RULES, type RiskMode } from '@/lib/portfolio/config'
 import research from '@/research/results/summary.json'
@@ -84,6 +85,7 @@ interface LiveView {
   quotes: Record<string, { price: number; previousClose: number | null }>
   cash: number
   brokerHoldings: BrokerHoldingRow[] | null
+  cautions?: MonthlyPlan['cautions']
 }
 
 const LIVE_POLL_MS = 15000
@@ -532,6 +534,7 @@ function PriceStatus({ plan, live }: { plan: MonthlyPlan; live: LiveView | null 
 function HoldingsCard({ plan, live, busy, onTrade }: {
   plan: MonthlyPlan; live: LiveView | null; busy: boolean; onTrade: (symbol: string, side: 'BUY' | 'SELL', held: number) => void
 }) {
+  const cautions = plan.cautions ?? {}
   const { book } = plan
   if (!book.exists) {
     return (
@@ -589,7 +592,7 @@ function HoldingsCard({ plan, live, busy, onTrade }: {
             <tbody>
               {rows.map(h => (
                 <tr key={h.symbol}>
-                  <td style={td}><span style={{ fontWeight: 600 }}>{h.symbol}</span><div style={{ ...muted, fontSize: '0.8em' }}>{h.sector}</div></td>
+                  <td style={td}><span style={{ fontWeight: 600 }}>{h.symbol}</span><div style={{ ...muted, fontSize: '0.8em' }}>{h.sector}</div><CautionNote caution={cautions[h.symbol]} /></td>
                   <td style={td}>{h.qty}</td>
                   <td style={td}>{price(h.avgPrice)}</td>
                   <td style={td}>{price(h.price)}</td>
@@ -690,6 +693,7 @@ function RankingTable({ rows, dim }: { rows: MonthlyPlan['ranking']; dim?: boole
 
 /** The trades that would take the book to the mode being looked at. Nothing happens until the button is pressed. */
 function ActionCard({ plan, busy, onRun }: { plan: MonthlyPlan; busy: boolean; onRun: () => void }) {
+  const cautions = plan.cautions ?? {}
   const { action, book } = plan
   const label = MODES[plan.mode].label
   const title =
@@ -730,7 +734,7 @@ function ActionCard({ plan, busy, onRun }: { plan: MonthlyPlan; busy: boolean; o
                 {action.orders.map(o => (
                   <tr key={o.side + o.symbol}>
                     <td style={{ ...td, color: o.side === 'BUY' ? '#34d399' : '#f87171', fontWeight: 700 }}>{o.side === 'BUY' ? 'Buy' : 'Sell'}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{o.symbol}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{o.symbol}<CautionNote caution={cautions[o.symbol]} /></td>
                     <td style={td}>{o.qty}</td>
                     <td style={td}>{price(o.price)}</td>
                     <td style={td}>{inr(o.value)}</td>
@@ -761,6 +765,7 @@ function ActionCard({ plan, busy, onRun }: { plan: MonthlyPlan; busy: boolean; o
 
 /** The user's real Zerodha holdings, read only, placed against each mode's ranking. */
 function BrokerHoldingsCard({ plan, live }: { plan: MonthlyPlan; live: LiveView | null }) {
+  const cautions = live?.cautions ?? {}
   const rows = live?.brokerHoldings
   const value = rows?.reduce((sum, h) => sum + h.value, 0) ?? 0
   const cost = rows?.reduce((sum, h) => sum + h.cost, 0) ?? 0
@@ -798,7 +803,7 @@ function BrokerHoldingsCard({ plan, live }: { plan: MonthlyPlan; live: LiveView 
               <tbody>
                 {rows.slice().sort((a, b) => b.value - a.value).map(h => (
                   <tr key={h.exchange + h.symbol}>
-                    <td style={{ ...td, fontWeight: 600 }}>{h.symbol}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>{h.symbol}<CautionNote caution={cautions[h.symbol]} /></td>
                     <td style={td}>{h.quantity}</td>
                     <td style={td}>{price(h.averagePrice)}</td>
                     <td style={td}>{price(h.lastPrice)}</td>

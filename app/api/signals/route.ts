@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUserIdCompat } from '@/lib/multi-user-auth'
 import { positionalView } from '@/lib/positional/service'
 import { splitView } from '@/lib/positional/split-service'
+import { loadCautions } from '@/lib/positional/caution-service'
 import { dayTradeView, monthlyView } from '@/lib/signals/service'
 import { brokerClientFor } from '../model-portfolio/_shared'
 import logger from '@/lib/logger'
@@ -28,7 +29,9 @@ export async function GET(request: NextRequest) {
       dayOnly ? null : splitView(client),
       dayOnly ? null : monthlyView(userId, client).catch(error => { logger.error('Monthly signals failed', { userId, error: error.message }); return null }),
     ])
-    return NextResponse.json({ success: true, day, positional, splits, monthly })
+    // Split and bonus cautions for the results buys; the Monthly Plan's orders bring their own
+    const cautions = { ...(monthly?.cautions ?? {}), ...(positional ? await loadCautions([...positional.fresh, ...positional.open].map(r => r.symbol)) : {}) }
+    return NextResponse.json({ success: true, day, positional, splits, monthly, cautions })
   } catch (error: any) {
     logger.error('Signals failed', { userId, error: error.message })
     return NextResponse.json({ success: false, error: 'Could not load the signals' }, { status: 500 })

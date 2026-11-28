@@ -10,6 +10,8 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { isWeak, strengthLabel } from '@/lib/positional/core'
 import type { PositionalRow, PositionalView } from '@/lib/positional/service'
 import type { SplitRow, SplitView } from '@/lib/positional/split-service'
+import type { Caution } from '@/lib/positional/caution'
+import CautionNote from './CautionNote'
 import type { DayTradeView, MonthlyView } from '@/lib/signals/service'
 import { sharesFor, type DayTradeSignal, type DayTradeState } from '@/lib/signals/core'
 import { useUIStore } from '@/lib/stores/ui-store'
@@ -86,7 +88,7 @@ function DayTradeCard({ s, amount, today }: { s: DayTradeSignal; amount: number;
   )
 }
 
-function ResultsBuyCard({ r, amount, hold }: { r: PositionalRow; amount: number; hold: number }) {
+function ResultsBuyCard({ r, amount, hold, caution }: { r: PositionalRow; amount: number; hold: number; caution?: Caution }) {
   const price = r.lastPrice ?? r.signalClose
   const shares = sharesFor(amount, price)
   return (
@@ -97,6 +99,7 @@ function ResultsBuyCard({ r, amount, hold }: { r: PositionalRow; amount: number;
       </div>
       <div style={{ ...muted, marginBottom: 8 }}>
         Up {r.jumpPct}% over two sessions around results, on {r.turnoverRatio} times its usual turnover. Signal on {day(r.signalDate)}.
+        <CautionNote caution={caution} />
       </div>
       <Line label="Strength">Over 12 months: <b>{strengthLabel(r.strengthRank)}</b> of the 750 most traded stocks</Line>
       <Line label="Entry">Next session, in the <b>last half hour</b> (after 3 pm). Last price <b>{rupees(price)}</b></Line>
@@ -135,6 +138,7 @@ export default function SignalsTab() {
   const [amount, setAmount] = useState(50000)
   const [positional, setPositional] = useState<PositionalView | null | undefined>(undefined)
   const [splits, setSplits] = useState<SplitView | null | undefined>(undefined)
+  const [cautions, setCautions] = useState<Record<string, Caution>>({})
   const [positionAmount, setPositionAmount] = useState(25000)
 
   useEffect(() => {
@@ -158,7 +162,7 @@ export default function SignalsTab() {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Could not load the signals')
       setDayView(json.day)
-      if (!part) { setMonthly(json.monthly); setPositional(json.positional); setSplits(json.splits) }
+      if (!part) { setMonthly(json.monthly); setPositional(json.positional); setSplits(json.splits); setCautions(json.cautions ?? {}) }
       setError(null)
     } catch (e: any) { setError(e.message) }
   }, [])
@@ -239,7 +243,7 @@ export default function SignalsTab() {
             ? <p style={{ marginTop: 0 }}>No new signal at the last close. They come in results season, a few a week.</p>
             : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 12 }}>
-                {positional.fresh.map(r => <ResultsBuyCard key={r.symbol + r.signalDate} r={r} amount={positionAmount} hold={positional.holdSessions} />)}
+                {positional.fresh.map(r => <ResultsBuyCard key={r.symbol + r.signalDate} r={r} amount={positionAmount} hold={positional.holdSessions} caution={cautions[r.symbol]} />)}
               </div>
             )}
 
@@ -259,7 +263,7 @@ export default function SignalsTab() {
                   <tbody>
                     {positional.open.map(r => (
                       <tr key={r.symbol + r.signalDate}>
-                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}</td>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.symbol}<CautionNote caution={cautions[r.symbol]} /></td>
                         <td style={td}>
                           {isWeak(r.strengthRank) ? <span style={badge('#d97706')}>Bottom fifth: weak</span> : r.strengthRank == null ? '' : strengthLabel(r.strengthRank)}
                         </td>
@@ -391,7 +395,7 @@ export default function SignalsTab() {
                       {[...sells, ...buys].map(o => (
                         <tr key={`${o.side}-${o.symbol}`}>
                           <td style={td}><span style={badge(o.side === 'BUY' ? BUY : SELL)}>{o.side}</span></td>
-                          <td style={{ ...td, fontWeight: 600 }}>{o.symbol}</td>
+                          <td style={{ ...td, fontWeight: 600 }}>{o.symbol}<CautionNote caution={cautions[o.symbol]} /></td>
                           <td style={td}>{o.qty}</td>
                           <td style={td}>{rupees(o.price)}</td>
                           <td style={td}>{rupees(o.value, 0)}</td>

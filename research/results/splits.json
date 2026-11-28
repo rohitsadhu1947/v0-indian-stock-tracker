@@ -204,5 +204,491 @@
         "trades": 28
       }
     }
+  },
+  "afterExDate": {
+    "note": "Bought through the ex-date session, held the number of sessions shown. Before costs. Excess is against the average top-500 stock.",
+    "split: 10 sessions from the ex-date, top 500": {
+      "trades": 156,
+      "winRatePct": 33.33,
+      "avgReturnPct": -2.86,
+      "medianReturnPct": -3.48,
+      "worstPct": -38.84,
+      "avgExcessPct": -3.69,
+      "tStat": -3.95,
+      "avgSessions": 10,
+      "periods": {
+        "2011-2019": {
+          "trades": 90,
+          "winRatePct": 36.67,
+          "avgReturnPct": -2.01,
+          "medianReturnPct": -3.01,
+          "worstPct": -38.84,
+          "avgExcessPct": -3.19,
+          "tStat": -2.14,
+          "avgSessions": 10
+        },
+        "2020-2022": {
+          "trades": 22
+        },
+        "2023-now": {
+          "trades": 44,
+          "winRatePct": 29.55,
+          "avgReturnPct": -3.82,
+          "medianReturnPct": -4.17,
+          "worstPct": -21.89,
+          "avgExcessPct": -3.87,
+          "tStat": -3.44,
+          "avgSessions": 10
+        }
+      }
+    },
+    "split: 20 sessions from the ex-date, top 500": {
+      "trades": 156,
+      "winRatePct": 33.97,
+      "avgReturnPct": -4.76,
+      "medianReturnPct": -4.62,
+      "worstPct": -53.43,
+      "avgExcessPct": -5.2,
+      "tStat": -5.07,
+      "avgSessions": 20,
+      "periods": {
+        "2011-2019": {
+          "trades": 90,
+          "winRatePct": 36.67,
+          "avgReturnPct": -3.89,
+          "medianReturnPct": -3.82,
+          "worstPct": -53.43,
+          "avgExcessPct": -4.45,
+          "tStat": -3.01,
+          "avgSessions": 20
+        },
+        "2020-2022": {
+          "trades": 22
+        },
+        "2023-now": {
+          "trades": 44,
+          "winRatePct": 29.55,
+          "avgReturnPct": -6.14,
+          "medianReturnPct": -4.55,
+          "worstPct": -34.79,
+          "avgExcessPct": -5.71,
+          "tStat": -3.59,
+          "avgSessions": 20
+        }
+      }
+    },
+    "split: 40 sessions from the ex-date, top 500": {
+      "trades": 156,
+      "winRatePct": 32.69,
+      "avgReturnPct": -5.28,
+      "medianReturnPct": -6.16,
+      "worstPct": -57.2,
+      "avgExcessPct": -6.33,
+      "tStat": -4.97,
+      "avgSessions": 40,
+      "periods": {
+        "2011-2019": {
+          "trades": 90,
+          "winRatePct": 35.56,
+          "avgReturnPct": -4.22,
+          "medianReturnPct": -6.16,
+          "worstPct": -57.2,
+          "avgExcessPct": -5.48,
+          "tStat": -2.99,
+          "avgSessions": 40
+        },
+        "2020-2022": {
+          "trades": 22
+        },
+        "2023-now": {
+          "trades": 44,
+          "winRatePct": 29.55,
+          "avgReturnPct": -6.19,
+          "medianReturnPct": -6.41,
+          "worstPct": -41.58,
+          "avgExcessPct": -6.84,
+          "tStat": -3.43,
+          "avgSessions": 40
+        }
+      }
+    },
+    "split: 10 sessions from the ex-date, top 750": {
+      "trades": 240,
+      "winRatePct": 32.5,
+      "avgReturnPct": -3.21,
+      "medianReturnPct": -3.77,
+      "worstPct": -38.84,
+      "avgExcessPct": -3.78,
+      "tStat": -5.27,
+      "avgSessions": 10,
+      "periods": {
+        "2011-2019": {
+          "trades": 133,
+          "winRatePct": 39.1,
+          "avgReturnPct": -1.82,
+          "medianReturnPct": -3.01,
+          "worstPct": -38.84,
+          "avgExcessPct": -2.6,
+          "tStat": -2.23,
+          "avgSessions": 10
+        },
+        "2020-2022": {
+          "trades": 40,
+          "winRatePct": 25,
+          "avgReturnPct": -5.04,
+          "medianReturnPct": -5,
+          "worstPct": -23.47,
+          "avgExcessPct": -5.84,
+          "tStat": -4.2,
+          "avgSessions": 10
+        },
+        "2023-now": {
+          "trades": 67,
+          "winRatePct": 23.88,
+          "avgReturnPct": -4.87,
+          "medianReturnPct": -4.67,
+          "worstPct": -26.9,
+          "avgExcessPct": -4.88,
+          "tStat": -5.17,
+          "avgSessions": 10
+        }
+      }
+    },
+    "split: 20 sessions from the ex-date, top 750": {
+      "trades": 240,
+      "winRatePct": 34.17,
+      "avgReturnPct": -4.44,
+      "medianReturnPct": -5.11,
+      "worstPct": -60.85,
+      "avgExcessPct": -4.86,
+      "tStat": -5.61,
+      "avgSessions": 20,
+      "periods": {
+        "2011-2019": {
+          "trades": 133,
+          "winRatePct": 38.35,
+          "avgReturnPct": -3.7,
+          "medianReturnPct": -3.8,
+          "worstPct": -60.85,
+          "avgExcessPct": -4.03,
+          "tStat": -3.26,
+          "avgSessions": 20
+        },
+        "2020-2022": {
+          "trades": 40,
+          "winRatePct": 27.5,
+          "avgReturnPct": -5.41,
+          "medianReturnPct": -6.46,
+          "worstPct": -33.16,
+          "avgExcessPct": -6.8,
+          "tStat": -3.81,
+          "avgSessions": 20
+        },
+        "2023-now": {
+          "trades": 67,
+          "winRatePct": 29.85,
+          "avgReturnPct": -5.32,
+          "medianReturnPct": -5.21,
+          "worstPct": -34.79,
+          "avgExcessPct": -5.34,
+          "tStat": -3.27,
+          "avgSessions": 20
+        }
+      }
+    },
+    "split: 40 sessions from the ex-date, top 750": {
+      "trades": 240,
+      "winRatePct": 32.92,
+      "avgReturnPct": -4.22,
+      "medianReturnPct": -5.37,
+      "worstPct": -57.2,
+      "avgExcessPct": -5.28,
+      "tStat": -4.74,
+      "avgSessions": 40,
+      "periods": {
+        "2011-2019": {
+          "trades": 133,
+          "winRatePct": 34.59,
+          "avgReturnPct": -3.22,
+          "medianReturnPct": -4.03,
+          "worstPct": -57.2,
+          "avgExcessPct": -4.39,
+          "tStat": -2.69,
+          "avgSessions": 40
+        },
+        "2020-2022": {
+          "trades": 40,
+          "winRatePct": 30,
+          "avgReturnPct": -6.68,
+          "medianReturnPct": -4.64,
+          "worstPct": -40.37,
+          "avgExcessPct": -7.09,
+          "tStat": -3.15,
+          "avgSessions": 40
+        },
+        "2023-now": {
+          "trades": 67,
+          "winRatePct": 31.34,
+          "avgReturnPct": -4.72,
+          "medianReturnPct": -7.85,
+          "worstPct": -41.58,
+          "avgExcessPct": -5.96,
+          "tStat": -2.88,
+          "avgSessions": 40
+        }
+      }
+    },
+    "bonus: 10 sessions from the ex-date, top 500": {
+      "trades": 223,
+      "winRatePct": 32.74,
+      "avgReturnPct": -2.81,
+      "medianReturnPct": -2.73,
+      "worstPct": -26.24,
+      "avgExcessPct": -2.8,
+      "tStat": -4.81,
+      "avgSessions": 10,
+      "periods": {
+        "2011-2019": {
+          "trades": 127,
+          "winRatePct": 36.22,
+          "avgReturnPct": -2.9,
+          "medianReturnPct": -2.33,
+          "worstPct": -26.24,
+          "avgExcessPct": -2.74,
+          "tStat": -4.33,
+          "avgSessions": 10
+        },
+        "2020-2022": {
+          "trades": 36,
+          "winRatePct": 30.56,
+          "avgReturnPct": -2.46,
+          "medianReturnPct": -2.51,
+          "worstPct": -19.42,
+          "avgExcessPct": -2.09,
+          "tStat": -1.35,
+          "avgSessions": 10
+        },
+        "2023-now": {
+          "trades": 60,
+          "winRatePct": 26.67,
+          "avgReturnPct": -2.81,
+          "medianReturnPct": -4.03,
+          "worstPct": -24.63,
+          "avgExcessPct": -3.37,
+          "tStat": -2.42,
+          "avgSessions": 10
+        }
+      }
+    },
+    "bonus: 20 sessions from the ex-date, top 500": {
+      "trades": 223,
+      "winRatePct": 34.98,
+      "avgReturnPct": -3.25,
+      "medianReturnPct": -3.41,
+      "worstPct": -37.2,
+      "avgExcessPct": -3.73,
+      "tStat": -5.29,
+      "avgSessions": 20,
+      "periods": {
+        "2011-2019": {
+          "trades": 127,
+          "winRatePct": 40.94,
+          "avgReturnPct": -2.97,
+          "medianReturnPct": -2.24,
+          "worstPct": -33.5,
+          "avgExcessPct": -2.82,
+          "tStat": -3.51,
+          "avgSessions": 20
+        },
+        "2020-2022": {
+          "trades": 36,
+          "winRatePct": 22.22,
+          "avgReturnPct": -4.45,
+          "medianReturnPct": -6.91,
+          "worstPct": -26.06,
+          "avgExcessPct": -6.36,
+          "tStat": -3.03,
+          "avgSessions": 20
+        },
+        "2023-now": {
+          "trades": 60,
+          "winRatePct": 30,
+          "avgReturnPct": -3.13,
+          "medianReturnPct": -2.89,
+          "worstPct": -37.2,
+          "avgExcessPct": -4.09,
+          "tStat": -2.58,
+          "avgSessions": 20
+        }
+      }
+    },
+    "bonus: 40 sessions from the ex-date, top 500": {
+      "trades": 223,
+      "winRatePct": 39.91,
+      "avgReturnPct": -2.21,
+      "medianReturnPct": -3.61,
+      "worstPct": -42.19,
+      "avgExcessPct": -2.83,
+      "tStat": -2.86,
+      "avgSessions": 40,
+      "periods": {
+        "2011-2019": {
+          "trades": 127,
+          "winRatePct": 38.58,
+          "avgReturnPct": -3.36,
+          "medianReturnPct": -3.87,
+          "worstPct": -42.19,
+          "avgExcessPct": -2.48,
+          "tStat": -1.85,
+          "avgSessions": 40
+        },
+        "2020-2022": {
+          "trades": 36,
+          "winRatePct": 30.56,
+          "avgReturnPct": -3.01,
+          "medianReturnPct": -5.28,
+          "worstPct": -31.59,
+          "avgExcessPct": -6.59,
+          "tStat": -3.02,
+          "avgSessions": 40
+        },
+        "2023-now": {
+          "trades": 60,
+          "winRatePct": 48.33,
+          "avgReturnPct": 0.7,
+          "medianReturnPct": -0.05,
+          "worstPct": -31.98,
+          "avgExcessPct": -1.31,
+          "tStat": -0.63,
+          "avgSessions": 40
+        }
+      }
+    },
+    "bonus: 10 sessions from the ex-date, top 750": {
+      "trades": 291,
+      "winRatePct": 29.21,
+      "avgReturnPct": -3.43,
+      "medianReturnPct": -3.86,
+      "worstPct": -26.9,
+      "avgExcessPct": -3.6,
+      "tStat": -6.86,
+      "avgSessions": 10,
+      "periods": {
+        "2011-2019": {
+          "trades": 156,
+          "winRatePct": 33.33,
+          "avgReturnPct": -3.17,
+          "medianReturnPct": -2.89,
+          "worstPct": -26.24,
+          "avgExcessPct": -3.26,
+          "tStat": -5.46,
+          "avgSessions": 10
+        },
+        "2020-2022": {
+          "trades": 46,
+          "winRatePct": 28.26,
+          "avgReturnPct": -2.98,
+          "medianReturnPct": -2.51,
+          "worstPct": -19.42,
+          "avgExcessPct": -2.88,
+          "tStat": -2,
+          "avgSessions": 10
+        },
+        "2023-now": {
+          "trades": 89,
+          "winRatePct": 22.47,
+          "avgReturnPct": -4.11,
+          "medianReturnPct": -4.57,
+          "worstPct": -26.9,
+          "avgExcessPct": -4.57,
+          "tStat": -4.04,
+          "avgSessions": 10
+        }
+      }
+    },
+    "bonus: 20 sessions from the ex-date, top 750": {
+      "trades": 291,
+      "winRatePct": 31.27,
+      "avgReturnPct": -4.35,
+      "medianReturnPct": -4.31,
+      "worstPct": -60.07,
+      "avgExcessPct": -5,
+      "tStat": -7.2,
+      "avgSessions": 20,
+      "periods": {
+        "2011-2019": {
+          "trades": 156,
+          "winRatePct": 37.18,
+          "avgReturnPct": -3.9,
+          "medianReturnPct": -3.78,
+          "worstPct": -60.07,
+          "avgExcessPct": -3.94,
+          "tStat": -4.5,
+          "avgSessions": 20
+        },
+        "2020-2022": {
+          "trades": 46,
+          "winRatePct": 19.57,
+          "avgReturnPct": -5.1,
+          "medianReturnPct": -6.91,
+          "worstPct": -26.06,
+          "avgExcessPct": -7.23,
+          "tStat": -3.88,
+          "avgSessions": 20
+        },
+        "2023-now": {
+          "trades": 89,
+          "winRatePct": 26.97,
+          "avgReturnPct": -4.74,
+          "medianReturnPct": -4.28,
+          "worstPct": -37.2,
+          "avgExcessPct": -5.69,
+          "tStat": -4.15,
+          "avgSessions": 20
+        }
+      }
+    },
+    "bonus: 40 sessions from the ex-date, top 750": {
+      "trades": 291,
+      "winRatePct": 36.43,
+      "avgReturnPct": -3.99,
+      "medianReturnPct": -4.6,
+      "worstPct": -60.87,
+      "avgExcessPct": -4.95,
+      "tStat": -5.38,
+      "avgSessions": 40,
+      "periods": {
+        "2011-2019": {
+          "trades": 156,
+          "winRatePct": 35.26,
+          "avgReturnPct": -5.06,
+          "medianReturnPct": -4.6,
+          "worstPct": -60.87,
+          "avgExcessPct": -4.6,
+          "tStat": -3.74,
+          "avgSessions": 40
+        },
+        "2020-2022": {
+          "trades": 46,
+          "winRatePct": 30.43,
+          "avgReturnPct": -3.43,
+          "medianReturnPct": -5.28,
+          "worstPct": -31.59,
+          "avgExcessPct": -7.42,
+          "tStat": -3.66,
+          "avgSessions": 40
+        },
+        "2023-now": {
+          "trades": 89,
+          "winRatePct": 41.57,
+          "avgReturnPct": -2.4,
+          "medianReturnPct": -3.88,
+          "worstPct": -38.86,
+          "avgExcessPct": -4.29,
+          "tStat": -2.33,
+          "avgSessions": 40
+        }
+      }
+    }
   }
 }

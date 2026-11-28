@@ -27,6 +27,8 @@ import { brokerHoldings, liveQuotes, type LiveQuote } from './live'
 import { actionKind, exitReason, fundLabel, fundOrderReason, holdingValue, isMarketHours, isPlanFund, orderReason, planTargets, type ActionKind, type ReasonContext } from './plan-core'
 import { rankingInputs, SECTOR_CAP } from './signals'
 import { SECTOR_BY_SYMBOL, sectorOf } from './sectors'
+import type { Caution } from '@/lib/positional/caution'
+import { loadCautions } from '@/lib/positional/caution-service'
 
 /** One paper book per user. */
 const BOOK_KIND = 'stock'
@@ -112,6 +114,8 @@ export interface MonthlyPlan {
   prices: { source: 'live' | 'last close'; at: string; lastCloseFor: string[] }
   /** What this mode would hold this month, best first. */
   picks: RankedRow[]
+  /** Stocks among the picks, holdings and orders with a split or bonus near: a flag only, the plan does not use it. */
+  cautions: Record<string, Caution>
   ranking: RankedRow[]
   /** Rank of every ranked stock in each mode, to place any holding against the plan. */
   modeRanks: Record<string, Partial<Record<RiskMode, number>>>
@@ -252,8 +256,10 @@ export async function buildMonthlyPlan(params: {
     notes.push('The market is open but Zerodha is not connected, so these orders are priced at the last close, not the current price.')
   }
 
+  const cautions = await loadCautions([...pickSymbols, ...holdings.map(h => h.symbol), ...rebalance.orders.map(o => o.symbol)])
+
   return {
-    asOf, mode, trendFilter, fundShare,
+    asOf, mode, trendFilter, fundShare, cautions,
     funds: fundShare > 0 ? PLAN_FUNDS.map(f => ({ symbol: f.symbol, label: f.label, targetPct: (fundShare / PLAN_FUNDS.length) * 100, price: live.quotes[f.symbol]?.price ?? null })) : [],
     modeInfo: MODES[mode], regime, exposure: invested, freshness,
     universe: { size: universe.length, ranked: viewed.list.length },
@@ -408,6 +414,8 @@ export async function liveView(userId: number, client: BrokerClient | null) {
   const state = stateOf(portfolio, DEFAULT_CAPITAL)
   const [live, real] = await Promise.all([liveQuotes(Object.keys(state.holdings), client), brokerHoldings(client)])
   return {
+    /** Split and bonus cautions on the real holdings. */
+    cautions: await loadCautions((real ?? []).map(h => h.symbol)),
     brokerConnected: !!client,
     marketOpen: isMarketHours(),
     source: live.source,
